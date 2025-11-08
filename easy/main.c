@@ -4,6 +4,9 @@
 #include "mylib.h"
 #include "mathops.h"
 
+#define MAX 100
+#define STRINGA "Easy Binary Analysis"
+
 // New utility function prototypes
 char* reverseString(char* str);
 int countDigits(int number);

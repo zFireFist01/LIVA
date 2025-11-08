@@ -1,10 +1,12 @@
 #include "mathops.h"
+#include <stdio.h>
 
 int square(int x) {
     return x * x;
 }
 
 int cube(int x) {
+    printf("Calculating cube of %d\n", x);
     return x * x * x;
 }
 
