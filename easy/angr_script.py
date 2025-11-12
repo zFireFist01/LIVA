@@ -13,15 +13,28 @@ def main(binary_path, output_path):
     cfg = project.analyses.CFGFast()
     functions = cfg.kb.functions
 
+
     target_asm = [
         "endbr64",
-        "push %rbp",
-        "lea",  # pattern generico, evita offset
-        "push %rbx",
-        "sub %rax,%rbx",
-        "sar $0x3,%rbx",
-        "call *0x0(%rbp,%rbx,8)",
-        "jmp"
+        "push rbp",
+        "lea rax, [rip + 0xac804]",
+        "mov rbp, rsp",
+        "push r12",
+        "push rbx",
+        "lea rbx, [rip + 0xac807]",
+        "sub rbx, rax",
+        "sar rbx, 3",
+        "je",
+        "pop rbx",
+        "pop r12",
+        "pop rbp",
+        "jmp 0x47ce40",
+        "lea r12, [rax - 8]",
+        "nop word ptr cs:[rax + rax]",
+        "call qword ptr [r12 + rbx*8]",
+        "sub rbx, 1",
+        "jne",
+        "call qword ptr [r12 + rbx*8]"
     ]
 
     target_func = None

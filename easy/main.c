@@ -59,7 +59,7 @@ void printBinary(int num) {
 
 int main() {
     int a = 10, b = 5;
-    char str[] = "Hello Binary Analysis";
+    char str[60] = "Hello Binary Analysis";
     int testNum = 12321;
     int decimalNum = 42;
 
@@ -94,6 +94,9 @@ int main() {
     printf("Binary representation of %d: ", decimalNum);
     printBinary(decimalNum);
     printf("\n");
+
+    strcat(str, " - Appended Text\0");
+    printf("After concatenation: %s\n", str);
 
     return 0;
 }
