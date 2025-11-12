@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Strumenti di base
 # -----------------------
 RUN apt-get update && apt-get install -y \
-    software-properties-common wget curl gnupg lsb-release build-essential python3 python3-pip git cmake \
+    software-properties-common wget curl gnupg lsb-release build-essential python3 python3-pip git cmake file \
  && rm -rf /var/lib/apt/lists/*
 
 # -----------------------
@@ -53,11 +53,14 @@ RUN pip install --no-cache-dir dwarf-debugger
 # -----------------------
 COPY libseeker_repo/ /app/libseeker_repo/
 
+COPY easy/ /app/easy/
+
 # Imposta la directory di lavoro
 WORKDIR /app
 
 # Rendi eseguibili gli script shell
 RUN chmod +x /app/libseeker_repo/build_lib/*.sh
+RUN chmod +x /app/easy/*.sh
 
 CMD ["/bin/bash"]
 
