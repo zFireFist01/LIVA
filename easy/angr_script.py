@@ -10,12 +10,63 @@ logging.getLogger("pyvex").setLevel(logging.CRITICAL)
 
 
 def normalize_instruction(insn_str):
-    """Remove offsets but keep constants"""
-    # Remove hex offsets in brackets like [rip + 0xac804] -> [rip + *]
-    insn_str = re.sub(r'\[([^\]]*?)\s*[\+\-]\s*0x[0-9a-f]+\]', r'[\1 + *]', insn_str, flags=re.IGNORECASE)
-    # Remove standalone hex addresses like 0x47ce40 -> *
-    insn_str = re.sub(r'\b0x[0-9a-f]+\b', '*', insn_str, flags=re.IGNORECASE)
-    return insn_str.strip()
+    """Normalize instruction removing addresses and offsets"""
+    # Remove hex values
+    insn_str = re.sub(r'0x[0-9a-f]+', '*', insn_str, flags=re.IGNORECASE)
+    # Normalize whitespace
+    insn_str = re.sub(r'\s+', ' ', insn_str)
+    return insn_str.strip().lower()
+
+
+def extract_mnemonic(insn_str):
+    """Extract just the instruction mnemonic"""
+    parts = insn_str.split()
+    return parts[0] if parts else ""
+
+
+def is_call_fini(asm_instructions):
+    """
+    Identifica call_fini cercando pattern caratteristici:
+    - endbr64 all'inizio
+    - due lea consecutive (caricamento array bounds)
+    - sub + sar (calcolo size array)
+    - loop con call indiretta e decremento
+    - jmp finale (tail call a _fini)
+    """
+    normalized = [normalize_instruction(insn) for insn in asm_instructions]
+    mnemonics = [extract_mnemonic(insn) for insn in normalized]
+    
+    # Pattern obbligatori
+    has_endbr64 = 'endbr64' in mnemonics
+    has_two_lea = sum(1 for m in mnemonics if m == 'lea') >= 2
+    has_sub = 'sub' in mnemonics
+    has_sar = 'sar' in mnemonics
+    has_indirect_call = any('call' in insn and ('*' in insn or 'qword ptr' in insn or 'QWORD PTR' in insn) 
+                            for insn in normalized)
+    has_final_jmp = mnemonics and mnemonics[-1] == 'jmp'
+    
+    # Cerca pattern loop: call + sub/dec + jne
+    has_loop = False
+    for i in range(len(mnemonics) - 2):
+        if (mnemonics[i] in ['call'] and 
+            mnemonics[i+1] in ['sub', 'dec'] and 
+            mnemonics[i+2] in ['jne', 'jnz']):
+            has_loop = True
+            break
+    
+    # Score basato sui pattern trovati
+    score = sum([
+        has_endbr64,
+        has_two_lea,
+        has_sub,
+        has_sar,
+        has_indirect_call,
+        has_final_jmp,
+        has_loop
+    ])
+    
+    # Richiedi almeno 5/7 pattern
+    return score >= 5
 
 
 def main(binary_path, output_path):
@@ -23,46 +74,27 @@ def main(binary_path, output_path):
     cfg = project.analyses.CFGFast()
     functions = cfg.kb.functions
 
-    target_asm = [
-        "endbr64",
-        "push rbp",
-        "lea rax, [rip + *]",
-        "mov rbp, rsp",
-        "push r12",
-        "push rbx",
-        "lea rbx, [rip + *]",
-        "sub rbx, rax",
-        "sar rbx, 3",
-        "je *",
-        "pop rbx",
-        "pop r12",
-        "pop rbp",
-        "jmp *",
-        "lea r12, [rax - 8]",
-        "nop word ptr cs:[rax + rax]",
-        "call qword ptr [r12 + rbx*8]",
-        "sub rbx, 1",
-        "jne *",
-        "call qword ptr [r12 + rbx*8]"
-    ]
-
     target_func = None
     for func in functions.values():
         asm_instructions = []
         for block in func.blocks:
             for insn in block.capstone.insns:
-                normalized = normalize_instruction(insn.mnemonic + ' ' + insn.op_str)
-                asm_instructions.append(normalized)
+                full_insn = f"{insn.mnemonic} {insn.op_str}"
+                asm_instructions.append(full_insn)
 
-        if all(any(t in asm for asm in asm_instructions) for t in target_asm):
+        if is_call_fini(asm_instructions):
             target_func = func
+            print(f"[+] Found candidate: {func.name} @ {hex(func.addr)}")
+            # Opzionale: stampa le istruzioni per debug
+            # for insn in asm_instructions[:20]:
+            #     print(f"    {insn}")
             break
 
     if target_func is None:
         print("[-] Target function not found.")
         return
 
-    print(f"[+] Found target function: {target_func.name} @ {hex(target_func.addr)}")
+    print(f"[+] Target function: {target_func.name} @ {hex(target_func.addr)}")
 
     valid_functions = [f for f in functions.values() if f.addr <= target_func.addr]
 
@@ -71,6 +103,7 @@ def main(binary_path, output_path):
             f.write(f"{hex(func.addr)} {func.name}\n")
 
     print(f"[+] Saved {len(valid_functions)} functions to {output_path}")
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

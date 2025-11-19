@@ -59,7 +59,7 @@ void printBinary(int num) {
 
 int main() {
     int a = 10, b = 5;
-    char str[60] = "Hello Binary Analysis";
+    char str[60] = "Hello Binary Analysis\0";
     int testNum = 12321;
     int decimalNum = 42;
 
