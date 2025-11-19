@@ -1,6 +1,7 @@
 import sys
 import angr
 import logging
+import re
 
 # Disattiva spam di warning e dirty helper
 logging.getLogger("angr").setLevel(logging.CRITICAL)
@@ -8,32 +9,40 @@ logging.getLogger("cle").setLevel(logging.CRITICAL)
 logging.getLogger("pyvex").setLevel(logging.CRITICAL)
 
 
+def normalize_instruction(insn_str):
+    """Remove offsets but keep constants"""
+    # Remove hex offsets in brackets like [rip + 0xac804] -> [rip + *]
+    insn_str = re.sub(r'\[([^\]]*?)\s*[\+\-]\s*0x[0-9a-f]+\]', r'[\1 + *]', insn_str, flags=re.IGNORECASE)
+    # Remove standalone hex addresses like 0x47ce40 -> *
+    insn_str = re.sub(r'\b0x[0-9a-f]+\b', '*', insn_str, flags=re.IGNORECASE)
+    return insn_str.strip()
+
+
 def main(binary_path, output_path):
     project = angr.Project(binary_path, auto_load_libs=False)
     cfg = project.analyses.CFGFast()
     functions = cfg.kb.functions
 
-
     target_asm = [
         "endbr64",
         "push rbp",
-        "lea rax, [rip + 0xac804]",
+        "lea rax, [rip + *]",
         "mov rbp, rsp",
         "push r12",
         "push rbx",
-        "lea rbx, [rip + 0xac807]",
+        "lea rbx, [rip + *]",
         "sub rbx, rax",
         "sar rbx, 3",
-        "je",
+        "je *",
         "pop rbx",
         "pop r12",
         "pop rbp",
-        "jmp 0x47ce40",
+        "jmp *",
         "lea r12, [rax - 8]",
         "nop word ptr cs:[rax + rax]",
         "call qword ptr [r12 + rbx*8]",
         "sub rbx, 1",
-        "jne",
+        "jne *",
         "call qword ptr [r12 + rbx*8]"
     ]
 
@@ -42,7 +51,8 @@ def main(binary_path, output_path):
         asm_instructions = []
         for block in func.blocks:
             for insn in block.capstone.insns:
-                asm_instructions.append(insn.mnemonic + ' ' + insn.op_str)
+                normalized = normalize_instruction(insn.mnemonic + ' ' + insn.op_str)
+                asm_instructions.append(normalized)
 
         if all(any(t in asm for asm in asm_instructions) for t in target_asm):
             target_func = func

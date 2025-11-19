@@ -1,6 +1,12 @@
 import angr
+import sys
 
-proj = angr.Project("calculator_static", auto_load_libs=False)
+#Se manca il file binario come argomento, esci
+if len(sys.argv) < 2:
+    print("Usage: python find_func_angr.py <binary>")
+    sys.exit(1)
+
+proj = angr.Project(sys.argv[1], auto_load_libs=False)
 cfg = proj.analyses.CFGFast()
 
 # Trova la funzione per nome
