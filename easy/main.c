@@ -71,18 +71,11 @@ int main() {
     printf("Second number: %d\n", b);
     
     printf("\nBasic Operations:\n");
-    printf("Addition: %d + %d = %d\n", a, b, add(a, b));
-    printf("Subtraction: %d - %d = %d\n", a, b, subtract(a, b));
-    printf("Multiplication: %d * %d = %d\n", a, b, multiply(a, b));
-    printf("Division: %d / %d = %d\n", a, b, divide(a, b));
-
-    printf("\nAdvanced Operations:\n");
+    //printf("Addition: %d + %d = %d\n", a, b, add(a, b));
     printf("Square of %d = %d\n", a, square(a));
+    //printf("Subtraction: %d - %d = %d\n", a, b, subtract(a, b));
     printf("Cube of %d = %d\n", a, cube(a));
-    printf("Power: %d^%d = %d\n", a, b, power(a, b));
-    printf("%d is prime? %s\n", a, isPrime(a) ? "Yes" : "No");
-    printf("%d is prime? %s\n", 17, isPrime(17) ? "Yes" : "No");
-
+    //printf("Division: %d / %d = %d\n", a, b, divide(a, b));
 
     // Calling function implemented in this file
 

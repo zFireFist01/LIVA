@@ -14,22 +14,22 @@ ar rcs libmylib.a mylib.o mathops.o
 # Crea le directory per i diversi compilatori
 mkdir -p gcc13 gcc11 clang18 clang14
 
-# Compila il programma staticamente, con e senza ottimizzazione
-cd gcc13
-gcc-13 -static ../main.c -L.. -lmylib -O3 -o calculator_static_opt
-gcc-13 -static ../main.c -L.. -lmylib -o calculator_static
-cd ..
+# # Compila il programma staticamente, con e senza ottimizzazione
+# cd gcc13
+# gcc-13 -static ../main.c -L.. -lmylib -O3 -o calculator_static_opt
+# gcc-13 -static ../main.c -L.. -lmylib -o calculator_static
+# cd ..
 
 cd gcc11
 gcc-11 -static ../main.c -L.. -lmylib -O3 -o calculator_static_opt
 gcc-11 -static ../main.c -L.. -lmylib -o calculator_static
 cd ..
 
-# Compila il programma staticamente con clang, con e senza ottimizzazione
-cd clang18
-clang-18 -static ../main.c -L.. -lmylib -O3 -o calculator_static_opt_clang
-clang-18 -static ../main.c -L.. -lmylib -o calculator_static_clang
-cd ..
+# # Compila il programma staticamente con clang, con e senza ottimizzazione
+# cd clang18
+# clang-18 -static ../main.c -L.. -lmylib -O3 -o calculator_static_opt_clang
+# clang-18 -static ../main.c -L.. -lmylib -o calculator_static_clang
+# cd ..
 
 cd clang14
 clang-14 -static ../main.c -L.. -lmylib -O3 -o calculator_static_opt_clang

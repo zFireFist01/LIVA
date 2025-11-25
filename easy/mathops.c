@@ -12,6 +12,7 @@ int cube(int x) {
 
 int power(int x, int n) {
     int result = 1;
+    printf("Calculating %d to the power of %d\n", x, n);
     for (int i = 0; i < n; i++) {
         result *= x;
     }
