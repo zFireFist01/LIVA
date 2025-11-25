@@ -1,12 +1,13 @@
 import angr
 import logging
+import sys
 
 # Disattiva warning
 logging.getLogger("angr").setLevel(logging.CRITICAL)
 logging.getLogger("cle").setLevel(logging.CRITICAL)
 logging.getLogger("pyvex").setLevel(logging.CRITICAL)
 
-BINARY_PATH = "./calculator_static"
+BINARY_PATH = sys.argv[1]
 
 def print_call_tree(cfg, func_node, visited=None, prefix="", is_last=True):
     """Stampa ricorsivamente l'albero delle chiamate"""

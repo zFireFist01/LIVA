@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include "mylib.h"
-#include "mathops.h"
+#include "libraries/mylib.h"
+#include "libraries/mathops.h"
 
 #define MAX 100
 #define STRINGA "Easy Binary Analysis"
