@@ -1,16 +1,15 @@
 #ifndef MATHOPS_H
 #define MATHOPS_H
 
-// Calculate the square of a number
 int square(int x);
-
-// Calculate the cube of a number
 int cube(int x);
-
-// Calculate power (x^n)
 int power(int x, int n);
-
-// Check if a number is prime
 int isPrime(int x);
+int sumOfSquares(int a, int b);
+int powerOfCube(int x);
+int countPrimesInRange(int start, int end);
+int averageOfSquares(int arr[], int size);
+int maxPrimeInArray(int arr[], int size);
+int sumOfPrimeSquares(int arr[], int size);
 
-#endif // MATHOPS_H
+#endif

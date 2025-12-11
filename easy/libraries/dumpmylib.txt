@@ -1,0 +1,384 @@
+
+mathops.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <square>:
+   0:	f3 0f 1e fa          	endbr64 
+   4:	55                   	push   %rbp
+   5:	48 89 e5             	mov    %rsp,%rbp
+   8:	89 7d fc             	mov    %edi,-0x4(%rbp)
+   b:	8b 45 fc             	mov    -0x4(%rbp),%eax
+   e:	0f af c0             	imul   %eax,%eax
+  11:	5d                   	pop    %rbp
+  12:	c3                   	ret    
+
+0000000000000013 <cube>:
+  13:	f3 0f 1e fa          	endbr64 
+  17:	55                   	push   %rbp
+  18:	48 89 e5             	mov    %rsp,%rbp
+  1b:	48 83 ec 10          	sub    $0x10,%rsp
+  1f:	89 7d fc             	mov    %edi,-0x4(%rbp)
+  22:	8b 45 fc             	mov    -0x4(%rbp),%eax
+  25:	89 c6                	mov    %eax,%esi
+  27:	48 8d 05 00 00 00 00 	lea    0x0(%rip),%rax        # 2e <cube+0x1b>
+  2e:	48 89 c7             	mov    %rax,%rdi
+  31:	b8 00 00 00 00       	mov    $0x0,%eax
+  36:	e8 00 00 00 00       	call   3b <cube+0x28>
+  3b:	8b 45 fc             	mov    -0x4(%rbp),%eax
+  3e:	0f af c0             	imul   %eax,%eax
+  41:	0f af 45 fc          	imul   -0x4(%rbp),%eax
+  45:	c9                   	leave  
+  46:	c3                   	ret    
+
+0000000000000047 <power>:
+  47:	f3 0f 1e fa          	endbr64 
+  4b:	55                   	push   %rbp
+  4c:	48 89 e5             	mov    %rsp,%rbp
+  4f:	48 83 ec 20          	sub    $0x20,%rsp
+  53:	89 7d ec             	mov    %edi,-0x14(%rbp)
+  56:	89 75 e8             	mov    %esi,-0x18(%rbp)
+  59:	c7 45 f8 01 00 00 00 	movl   $0x1,-0x8(%rbp)
+  60:	8b 55 e8             	mov    -0x18(%rbp),%edx
+  63:	8b 45 ec             	mov    -0x14(%rbp),%eax
+  66:	89 c6                	mov    %eax,%esi
+  68:	48 8d 05 00 00 00 00 	lea    0x0(%rip),%rax        # 6f <power+0x28>
+  6f:	48 89 c7             	mov    %rax,%rdi
+  72:	b8 00 00 00 00       	mov    $0x0,%eax
+  77:	e8 00 00 00 00       	call   7c <power+0x35>
+  7c:	c7 45 fc 00 00 00 00 	movl   $0x0,-0x4(%rbp)
+  83:	eb 0e                	jmp    93 <power+0x4c>
+  85:	8b 45 f8             	mov    -0x8(%rbp),%eax
+  88:	0f af 45 ec          	imul   -0x14(%rbp),%eax
+  8c:	89 45 f8             	mov    %eax,-0x8(%rbp)
+  8f:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+  93:	8b 45 fc             	mov    -0x4(%rbp),%eax
+  96:	3b 45 e8             	cmp    -0x18(%rbp),%eax
+  99:	7c ea                	jl     85 <power+0x3e>
+  9b:	8b 45 f8             	mov    -0x8(%rbp),%eax
+  9e:	c9                   	leave  
+  9f:	c3                   	ret    
+
+00000000000000a0 <isPrime>:
+  a0:	f3 0f 1e fa          	endbr64 
+  a4:	55                   	push   %rbp
+  a5:	48 89 e5             	mov    %rsp,%rbp
+  a8:	89 7d ec             	mov    %edi,-0x14(%rbp)
+  ab:	83 7d ec 01          	cmpl   $0x1,-0x14(%rbp)
+  af:	7f 07                	jg     b8 <isPrime+0x18>
+  b1:	b8 00 00 00 00       	mov    $0x0,%eax
+  b6:	eb 31                	jmp    e9 <isPrime+0x49>
+  b8:	c7 45 fc 02 00 00 00 	movl   $0x2,-0x4(%rbp)
+  bf:	eb 18                	jmp    d9 <isPrime+0x39>
+  c1:	8b 45 ec             	mov    -0x14(%rbp),%eax
+  c4:	99                   	cltd   
+  c5:	f7 7d fc             	idivl  -0x4(%rbp)
+  c8:	89 d0                	mov    %edx,%eax
+  ca:	85 c0                	test   %eax,%eax
+  cc:	75 07                	jne    d5 <isPrime+0x35>
+  ce:	b8 00 00 00 00       	mov    $0x0,%eax
+  d3:	eb 14                	jmp    e9 <isPrime+0x49>
+  d5:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+  d9:	8b 45 fc             	mov    -0x4(%rbp),%eax
+  dc:	0f af c0             	imul   %eax,%eax
+  df:	39 45 ec             	cmp    %eax,-0x14(%rbp)
+  e2:	7d dd                	jge    c1 <isPrime+0x21>
+  e4:	b8 01 00 00 00       	mov    $0x1,%eax
+  e9:	5d                   	pop    %rbp
+  ea:	c3                   	ret    
+
+00000000000000eb <sumOfSquares>:
+  eb:	f3 0f 1e fa          	endbr64 
+  ef:	55                   	push   %rbp
+  f0:	48 89 e5             	mov    %rsp,%rbp
+  f3:	53                   	push   %rbx
+  f4:	48 83 ec 08          	sub    $0x8,%rsp
+  f8:	89 7d f4             	mov    %edi,-0xc(%rbp)
+  fb:	89 75 f0             	mov    %esi,-0x10(%rbp)
+  fe:	8b 45 f4             	mov    -0xc(%rbp),%eax
+ 101:	89 c7                	mov    %eax,%edi
+ 103:	e8 00 00 00 00       	call   108 <sumOfSquares+0x1d>
+ 108:	89 c3                	mov    %eax,%ebx
+ 10a:	8b 45 f0             	mov    -0x10(%rbp),%eax
+ 10d:	89 c7                	mov    %eax,%edi
+ 10f:	e8 00 00 00 00       	call   114 <sumOfSquares+0x29>
+ 114:	01 d8                	add    %ebx,%eax
+ 116:	48 8b 5d f8          	mov    -0x8(%rbp),%rbx
+ 11a:	c9                   	leave  
+ 11b:	c3                   	ret    
+
+000000000000011c <powerOfCube>:
+ 11c:	f3 0f 1e fa          	endbr64 
+ 120:	55                   	push   %rbp
+ 121:	48 89 e5             	mov    %rsp,%rbp
+ 124:	48 83 ec 20          	sub    $0x20,%rsp
+ 128:	89 7d ec             	mov    %edi,-0x14(%rbp)
+ 12b:	8b 45 ec             	mov    -0x14(%rbp),%eax
+ 12e:	89 c7                	mov    %eax,%edi
+ 130:	e8 00 00 00 00       	call   135 <powerOfCube+0x19>
+ 135:	89 45 fc             	mov    %eax,-0x4(%rbp)
+ 138:	8b 45 fc             	mov    -0x4(%rbp),%eax
+ 13b:	be 02 00 00 00       	mov    $0x2,%esi
+ 140:	89 c7                	mov    %eax,%edi
+ 142:	e8 00 00 00 00       	call   147 <powerOfCube+0x2b>
+ 147:	c9                   	leave  
+ 148:	c3                   	ret    
+
+0000000000000149 <countPrimesInRange>:
+ 149:	f3 0f 1e fa          	endbr64 
+ 14d:	55                   	push   %rbp
+ 14e:	48 89 e5             	mov    %rsp,%rbp
+ 151:	48 83 ec 18          	sub    $0x18,%rsp
+ 155:	89 7d ec             	mov    %edi,-0x14(%rbp)
+ 158:	89 75 e8             	mov    %esi,-0x18(%rbp)
+ 15b:	c7 45 f8 00 00 00 00 	movl   $0x0,-0x8(%rbp)
+ 162:	8b 45 ec             	mov    -0x14(%rbp),%eax
+ 165:	89 45 fc             	mov    %eax,-0x4(%rbp)
+ 168:	eb 16                	jmp    180 <countPrimesInRange+0x37>
+ 16a:	8b 45 fc             	mov    -0x4(%rbp),%eax
+ 16d:	89 c7                	mov    %eax,%edi
+ 16f:	e8 00 00 00 00       	call   174 <countPrimesInRange+0x2b>
+ 174:	85 c0                	test   %eax,%eax
+ 176:	74 04                	je     17c <countPrimesInRange+0x33>
+ 178:	83 45 f8 01          	addl   $0x1,-0x8(%rbp)
+ 17c:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+ 180:	8b 45 fc             	mov    -0x4(%rbp),%eax
+ 183:	3b 45 e8             	cmp    -0x18(%rbp),%eax
+ 186:	7e e2                	jle    16a <countPrimesInRange+0x21>
+ 188:	8b 45 f8             	mov    -0x8(%rbp),%eax
+ 18b:	c9                   	leave  
+ 18c:	c3                   	ret    
+
+000000000000018d <averageOfSquares>:
+ 18d:	f3 0f 1e fa          	endbr64 
+ 191:	55                   	push   %rbp
+ 192:	48 89 e5             	mov    %rsp,%rbp
+ 195:	53                   	push   %rbx
+ 196:	48 83 ec 38          	sub    $0x38,%rsp
+ 19a:	48 89 7d c8          	mov    %rdi,-0x38(%rbp)
+ 19e:	89 75 c4             	mov    %esi,-0x3c(%rbp)
+ 1a1:	64 48 8b 04 25 28 00 	mov    %fs:0x28,%rax
+ 1a8:	00 00 
+ 1aa:	48 89 45 e8          	mov    %rax,-0x18(%rbp)
+ 1ae:	31 c0                	xor    %eax,%eax
+ 1b0:	48 89 e0             	mov    %rsp,%rax
+ 1b3:	48 89 c3             	mov    %rax,%rbx
+ 1b6:	8b 45 c4             	mov    -0x3c(%rbp),%eax
+ 1b9:	48 63 d0             	movslq %eax,%rdx
+ 1bc:	48 83 ea 01          	sub    $0x1,%rdx
+ 1c0:	48 89 55 d8          	mov    %rdx,-0x28(%rbp)
+ 1c4:	48 63 d0             	movslq %eax,%rdx
+ 1c7:	49 89 d2             	mov    %rdx,%r10
+ 1ca:	41 bb 00 00 00 00    	mov    $0x0,%r11d
+ 1d0:	48 63 d0             	movslq %eax,%rdx
+ 1d3:	49 89 d0             	mov    %rdx,%r8
+ 1d6:	41 b9 00 00 00 00    	mov    $0x0,%r9d
+ 1dc:	48 98                	cltq   
+ 1de:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+ 1e5:	00 
+ 1e6:	b8 10 00 00 00       	mov    $0x10,%eax
+ 1eb:	48 83 e8 01          	sub    $0x1,%rax
+ 1ef:	48 01 d0             	add    %rdx,%rax
+ 1f2:	be 10 00 00 00       	mov    $0x10,%esi
+ 1f7:	ba 00 00 00 00       	mov    $0x0,%edx
+ 1fc:	48 f7 f6             	div    %rsi
+ 1ff:	48 6b c0 10          	imul   $0x10,%rax,%rax
+ 203:	48 89 c1             	mov    %rax,%rcx
+ 206:	48 81 e1 00 f0 ff ff 	and    $0xfffffffffffff000,%rcx
+ 20d:	48 89 e2             	mov    %rsp,%rdx
+ 210:	48 29 ca             	sub    %rcx,%rdx
+ 213:	48 39 d4             	cmp    %rdx,%rsp
+ 216:	74 12                	je     22a <averageOfSquares+0x9d>
+ 218:	48 81 ec 00 10 00 00 	sub    $0x1000,%rsp
+ 21f:	48 83 8c 24 f8 0f 00 	orq    $0x0,0xff8(%rsp)
+ 226:	00 00 
+ 228:	eb e9                	jmp    213 <averageOfSquares+0x86>
+ 22a:	48 89 c2             	mov    %rax,%rdx
+ 22d:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+ 233:	48 29 d4             	sub    %rdx,%rsp
+ 236:	48 89 c2             	mov    %rax,%rdx
+ 239:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+ 23f:	48 85 d2             	test   %rdx,%rdx
+ 242:	74 10                	je     254 <averageOfSquares+0xc7>
+ 244:	25 ff 0f 00 00       	and    $0xfff,%eax
+ 249:	48 83 e8 08          	sub    $0x8,%rax
+ 24d:	48 01 e0             	add    %rsp,%rax
+ 250:	48 83 08 00          	orq    $0x0,(%rax)
+ 254:	48 89 e0             	mov    %rsp,%rax
+ 257:	48 83 c0 03          	add    $0x3,%rax
+ 25b:	48 c1 e8 02          	shr    $0x2,%rax
+ 25f:	48 c1 e0 02          	shl    $0x2,%rax
+ 263:	48 89 45 e0          	mov    %rax,-0x20(%rbp)
+ 267:	c7 45 d4 00 00 00 00 	movl   $0x0,-0x2c(%rbp)
+ 26e:	eb 2e                	jmp    29e <averageOfSquares+0x111>
+ 270:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+ 273:	48 98                	cltq   
+ 275:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+ 27c:	00 
+ 27d:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+ 281:	48 01 d0             	add    %rdx,%rax
+ 284:	8b 00                	mov    (%rax),%eax
+ 286:	89 c7                	mov    %eax,%edi
+ 288:	e8 00 00 00 00       	call   28d <averageOfSquares+0x100>
+ 28d:	48 8b 55 e0          	mov    -0x20(%rbp),%rdx
+ 291:	8b 4d d4             	mov    -0x2c(%rbp),%ecx
+ 294:	48 63 c9             	movslq %ecx,%rcx
+ 297:	89 04 8a             	mov    %eax,(%rdx,%rcx,4)
+ 29a:	83 45 d4 01          	addl   $0x1,-0x2c(%rbp)
+ 29e:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+ 2a1:	3b 45 c4             	cmp    -0x3c(%rbp),%eax
+ 2a4:	7c ca                	jl     270 <averageOfSquares+0xe3>
+ 2a6:	8b 55 c4             	mov    -0x3c(%rbp),%edx
+ 2a9:	48 8b 45 e0          	mov    -0x20(%rbp),%rax
+ 2ad:	89 d6                	mov    %edx,%esi
+ 2af:	48 89 c7             	mov    %rax,%rdi
+ 2b2:	e8 00 00 00 00       	call   2b7 <averageOfSquares+0x12a>
+ 2b7:	48 89 dc             	mov    %rbx,%rsp
+ 2ba:	48 8b 55 e8          	mov    -0x18(%rbp),%rdx
+ 2be:	64 48 2b 14 25 28 00 	sub    %fs:0x28,%rdx
+ 2c5:	00 00 
+ 2c7:	74 05                	je     2ce <averageOfSquares+0x141>
+ 2c9:	e8 00 00 00 00       	call   2ce <averageOfSquares+0x141>
+ 2ce:	48 8b 5d f8          	mov    -0x8(%rbp),%rbx
+ 2d2:	c9                   	leave  
+ 2d3:	c3                   	ret    
+
+00000000000002d4 <maxPrimeInArray>:
+ 2d4:	f3 0f 1e fa          	endbr64 
+ 2d8:	55                   	push   %rbp
+ 2d9:	48 89 e5             	mov    %rsp,%rbp
+ 2dc:	48 83 ec 20          	sub    $0x20,%rsp
+ 2e0:	48 89 7d e8          	mov    %rdi,-0x18(%rbp)
+ 2e4:	89 75 e4             	mov    %esi,-0x1c(%rbp)
+ 2e7:	8b 55 e4             	mov    -0x1c(%rbp),%edx
+ 2ea:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+ 2ee:	89 d6                	mov    %edx,%esi
+ 2f0:	48 89 c7             	mov    %rax,%rdi
+ 2f3:	e8 00 00 00 00       	call   2f8 <maxPrimeInArray+0x24>
+ 2f8:	89 45 fc             	mov    %eax,-0x4(%rbp)
+ 2fb:	eb 17                	jmp    314 <maxPrimeInArray+0x40>
+ 2fd:	8b 45 fc             	mov    -0x4(%rbp),%eax
+ 300:	89 c7                	mov    %eax,%edi
+ 302:	e8 00 00 00 00       	call   307 <maxPrimeInArray+0x33>
+ 307:	85 c0                	test   %eax,%eax
+ 309:	74 05                	je     310 <maxPrimeInArray+0x3c>
+ 30b:	8b 45 fc             	mov    -0x4(%rbp),%eax
+ 30e:	eb 0f                	jmp    31f <maxPrimeInArray+0x4b>
+ 310:	83 6d fc 01          	subl   $0x1,-0x4(%rbp)
+ 314:	83 7d fc 01          	cmpl   $0x1,-0x4(%rbp)
+ 318:	7f e3                	jg     2fd <maxPrimeInArray+0x29>
+ 31a:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+ 31f:	c9                   	leave  
+ 320:	c3                   	ret    
+
+0000000000000321 <sumOfPrimeSquares>:
+ 321:	f3 0f 1e fa          	endbr64 
+ 325:	55                   	push   %rbp
+ 326:	48 89 e5             	mov    %rsp,%rbp
+ 329:	41 54                	push   %r12
+ 32b:	53                   	push   %rbx
+ 32c:	48 83 ec 30          	sub    $0x30,%rsp
+ 330:	48 89 7d c8          	mov    %rdi,-0x38(%rbp)
+ 334:	89 75 c4             	mov    %esi,-0x3c(%rbp)
+ 337:	64 48 8b 04 25 28 00 	mov    %fs:0x28,%rax
+ 33e:	00 00 
+ 340:	48 89 45 e8          	mov    %rax,-0x18(%rbp)
+ 344:	31 c0                	xor    %eax,%eax
+ 346:	48 89 e0             	mov    %rsp,%rax
+ 349:	49 89 c4             	mov    %rax,%r12
+ 34c:	8b 45 c4             	mov    -0x3c(%rbp),%eax
+ 34f:	48 63 d0             	movslq %eax,%rdx
+ 352:	48 83 ea 01          	sub    $0x1,%rdx
+ 356:	48 89 55 d8          	mov    %rdx,-0x28(%rbp)
+ 35a:	48 63 d0             	movslq %eax,%rdx
+ 35d:	49 89 d0             	mov    %rdx,%r8
+ 360:	41 b9 00 00 00 00    	mov    $0x0,%r9d
+ 366:	48 63 d0             	movslq %eax,%rdx
+ 369:	48 89 d1             	mov    %rdx,%rcx
+ 36c:	bb 00 00 00 00       	mov    $0x0,%ebx
+ 371:	48 98                	cltq   
+ 373:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+ 37a:	00 
+ 37b:	b8 10 00 00 00       	mov    $0x10,%eax
+ 380:	48 83 e8 01          	sub    $0x1,%rax
+ 384:	48 01 d0             	add    %rdx,%rax
+ 387:	be 10 00 00 00       	mov    $0x10,%esi
+ 38c:	ba 00 00 00 00       	mov    $0x0,%edx
+ 391:	48 f7 f6             	div    %rsi
+ 394:	48 6b c0 10          	imul   $0x10,%rax,%rax
+ 398:	48 89 c1             	mov    %rax,%rcx
+ 39b:	48 81 e1 00 f0 ff ff 	and    $0xfffffffffffff000,%rcx
+ 3a2:	48 89 e2             	mov    %rsp,%rdx
+ 3a5:	48 29 ca             	sub    %rcx,%rdx
+ 3a8:	48 39 d4             	cmp    %rdx,%rsp
+ 3ab:	74 12                	je     3bf <sumOfPrimeSquares+0x9e>
+ 3ad:	48 81 ec 00 10 00 00 	sub    $0x1000,%rsp
+ 3b4:	48 83 8c 24 f8 0f 00 	orq    $0x0,0xff8(%rsp)
+ 3bb:	00 00 
+ 3bd:	eb e9                	jmp    3a8 <sumOfPrimeSquares+0x87>
+ 3bf:	48 89 c2             	mov    %rax,%rdx
+ 3c2:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+ 3c8:	48 29 d4             	sub    %rdx,%rsp
+ 3cb:	48 89 c2             	mov    %rax,%rdx
+ 3ce:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+ 3d4:	48 85 d2             	test   %rdx,%rdx
+ 3d7:	74 10                	je     3e9 <sumOfPrimeSquares+0xc8>
+ 3d9:	25 ff 0f 00 00       	and    $0xfff,%eax
+ 3de:	48 83 e8 08          	sub    $0x8,%rax
+ 3e2:	48 01 e0             	add    %rsp,%rax
+ 3e5:	48 83 08 00          	orq    $0x0,(%rax)
+ 3e9:	48 89 e0             	mov    %rsp,%rax
+ 3ec:	48 83 c0 03          	add    $0x3,%rax
+ 3f0:	48 c1 e8 02          	shr    $0x2,%rax
+ 3f4:	48 c1 e0 02          	shl    $0x2,%rax
+ 3f8:	48 89 45 e0          	mov    %rax,-0x20(%rbp)
+ 3fc:	c7 45 d0 00 00 00 00 	movl   $0x0,-0x30(%rbp)
+ 403:	c7 45 d4 00 00 00 00 	movl   $0x0,-0x2c(%rbp)
+ 40a:	eb 55                	jmp    461 <sumOfPrimeSquares+0x140>
+ 40c:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+ 40f:	48 98                	cltq   
+ 411:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+ 418:	00 
+ 419:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+ 41d:	48 01 d0             	add    %rdx,%rax
+ 420:	8b 00                	mov    (%rax),%eax
+ 422:	89 c7                	mov    %eax,%edi
+ 424:	e8 00 00 00 00       	call   429 <sumOfPrimeSquares+0x108>
+ 429:	85 c0                	test   %eax,%eax
+ 42b:	74 30                	je     45d <sumOfPrimeSquares+0x13c>
+ 42d:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+ 430:	48 98                	cltq   
+ 432:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+ 439:	00 
+ 43a:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+ 43e:	48 01 d0             	add    %rdx,%rax
+ 441:	8b 00                	mov    (%rax),%eax
+ 443:	8b 5d d0             	mov    -0x30(%rbp),%ebx
+ 446:	8d 53 01             	lea    0x1(%rbx),%edx
+ 449:	89 55 d0             	mov    %edx,-0x30(%rbp)
+ 44c:	89 c7                	mov    %eax,%edi
+ 44e:	e8 00 00 00 00       	call   453 <sumOfPrimeSquares+0x132>
+ 453:	48 8b 55 e0          	mov    -0x20(%rbp),%rdx
+ 457:	48 63 cb             	movslq %ebx,%rcx
+ 45a:	89 04 8a             	mov    %eax,(%rdx,%rcx,4)
+ 45d:	83 45 d4 01          	addl   $0x1,-0x2c(%rbp)
+ 461:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+ 464:	3b 45 c4             	cmp    -0x3c(%rbp),%eax
+ 467:	7c a3                	jl     40c <sumOfPrimeSquares+0xeb>
+ 469:	8b 55 d0             	mov    -0x30(%rbp),%edx
+ 46c:	48 8b 45 e0          	mov    -0x20(%rbp),%rax
+ 470:	89 d6                	mov    %edx,%esi
+ 472:	48 89 c7             	mov    %rax,%rdi
+ 475:	e8 00 00 00 00       	call   47a <sumOfPrimeSquares+0x159>
+ 47a:	4c 89 e4             	mov    %r12,%rsp
+ 47d:	48 8b 55 e8          	mov    -0x18(%rbp),%rdx
+ 481:	64 48 2b 14 25 28 00 	sub    %fs:0x28,%rdx
+ 488:	00 00 
+ 48a:	74 05                	je     491 <sumOfPrimeSquares+0x170>
+ 48c:	e8 00 00 00 00       	call   491 <sumOfPrimeSquares+0x170>
+ 491:	48 8d 65 f0          	lea    -0x10(%rbp),%rsp
+ 495:	5b                   	pop    %rbx
+ 496:	41 5c                	pop    %r12
+ 498:	5d                   	pop    %rbp
+ 499:	c3                   	ret    

@@ -71,11 +71,11 @@ int main() {
     printf("Second number: %d\n", b);
     
     printf("\nBasic Operations:\n");
-    //printf("Addition: %d + %d = %d\n", a, b, add(a, b));
+    printf("Addition: %d + %d = %d\n", a, b, add(a, b));
     printf("Square of %d = %d\n", a, square(a));
-    //printf("Subtraction: %d - %d = %d\n", a, b, subtract(a, b));
+    printf("Subtraction: %d - %d = %d\n", a, b, subtract(a, b));
     printf("Cube of %d = %d\n", a, cube(a));
-    //printf("Division: %d / %d = %d\n", a, b, divide(a, b));
+    printf("Division: %d / %d = %d\n", a, b, divide(a, b));
 
     // Calling function implemented in this file
 

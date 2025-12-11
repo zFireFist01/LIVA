@@ -5,3 +5,5 @@ Findings:
 4) Function order -> Se l'ottimizzazione è forte le funzioni vengono raggruppate sopra call_fini e sotto main, ma tra il main e le funzioni di liberia ci possono essere altre funzioni in mezzo, tra cui anche sottofunzioni; nel caso di nessuna ottimizzazione, vengono importate a gruppi di compilation unit, una dietro l'altra seguendo l'ordine di dichiarazione lo stesso vale per le sottofunzioni che vengono messe sopra il main
 5) Script Angr -> Avevo creato uno scriptino angr per trovare call_fini basandomi sull'assembly, ma in caso di ottimizzazioni questo assembly cambia, quindi non ha troppo senso farlo ora, ha più senso nel caso serva usare direttamente un embedding di questa funzione e cercarla all'interno dell'elf.
 6) Se le funzioni di una compilation unit non vengono chiamate allora questa non viene importata come previsto, stessa cosa vale per il .rodata
+7) Il CFG resta uguale tra compilation unit ed elf -> Viene "importato" così com'è 
+8) Nel file della static library (.a) abbiamo le compilation unit una dietro l'altra per ordine di "archiviazione". Abbiamo una sezione .text per compilation unit. 

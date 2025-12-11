@@ -2,11 +2,12 @@
 set -e
 
 # Compila i file sorgente in oggetti
+gcc -c libraries/statistics.c -o libraries/statistics.o 
 gcc -c libraries/mylib.c -o libraries/mylib.o
 gcc -c libraries/mathops.c -o libraries/mathops.o
 
 # Crea la libreria statica
-ar rcs libmylib.a libraries/mylib.o libraries/mathops.o
+ar rcs libmylib.a libraries/mylib.o libraries/mathops.o libraries/statistics.o
 
 
 # Crea le directory per i diversi compilatori
