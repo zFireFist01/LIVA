@@ -7,8 +7,8 @@ gcc -c libraries/mylib.c -o libraries/mylib.o
 gcc -c libraries/mathops.c -o libraries/mathops.o
 
 # Crea la libreria statica
-ar rcs libmylib.a libraries/mylib.o libraries/mathops.o libraries/statistics.o
-
+ar rcs libmylib.a libraries/mylib.o libraries/mathops.o
+ar rcs libstats.a libraries/statistics.o
 
 # Crea le directory per i diversi compilatori
 mkdir -p gcc13 gcc11 clang18 clang14
@@ -22,8 +22,8 @@ mkdir -p gcc13 gcc11 clang18 clang14
 # cd ..
 
 cd gcc11
-gcc-11 -static ../main.c -L.. -lmylib -O3 -o calculator_static_opt
-gcc-11 -static ../main.c -L.. -lmylib -o calculator_static
+gcc-11 -static ../main.c -L..  -lmylib -lstats -O3 -o calculator_static_opt
+gcc-11 -static ../main.c -L..  -lmylib -lstats -o calculator_static
 
 objdump -d calculator_static_opt > disass_opt.txt
 objdump -d calculator_static > disass.txt
@@ -41,16 +41,21 @@ cd ..
 # cd ..
 
 cd clang14
-clang-14 -static ../main.c -L.. -lmylib -O3 -o calculator_static_opt
-clang-14 -static ../main.c -L.. -lmylib -o calculator_static
+clang-14 -static ../main.c -L.. -lmylib -lstats -O3 -o calculator_static_opt
+clang-14 -static ../main.c -L.. -lmylib -lstats -o calculator_static
 
 objdump -d calculator_static_opt > disass_opt.txt
 objdump -d calculator_static > disass.txt
 
 cd ..
 
+# Pulisci i file temporanei
+rm libmylib.a libstats.a
+rm libraries/*.o
+
 echo "Build completata:"
 echo "  → calculator_static_opt (con -O3)"
 echo "  → calculator_static (senza ottimizzazioni)"
 echo "  → calculator_static_opt_clang (con -O3)"
 echo "  → calculator_static_clang (senza ottimizzazioni)"
+echo "Eliminate librerie temporanee."

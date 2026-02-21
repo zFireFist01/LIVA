@@ -1,3 +1,48 @@
+Paper Letti: 
+	-LIBS: 
+		LLVM(compiler) IR(Intermediate Representation) per approccio multi architetturale
+		Funzione per Funzione con feature vector (WordVec + Altro)
+		IR Loader, Embedding Manager, Matcher, Result Agregator
+		Strutture Dati Particolari 
+
+	-BINSHAPE (2017): 
+		B++ Tree per indicizzare funzioni e feature di funzioni (Si basa su CFG)
+		Dipendenza Architetturale
+		Feature Manuali
+
+	-GMN (2019): 
+		GNN che prende 2 CFG di funzioni esegue Cross Graph Attention e produce uno score di similarità 
+		In coppie o triplet per training
+
+	-Mantilla (2025):
+		Usa radare2 per estrarre feature da binario
+		Usa KNN + majority voting per classificare
+		Feature statiche non simboliche
+		Multi Architetturale
+
+	-ASM2VEC (2019):
+		Representation Learning Model per assembly
+		Relazioni semantiche tra token co-occorenti
+		Funzione rappresentata come media pesata degli embedding
+
+	-PalmTree (2021):
+		Basato su BERT
+		A differenza di ASM2VEC va più nel dettaglio(anzichè lavorare direttamente sulle funzioni, lavora sulle singole instruzioni)
+		Usa data flow e instruction reordering detection
+		Masked Instruction Prediction
+
+	-Genius (2016):
+		Usa locality sensitive hashing 
+		Converte CFG in feature vettoriali numeriche
+
+	-LibSeeker-Rizzi (2025):
+		Creazione di embedding sulla sequenza di opcode delle istruzioni di ogni funzione con FastText
+		Si costruisce un mapping tra funzioni della Compilation Unit (CU) e le funzioni del binario per ogni CU
+		Dopo aver trovato la coppia migliore si esplora con un matching windows cercando di massimizzare la similarità
+
+
+
+
 Findings:
 1) Call_fini -> funzione che si trova sempre dopo le funzioni delle librerie, creata dal compilatore; presente sia per gcc che per clang; ci sono anche due funzioni che a volte si mettono sopra call_fini-> handle_amd e handle_zhaoxin che sono sempre funzioni del compilatore
 2) .rodata -> Contiene le strighe delle librerie come previsto, ma in caso di ottimazzioni il loro contenuto può venire spezzettato o riordinato in maniera casuale -> Tendenzialmente però è molto affidabile. Anche se una funzione della libreria non viene chiamata il contenuto di .rodata di quella funzione viene comunque importata così come la funzione stessa
@@ -7,3 +52,5 @@ Findings:
 6) Se le funzioni di una compilation unit non vengono chiamate allora questa non viene importata come previsto, stessa cosa vale per il .rodata
 7) Il CFG resta uguale tra compilation unit ed elf -> Viene "importato" così com'è 
 8) Nel file della static library (.a) abbiamo le compilation unit una dietro l'altra per ordine di "archiviazione". Abbiamo una sezione .text per compilation unit. 
+9) Se una libreria ha una dipendenza con un'altra libreria (con libreria intendo un .a) anche se nessuna funzione che usa quella seconda libreria viene chiamata, tutta la compilation unit viene importata; L'ordine di compilazione dei .a è importante se non viene messo in ordine la compilazione fallisce.
+10) 
