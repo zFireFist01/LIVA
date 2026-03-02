@@ -1,0 +1,85 @@
+--- average (FILE A)
++++ average (FILE B)
+@@ -1,21 +1,21 @@
+-00000000004021cb <average>:
+
+-  4021cb:	f3 0f 1e fa          	endbr64 
+
+-  4021cf:	55                   	push   %rbp
+
+-  4021d0:	48 89 e5             	mov    %rsp,%rbp
+
+-  4021d3:	48 83 ec 10          	sub    $0x10,%rsp
+
+-  4021d7:	48 89 7d f8          	mov    %rdi,-0x8(%rbp)
+
+-  4021db:	89 75 f4             	mov    %esi,-0xc(%rbp)
+
+-  4021de:	83 7d f4 00          	cmpl   $0x0,-0xc(%rbp)
+
+-  4021e2:	75 07                	jne    4021eb <average+0x20>
+
+-  4021e4:	b8 00 00 00 00       	mov    $0x0,%eax
+
+-  4021e9:	eb 15                	jmp    402200 <average+0x35>
+
+-  4021eb:	8b 55 f4             	mov    -0xc(%rbp),%edx
+
+-  4021ee:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+
+-  4021f2:	89 d6                	mov    %edx,%esi
+
+-  4021f4:	48 89 c7             	mov    %rax,%rdi
+
+-  4021f7:	e8 86 ff ff ff       	call   402182 <sum>
+
+-  4021fc:	99                   	cltd   
+
+-  4021fd:	f7 7d f4             	idivl  -0xc(%rbp)
+
+-  402200:	c9                   	leave  
+
+-  402201:	c3                   	ret    
+
++000000000040212b <average>:
+
++  40212b:	f3 0f 1e fa          	endbr64 
+
++  40212f:	55                   	push   %rbp
+
++  402130:	48 89 e5             	mov    %rsp,%rbp
+
++  402133:	48 83 ec 10          	sub    $0x10,%rsp
+
++  402137:	48 89 7d f8          	mov    %rdi,-0x8(%rbp)
+
++  40213b:	89 75 f4             	mov    %esi,-0xc(%rbp)
+
++  40213e:	83 7d f4 00          	cmpl   $0x0,-0xc(%rbp)
+
++  402142:	75 07                	jne    40214b <average+0x20>
+
++  402144:	b8 00 00 00 00       	mov    $0x0,%eax
+
++  402149:	eb 15                	jmp    402160 <average+0x35>
+
++  40214b:	8b 55 f4             	mov    -0xc(%rbp),%edx
+
++  40214e:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+
++  402152:	89 d6                	mov    %edx,%esi
+
++  402154:	48 89 c7             	mov    %rax,%rdi
+
++  402157:	e8 86 ff ff ff       	call   4020e2 <sum>
+
++  40215c:	99                   	cltd   
+
++  40215d:	f7 7d f4             	idivl  -0xc(%rbp)
+
++  402160:	c9                   	leave  
+
++  402161:	c3                   	ret    
+
+ 
+

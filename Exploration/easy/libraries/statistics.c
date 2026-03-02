@@ -7,6 +7,9 @@ int sum(int arr[], int size) {
     for (int i = 0; i < size; i++) {
         total += arr[i];
     }
+
+    printf("Computed sum: %d\n", total);  // Debug statement
+    printf("Array size: %d\n", size);  // Debug statement
     return total;
 }
 

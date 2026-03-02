@@ -1,0 +1,81 @@
+--- sumOfSquares (FILE A)
++++ sumOfSquares (FILE B)
+@@ -1,20 +1,20 @@
+-0000000000401dd3 <sumOfSquares>:
+
+-  401dd3:	f3 0f 1e fa          	endbr64 
+
+-  401dd7:	55                   	push   %rbp
+
+-  401dd8:	48 89 e5             	mov    %rsp,%rbp
+
+-  401ddb:	53                   	push   %rbx
+
+-  401ddc:	48 83 ec 08          	sub    $0x8,%rsp
+
+-  401de0:	89 7d f4             	mov    %edi,-0xc(%rbp)
+
+-  401de3:	89 75 f0             	mov    %esi,-0x10(%rbp)
+
+-  401de6:	8b 45 f4             	mov    -0xc(%rbp),%eax
+
+-  401de9:	89 c7                	mov    %eax,%edi
+
+-  401deb:	e8 f8 fe ff ff       	call   401ce8 <square>
+
+-  401df0:	89 c3                	mov    %eax,%ebx
+
+-  401df2:	8b 45 f0             	mov    -0x10(%rbp),%eax
+
+-  401df5:	89 c7                	mov    %eax,%edi
+
+-  401df7:	e8 ec fe ff ff       	call   401ce8 <square>
+
+-  401dfc:	01 d8                	add    %ebx,%eax
+
+-  401dfe:	48 8b 5d f8          	mov    -0x8(%rbp),%rbx
+
+-  401e02:	c9                   	leave  
+
+-  401e03:	c3                   	ret    
+
++0000000000401d33 <sumOfSquares>:
+
++  401d33:	f3 0f 1e fa          	endbr64 
+
++  401d37:	55                   	push   %rbp
+
++  401d38:	48 89 e5             	mov    %rsp,%rbp
+
++  401d3b:	53                   	push   %rbx
+
++  401d3c:	48 83 ec 08          	sub    $0x8,%rsp
+
++  401d40:	89 7d f4             	mov    %edi,-0xc(%rbp)
+
++  401d43:	89 75 f0             	mov    %esi,-0x10(%rbp)
+
++  401d46:	8b 45 f4             	mov    -0xc(%rbp),%eax
+
++  401d49:	89 c7                	mov    %eax,%edi
+
++  401d4b:	e8 f8 fe ff ff       	call   401c48 <square>
+
++  401d50:	89 c3                	mov    %eax,%ebx
+
++  401d52:	8b 45 f0             	mov    -0x10(%rbp),%eax
+
++  401d55:	89 c7                	mov    %eax,%edi
+
++  401d57:	e8 ec fe ff ff       	call   401c48 <square>
+
++  401d5c:	01 d8                	add    %ebx,%eax
+
++  401d5e:	48 8b 5d f8          	mov    -0x8(%rbp),%rbx
+
++  401d62:	c9                   	leave  
+
++  401d63:	c3                   	ret    
+
+ 
+

@@ -1,0 +1,101 @@
+--- countPrimesInRange (FILE A)
++++ countPrimesInRange (FILE B)
+@@ -1,25 +1,25 @@
+-0000000000401e31 <countPrimesInRange>:
+
+-  401e31:	f3 0f 1e fa          	endbr64 
+
+-  401e35:	55                   	push   %rbp
+
+-  401e36:	48 89 e5             	mov    %rsp,%rbp
+
+-  401e39:	48 83 ec 18          	sub    $0x18,%rsp
+
+-  401e3d:	89 7d ec             	mov    %edi,-0x14(%rbp)
+
+-  401e40:	89 75 e8             	mov    %esi,-0x18(%rbp)
+
+-  401e43:	c7 45 f8 00 00 00 00 	movl   $0x0,-0x8(%rbp)
+
+-  401e4a:	8b 45 ec             	mov    -0x14(%rbp),%eax
+
+-  401e4d:	89 45 fc             	mov    %eax,-0x4(%rbp)
+
+-  401e50:	eb 16                	jmp    401e68 <countPrimesInRange+0x37>
+
+-  401e52:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401e55:	89 c7                	mov    %eax,%edi
+
+-  401e57:	e8 2c ff ff ff       	call   401d88 <isPrime>
+
+-  401e5c:	85 c0                	test   %eax,%eax
+
+-  401e5e:	74 04                	je     401e64 <countPrimesInRange+0x33>
+
+-  401e60:	83 45 f8 01          	addl   $0x1,-0x8(%rbp)
+
+-  401e64:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+
+-  401e68:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401e6b:	3b 45 e8             	cmp    -0x18(%rbp),%eax
+
+-  401e6e:	7e e2                	jle    401e52 <countPrimesInRange+0x21>
+
+-  401e70:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
+-  401e73:	c9                   	leave  
+
+-  401e74:	c3                   	ret    
+
++0000000000401d91 <countPrimesInRange>:
+
++  401d91:	f3 0f 1e fa          	endbr64 
+
++  401d95:	55                   	push   %rbp
+
++  401d96:	48 89 e5             	mov    %rsp,%rbp
+
++  401d99:	48 83 ec 18          	sub    $0x18,%rsp
+
++  401d9d:	89 7d ec             	mov    %edi,-0x14(%rbp)
+
++  401da0:	89 75 e8             	mov    %esi,-0x18(%rbp)
+
++  401da3:	c7 45 f8 00 00 00 00 	movl   $0x0,-0x8(%rbp)
+
++  401daa:	8b 45 ec             	mov    -0x14(%rbp),%eax
+
++  401dad:	89 45 fc             	mov    %eax,-0x4(%rbp)
+
++  401db0:	eb 16                	jmp    401dc8 <countPrimesInRange+0x37>
+
++  401db2:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  401db5:	89 c7                	mov    %eax,%edi
+
++  401db7:	e8 2c ff ff ff       	call   401ce8 <isPrime>
+
++  401dbc:	85 c0                	test   %eax,%eax
+
++  401dbe:	74 04                	je     401dc4 <countPrimesInRange+0x33>
+
++  401dc0:	83 45 f8 01          	addl   $0x1,-0x8(%rbp)
+
++  401dc4:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+
++  401dc8:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  401dcb:	3b 45 e8             	cmp    -0x18(%rbp),%eax
+
++  401dce:	7e e2                	jle    401db2 <countPrimesInRange+0x21>
+
++  401dd0:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
++  401dd3:	c9                   	leave  
+
++  401dd4:	c3                   	ret    
+
+ 
+

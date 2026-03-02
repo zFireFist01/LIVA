@@ -1,0 +1,161 @@
+--- printBinary (FILE A)
++++ printBinary (FILE B)
+@@ -1,30 +1,50 @@
+-000000000040191b <printBinary>:
+
+-  40191b:	f3 0f 1e fa          	endbr64 
+
+-  40191f:	55                   	push   %rbp
+
+-  401920:	48 89 e5             	mov    %rsp,%rbp
+
+-  401923:	48 83 ec 10          	sub    $0x10,%rsp
+
+-  401927:	89 7d fc             	mov    %edi,-0x4(%rbp)
+
+-  40192a:	83 7d fc 01          	cmpl   $0x1,-0x4(%rbp)
+
+-  40192e:	7e 13                	jle    401943 <printBinary+0x28>
+
+-  401930:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401933:	89 c2                	mov    %eax,%edx
+
+-  401935:	c1 ea 1f             	shr    $0x1f,%edx
+
+-  401938:	01 d0                	add    %edx,%eax
+
+-  40193a:	d1 f8                	sar    %eax
+
+-  40193c:	89 c7                	mov    %eax,%edi
+
+-  40193e:	e8 d8 ff ff ff       	call   40191b <printBinary>
+
+-  401943:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401946:	99                   	cltd   
+
+-  401947:	c1 ea 1f             	shr    $0x1f,%edx
+
+-  40194a:	01 d0                	add    %edx,%eax
+
+-  40194c:	83 e0 01             	and    $0x1,%eax
+
+-  40194f:	29 d0                	sub    %edx,%eax
+
+-  401951:	89 c6                	mov    %eax,%esi
+
+-  401953:	48 8d 05 ae 76 09 00 	lea    0x976ae(%rip),%rax        # 499008 <_IO_stdin_used+0x8>
+
+-  40195a:	48 89 c7             	mov    %rax,%rdi
+
+-  40195d:	b8 00 00 00 00       	mov    $0x0,%eax
+
+-  401962:	e8 d9 a8 00 00       	call   40c240 <_IO_printf>
+
+-  401967:	90                   	nop
+
+-  401968:	c9                   	leave  
+
+-  401969:	c3                   	ret    
+
++0000000000401b30 <printBinary>:
+
++  401b30:	f3 0f 1e fa          	endbr64 
+
++  401b34:	41 54                	push   %r12
+
++  401b36:	55                   	push   %rbp
+
++  401b37:	48 8d 2d 13 b5 09 00 	lea    0x9b513(%rip),%rbp        # 49d051 <__PRETTY_FUNCTION__.0+0x41>
+
++  401b3e:	53                   	push   %rbx
+
++  401b3f:	89 fb                	mov    %edi,%ebx
+
++  401b41:	83 ff 01             	cmp    $0x1,%edi
+
++  401b44:	7f 2a                	jg     401b70 <printBinary+0x40>
+
++  401b46:	89 d8                	mov    %ebx,%eax
+
++  401b48:	48 89 ee             	mov    %rbp,%rsi
+
++  401b4b:	bf 01 00 00 00       	mov    $0x1,%edi
+
++  401b50:	c1 e8 1f             	shr    $0x1f,%eax
+
++  401b53:	8d 14 03             	lea    (%rbx,%rax,1),%edx
+
++  401b56:	5b                   	pop    %rbx
+
++  401b57:	5d                   	pop    %rbp
+
++  401b58:	83 e2 01             	and    $0x1,%edx
+
++  401b5b:	41 5c                	pop    %r12
+
++  401b5d:	29 c2                	sub    %eax,%edx
+
++  401b5f:	31 c0                	xor    %eax,%eax
+
++  401b61:	e9 aa 0e 05 00       	jmp    452a10 <___printf_chk>
+
++  401b66:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+
++  401b6d:	00 00 00 
+
++  401b70:	41 89 fc             	mov    %edi,%r12d
+
++  401b73:	41 d1 fc             	sar    %r12d
+
++  401b76:	41 83 fc 01          	cmp    $0x1,%r12d
+
++  401b7a:	75 1c                	jne    401b98 <printBinary+0x68>
+
++  401b7c:	44 89 e2             	mov    %r12d,%edx
+
++  401b7f:	48 89 ee             	mov    %rbp,%rsi
+
++  401b82:	bf 01 00 00 00       	mov    $0x1,%edi
+
++  401b87:	31 c0                	xor    %eax,%eax
+
++  401b89:	83 e2 01             	and    $0x1,%edx
+
++  401b8c:	e8 7f 0e 05 00       	call   452a10 <___printf_chk>
+
++  401b91:	eb b3                	jmp    401b46 <printBinary+0x16>
+
++  401b93:	0f 1f 44 00 00       	nopl   0x0(%rax,%rax,1)
+
++  401b98:	89 fd                	mov    %edi,%ebp
+
++  401b9a:	c1 fd 02             	sar    $0x2,%ebp
+
++  401b9d:	83 fd 01             	cmp    $0x1,%ebp
+
++  401ba0:	74 08                	je     401baa <printBinary+0x7a>
+
++  401ba2:	c1 ff 03             	sar    $0x3,%edi
+
++  401ba5:	e8 86 ff ff ff       	call   401b30 <printBinary>
+
++  401baa:	89 ea                	mov    %ebp,%edx
+
++  401bac:	48 8d 2d 9e b4 09 00 	lea    0x9b49e(%rip),%rbp        # 49d051 <__PRETTY_FUNCTION__.0+0x41>
+
++  401bb3:	bf 01 00 00 00       	mov    $0x1,%edi
+
++  401bb8:	31 c0                	xor    %eax,%eax
+
++  401bba:	83 e2 01             	and    $0x1,%edx
+
++  401bbd:	48 89 ee             	mov    %rbp,%rsi
+
++  401bc0:	e8 4b 0e 05 00       	call   452a10 <___printf_chk>
+
++  401bc5:	eb b5                	jmp    401b7c <printBinary+0x4c>
+
+ 
+

@@ -1,0 +1,45 @@
+--- multiply (FILE A)
++++ multiply (FILE B)
+@@ -1,11 +1,11 @@
+-0000000000401cad <multiply>:
+
+-  401cad:	f3 0f 1e fa          	endbr64 
+
+-  401cb1:	55                   	push   %rbp
+
+-  401cb2:	48 89 e5             	mov    %rsp,%rbp
+
+-  401cb5:	89 7d fc             	mov    %edi,-0x4(%rbp)
+
+-  401cb8:	89 75 f8             	mov    %esi,-0x8(%rbp)
+
+-  401cbb:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401cbe:	0f af 45 f8          	imul   -0x8(%rbp),%eax
+
+-  401cc2:	5d                   	pop    %rbp
+
+-  401cc3:	c3                   	ret    
+
++0000000000401c0d <multiply>:
+
++  401c0d:	f3 0f 1e fa          	endbr64 
+
++  401c11:	55                   	push   %rbp
+
++  401c12:	48 89 e5             	mov    %rsp,%rbp
+
++  401c15:	89 7d fc             	mov    %edi,-0x4(%rbp)
+
++  401c18:	89 75 f8             	mov    %esi,-0x8(%rbp)
+
++  401c1b:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  401c1e:	0f af 45 f8          	imul   -0x8(%rbp),%eax
+
++  401c22:	5d                   	pop    %rbp
+
++  401c23:	c3                   	ret    
+
+ 
+

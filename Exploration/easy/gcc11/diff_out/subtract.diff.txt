@@ -1,0 +1,65 @@
+--- subtract (FILE A)
++++ subtract (FILE B)
+@@ -1,16 +1,16 @@
+-0000000000401c7f <subtract>:
+
+-  401c7f:	f3 0f 1e fa          	endbr64 
+
+-  401c83:	55                   	push   %rbp
+
+-  401c84:	48 89 e5             	mov    %rsp,%rbp
+
+-  401c87:	48 83 ec 10          	sub    $0x10,%rsp
+
+-  401c8b:	89 7d fc             	mov    %edi,-0x4(%rbp)
+
+-  401c8e:	89 75 f8             	mov    %esi,-0x8(%rbp)
+
+-  401c91:	48 8d 05 3d 75 09 00 	lea    0x9753d(%rip),%rax        # 4991d5 <_IO_stdin_used+0x1d5>
+
+-  401c98:	48 89 c7             	mov    %rax,%rdi
+
+-  401c9b:	b8 00 00 00 00       	mov    $0x0,%eax
+
+-  401ca0:	e8 9b a5 00 00       	call   40c240 <_IO_printf>
+
+-  401ca5:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401ca8:	2b 45 f8             	sub    -0x8(%rbp),%eax
+
+-  401cab:	c9                   	leave  
+
+-  401cac:	c3                   	ret    
+
++0000000000401bdf <subtract>:
+
++  401bdf:	f3 0f 1e fa          	endbr64 
+
++  401be3:	55                   	push   %rbp
+
++  401be4:	48 89 e5             	mov    %rsp,%rbp
+
++  401be7:	48 83 ec 10          	sub    $0x10,%rsp
+
++  401beb:	89 7d fc             	mov    %edi,-0x4(%rbp)
+
++  401bee:	89 75 f8             	mov    %esi,-0x8(%rbp)
+
++  401bf1:	48 8d 05 f8 75 09 00 	lea    0x975f8(%rip),%rax        # 4991f0 <_IO_stdin_used+0x1f0>
+
++  401bf8:	48 89 c7             	mov    %rax,%rdi
+
++  401bfb:	b8 00 00 00 00       	mov    $0x0,%eax
+
++  401c00:	e8 9b a5 00 00       	call   40c1a0 <_IO_printf>
+
++  401c05:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  401c08:	2b 45 f8             	sub    -0x8(%rbp),%eax
+
++  401c0b:	c9                   	leave  
+
++  401c0c:	c3                   	ret    
+
+ 
+

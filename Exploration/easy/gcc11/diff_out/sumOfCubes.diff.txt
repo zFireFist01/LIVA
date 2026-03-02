@@ -1,0 +1,145 @@
+--- sumOfCubes (FILE A)
++++ sumOfCubes (FILE B)
+@@ -1,36 +1,36 @@
+-000000000040236a <sumOfCubes>:
+
+-  40236a:	f3 0f 1e fa          	endbr64 
+
+-  40236e:	55                   	push   %rbp
+
+-  40236f:	48 89 e5             	mov    %rsp,%rbp
+
+-  402372:	48 83 ec 20          	sub    $0x20,%rsp
+
+-  402376:	48 89 7d e8          	mov    %rdi,-0x18(%rbp)
+
+-  40237a:	89 75 e4             	mov    %esi,-0x1c(%rbp)
+
+-  40237d:	c7 45 f8 00 00 00 00 	movl   $0x0,-0x8(%rbp)
+
+-  402384:	8b 45 e4             	mov    -0x1c(%rbp),%eax
+
+-  402387:	89 c6                	mov    %eax,%esi
+
+-  402389:	48 8d 05 98 6e 09 00 	lea    0x96e98(%rip),%rax        # 499228 <_IO_stdin_used+0x228>
+
+-  402390:	48 89 c7             	mov    %rax,%rdi
+
+-  402393:	b8 00 00 00 00       	mov    $0x0,%eax
+
+-  402398:	e8 a3 9e 00 00       	call   40c240 <_IO_printf>
+
+-  40239d:	c7 45 fc 00 00 00 00 	movl   $0x0,-0x4(%rbp)
+
+-  4023a4:	eb 24                	jmp    4023ca <sumOfCubes+0x60>
+
+-  4023a6:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  4023a9:	48 98                	cltq   
+
+-  4023ab:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
+-  4023b2:	00 
+
+-  4023b3:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
+-  4023b7:	48 01 d0             	add    %rdx,%rax
+
+-  4023ba:	8b 00                	mov    (%rax),%eax
+
+-  4023bc:	89 c7                	mov    %eax,%edi
+
+-  4023be:	e8 38 f9 ff ff       	call   401cfb <cube>
+
+-  4023c3:	01 45 f8             	add    %eax,-0x8(%rbp)
+
+-  4023c6:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+
+-  4023ca:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  4023cd:	3b 45 e4             	cmp    -0x1c(%rbp),%eax
+
+-  4023d0:	7c d4                	jl     4023a6 <sumOfCubes+0x3c>
+
+-  4023d2:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
+-  4023d5:	c9                   	leave  
+
+-  4023d6:	c3                   	ret    
+
+-  4023d7:	66 0f 1f 84 00 00 00 	nopw   0x0(%rax,%rax,1)
+
+-  4023de:	00 00 
+
++00000000004022ca <sumOfCubes>:
+
++  4022ca:	f3 0f 1e fa          	endbr64 
+
++  4022ce:	55                   	push   %rbp
+
++  4022cf:	48 89 e5             	mov    %rsp,%rbp
+
++  4022d2:	48 83 ec 20          	sub    $0x20,%rsp
+
++  4022d6:	48 89 7d e8          	mov    %rdi,-0x18(%rbp)
+
++  4022da:	89 75 e4             	mov    %esi,-0x1c(%rbp)
+
++  4022dd:	c7 45 f8 00 00 00 00 	movl   $0x0,-0x8(%rbp)
+
++  4022e4:	8b 45 e4             	mov    -0x1c(%rbp),%eax
+
++  4022e7:	89 c6                	mov    %eax,%esi
+
++  4022e9:	48 8d 05 50 6f 09 00 	lea    0x96f50(%rip),%rax        # 499240 <_IO_stdin_used+0x240>
+
++  4022f0:	48 89 c7             	mov    %rax,%rdi
+
++  4022f3:	b8 00 00 00 00       	mov    $0x0,%eax
+
++  4022f8:	e8 a3 9e 00 00       	call   40c1a0 <_IO_printf>
+
++  4022fd:	c7 45 fc 00 00 00 00 	movl   $0x0,-0x4(%rbp)
+
++  402304:	eb 24                	jmp    40232a <sumOfCubes+0x60>
+
++  402306:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  402309:	48 98                	cltq   
+
++  40230b:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
++  402312:	00 
+
++  402313:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
++  402317:	48 01 d0             	add    %rdx,%rax
+
++  40231a:	8b 00                	mov    (%rax),%eax
+
++  40231c:	89 c7                	mov    %eax,%edi
+
++  40231e:	e8 38 f9 ff ff       	call   401c5b <cube>
+
++  402323:	01 45 f8             	add    %eax,-0x8(%rbp)
+
++  402326:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+
++  40232a:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  40232d:	3b 45 e4             	cmp    -0x1c(%rbp),%eax
+
++  402330:	7c d4                	jl     402306 <sumOfCubes+0x3c>
+
++  402332:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
++  402335:	c9                   	leave  
+
++  402336:	c3                   	ret    
+
++  402337:	66 0f 1f 84 00 00 00 	nopw   0x0(%rax,%rax,1)
+
++  40233e:	00 00 
+
+ 
+

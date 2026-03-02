@@ -1,0 +1,73 @@
+--- cube (FILE A)
++++ cube (FILE B)
+@@ -1,18 +1,18 @@
+-0000000000401cfb <cube>:
+
+-  401cfb:	f3 0f 1e fa          	endbr64 
+
+-  401cff:	55                   	push   %rbp
+
+-  401d00:	48 89 e5             	mov    %rsp,%rbp
+
+-  401d03:	48 83 ec 10          	sub    $0x10,%rsp
+
+-  401d07:	89 7d fc             	mov    %edi,-0x4(%rbp)
+
+-  401d0a:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401d0d:	89 c6                	mov    %eax,%esi
+
+-  401d0f:	48 8d 05 d2 74 09 00 	lea    0x974d2(%rip),%rax        # 4991e8 <_IO_stdin_used+0x1e8>
+
+-  401d16:	48 89 c7             	mov    %rax,%rdi
+
+-  401d19:	b8 00 00 00 00       	mov    $0x0,%eax
+
+-  401d1e:	e8 1d a5 00 00       	call   40c240 <_IO_printf>
+
+-  401d23:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401d26:	0f af c0             	imul   %eax,%eax
+
+-  401d29:	0f af 45 fc          	imul   -0x4(%rbp),%eax
+
+-  401d2d:	c9                   	leave  
+
+-  401d2e:	c3                   	ret    
+
++0000000000401c5b <cube>:
+
++  401c5b:	f3 0f 1e fa          	endbr64 
+
++  401c5f:	55                   	push   %rbp
+
++  401c60:	48 89 e5             	mov    %rsp,%rbp
+
++  401c63:	48 83 ec 10          	sub    $0x10,%rsp
+
++  401c67:	89 7d fc             	mov    %edi,-0x4(%rbp)
+
++  401c6a:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  401c6d:	89 c6                	mov    %eax,%esi
+
++  401c6f:	48 8d 05 8a 75 09 00 	lea    0x9758a(%rip),%rax        # 499200 <_IO_stdin_used+0x200>
+
++  401c76:	48 89 c7             	mov    %rax,%rdi
+
++  401c79:	b8 00 00 00 00       	mov    $0x0,%eax
+
++  401c7e:	e8 1d a5 00 00       	call   40c1a0 <_IO_printf>
+
++  401c83:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  401c86:	0f af c0             	imul   %eax,%eax
+
++  401c89:	0f af 45 fc          	imul   -0x4(%rbp),%eax
+
++  401c8d:	c9                   	leave  
+
++  401c8e:	c3                   	ret    
+
+ 
+

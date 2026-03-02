@@ -1,0 +1,161 @@
+--- findMax (FILE A)
++++ findMax (FILE B)
+@@ -1,40 +1,40 @@
+-0000000000402202 <findMax>:
+
+-  402202:	f3 0f 1e fa          	endbr64 
+
+-  402206:	55                   	push   %rbp
+
+-  402207:	48 89 e5             	mov    %rsp,%rbp
+
+-  40220a:	48 89 7d e8          	mov    %rdi,-0x18(%rbp)
+
+-  40220e:	89 75 e4             	mov    %esi,-0x1c(%rbp)
+
+-  402211:	83 7d e4 00          	cmpl   $0x0,-0x1c(%rbp)
+
+-  402215:	75 07                	jne    40221e <findMax+0x1c>
+
+-  402217:	b8 00 00 00 00       	mov    $0x0,%eax
+
+-  40221c:	eb 55                	jmp    402273 <findMax+0x71>
+
+-  40221e:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
+-  402222:	8b 00                	mov    (%rax),%eax
+
+-  402224:	89 45 f8             	mov    %eax,-0x8(%rbp)
+
+-  402227:	c7 45 fc 01 00 00 00 	movl   $0x1,-0x4(%rbp)
+
+-  40222e:	eb 38                	jmp    402268 <findMax+0x66>
+
+-  402230:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  402233:	48 98                	cltq   
+
+-  402235:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
+-  40223c:	00 
+
+-  40223d:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
+-  402241:	48 01 d0             	add    %rdx,%rax
+
+-  402244:	8b 00                	mov    (%rax),%eax
+
+-  402246:	39 45 f8             	cmp    %eax,-0x8(%rbp)
+
+-  402249:	7d 19                	jge    402264 <findMax+0x62>
+
+-  40224b:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  40224e:	48 98                	cltq   
+
+-  402250:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
+-  402257:	00 
+
+-  402258:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
+-  40225c:	48 01 d0             	add    %rdx,%rax
+
+-  40225f:	8b 00                	mov    (%rax),%eax
+
+-  402261:	89 45 f8             	mov    %eax,-0x8(%rbp)
+
+-  402264:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+
+-  402268:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  40226b:	3b 45 e4             	cmp    -0x1c(%rbp),%eax
+
+-  40226e:	7c c0                	jl     402230 <findMax+0x2e>
+
+-  402270:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
+-  402273:	5d                   	pop    %rbp
+
+-  402274:	c3                   	ret    
+
++0000000000402162 <findMax>:
+
++  402162:	f3 0f 1e fa          	endbr64 
+
++  402166:	55                   	push   %rbp
+
++  402167:	48 89 e5             	mov    %rsp,%rbp
+
++  40216a:	48 89 7d e8          	mov    %rdi,-0x18(%rbp)
+
++  40216e:	89 75 e4             	mov    %esi,-0x1c(%rbp)
+
++  402171:	83 7d e4 00          	cmpl   $0x0,-0x1c(%rbp)
+
++  402175:	75 07                	jne    40217e <findMax+0x1c>
+
++  402177:	b8 00 00 00 00       	mov    $0x0,%eax
+
++  40217c:	eb 55                	jmp    4021d3 <findMax+0x71>
+
++  40217e:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
++  402182:	8b 00                	mov    (%rax),%eax
+
++  402184:	89 45 f8             	mov    %eax,-0x8(%rbp)
+
++  402187:	c7 45 fc 01 00 00 00 	movl   $0x1,-0x4(%rbp)
+
++  40218e:	eb 38                	jmp    4021c8 <findMax+0x66>
+
++  402190:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  402193:	48 98                	cltq   
+
++  402195:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
++  40219c:	00 
+
++  40219d:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
++  4021a1:	48 01 d0             	add    %rdx,%rax
+
++  4021a4:	8b 00                	mov    (%rax),%eax
+
++  4021a6:	39 45 f8             	cmp    %eax,-0x8(%rbp)
+
++  4021a9:	7d 19                	jge    4021c4 <findMax+0x62>
+
++  4021ab:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  4021ae:	48 98                	cltq   
+
++  4021b0:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
++  4021b7:	00 
+
++  4021b8:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
++  4021bc:	48 01 d0             	add    %rdx,%rax
+
++  4021bf:	8b 00                	mov    (%rax),%eax
+
++  4021c1:	89 45 f8             	mov    %eax,-0x8(%rbp)
+
++  4021c4:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+
++  4021c8:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  4021cb:	3b 45 e4             	cmp    -0x1c(%rbp),%eax
+
++  4021ce:	7c c0                	jl     402190 <findMax+0x2e>
+
++  4021d0:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
++  4021d3:	5d                   	pop    %rbp
+
++  4021d4:	c3                   	ret    
+
+ 
+

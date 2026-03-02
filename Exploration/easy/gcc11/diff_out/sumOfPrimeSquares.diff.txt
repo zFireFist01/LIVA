@@ -1,0 +1,445 @@
+--- sumOfPrimeSquares (FILE A)
++++ sumOfPrimeSquares (FILE B)
+@@ -1,111 +1,111 @@
+-0000000000402009 <sumOfPrimeSquares>:
+
+-  402009:	f3 0f 1e fa          	endbr64 
+
+-  40200d:	55                   	push   %rbp
+
+-  40200e:	48 89 e5             	mov    %rsp,%rbp
+
+-  402011:	41 54                	push   %r12
+
+-  402013:	53                   	push   %rbx
+
+-  402014:	48 83 ec 30          	sub    $0x30,%rsp
+
+-  402018:	48 89 7d c8          	mov    %rdi,-0x38(%rbp)
+
+-  40201c:	89 75 c4             	mov    %esi,-0x3c(%rbp)
+
+-  40201f:	64 48 8b 04 25 28 00 	mov    %fs:0x28,%rax
+
+-  402026:	00 00 
+
+-  402028:	48 89 45 e8          	mov    %rax,-0x18(%rbp)
+
+-  40202c:	31 c0                	xor    %eax,%eax
+
+-  40202e:	48 89 e0             	mov    %rsp,%rax
+
+-  402031:	49 89 c4             	mov    %rax,%r12
+
+-  402034:	8b 45 c4             	mov    -0x3c(%rbp),%eax
+
+-  402037:	48 63 d0             	movslq %eax,%rdx
+
+-  40203a:	48 83 ea 01          	sub    $0x1,%rdx
+
+-  40203e:	48 89 55 d8          	mov    %rdx,-0x28(%rbp)
+
+-  402042:	48 63 d0             	movslq %eax,%rdx
+
+-  402045:	49 89 d0             	mov    %rdx,%r8
+
+-  402048:	41 b9 00 00 00 00    	mov    $0x0,%r9d
+
+-  40204e:	48 63 d0             	movslq %eax,%rdx
+
+-  402051:	48 89 d1             	mov    %rdx,%rcx
+
+-  402054:	bb 00 00 00 00       	mov    $0x0,%ebx
+
+-  402059:	48 98                	cltq   
+
+-  40205b:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
+-  402062:	00 
+
+-  402063:	b8 10 00 00 00       	mov    $0x10,%eax
+
+-  402068:	48 83 e8 01          	sub    $0x1,%rax
+
+-  40206c:	48 01 d0             	add    %rdx,%rax
+
+-  40206f:	be 10 00 00 00       	mov    $0x10,%esi
+
+-  402074:	ba 00 00 00 00       	mov    $0x0,%edx
+
+-  402079:	48 f7 f6             	div    %rsi
+
+-  40207c:	48 6b c0 10          	imul   $0x10,%rax,%rax
+
+-  402080:	48 89 c1             	mov    %rax,%rcx
+
+-  402083:	48 81 e1 00 f0 ff ff 	and    $0xfffffffffffff000,%rcx
+
+-  40208a:	48 89 e2             	mov    %rsp,%rdx
+
+-  40208d:	48 29 ca             	sub    %rcx,%rdx
+
+-  402090:	48 39 d4             	cmp    %rdx,%rsp
+
+-  402093:	74 12                	je     4020a7 <sumOfPrimeSquares+0x9e>
+
+-  402095:	48 81 ec 00 10 00 00 	sub    $0x1000,%rsp
+
+-  40209c:	48 83 8c 24 f8 0f 00 	orq    $0x0,0xff8(%rsp)
+
+-  4020a3:	00 00 
+
+-  4020a5:	eb e9                	jmp    402090 <sumOfPrimeSquares+0x87>
+
+-  4020a7:	48 89 c2             	mov    %rax,%rdx
+
+-  4020aa:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+
+-  4020b0:	48 29 d4             	sub    %rdx,%rsp
+
+-  4020b3:	48 89 c2             	mov    %rax,%rdx
+
+-  4020b6:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+
+-  4020bc:	48 85 d2             	test   %rdx,%rdx
+
+-  4020bf:	74 10                	je     4020d1 <sumOfPrimeSquares+0xc8>
+
+-  4020c1:	25 ff 0f 00 00       	and    $0xfff,%eax
+
+-  4020c6:	48 83 e8 08          	sub    $0x8,%rax
+
+-  4020ca:	48 01 e0             	add    %rsp,%rax
+
+-  4020cd:	48 83 08 00          	orq    $0x0,(%rax)
+
+-  4020d1:	48 89 e0             	mov    %rsp,%rax
+
+-  4020d4:	48 83 c0 03          	add    $0x3,%rax
+
+-  4020d8:	48 c1 e8 02          	shr    $0x2,%rax
+
+-  4020dc:	48 c1 e0 02          	shl    $0x2,%rax
+
+-  4020e0:	48 89 45 e0          	mov    %rax,-0x20(%rbp)
+
+-  4020e4:	c7 45 d0 00 00 00 00 	movl   $0x0,-0x30(%rbp)
+
+-  4020eb:	c7 45 d4 00 00 00 00 	movl   $0x0,-0x2c(%rbp)
+
+-  4020f2:	eb 55                	jmp    402149 <sumOfPrimeSquares+0x140>
+
+-  4020f4:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+
+-  4020f7:	48 98                	cltq   
+
+-  4020f9:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
+-  402100:	00 
+
+-  402101:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+
+-  402105:	48 01 d0             	add    %rdx,%rax
+
+-  402108:	8b 00                	mov    (%rax),%eax
+
+-  40210a:	89 c7                	mov    %eax,%edi
+
+-  40210c:	e8 77 fc ff ff       	call   401d88 <isPrime>
+
+-  402111:	85 c0                	test   %eax,%eax
+
+-  402113:	74 30                	je     402145 <sumOfPrimeSquares+0x13c>
+
+-  402115:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+
+-  402118:	48 98                	cltq   
+
+-  40211a:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
+-  402121:	00 
+
+-  402122:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+
+-  402126:	48 01 d0             	add    %rdx,%rax
+
+-  402129:	8b 00                	mov    (%rax),%eax
+
+-  40212b:	8b 5d d0             	mov    -0x30(%rbp),%ebx
+
+-  40212e:	8d 53 01             	lea    0x1(%rbx),%edx
+
+-  402131:	89 55 d0             	mov    %edx,-0x30(%rbp)
+
+-  402134:	89 c7                	mov    %eax,%edi
+
+-  402136:	e8 ad fb ff ff       	call   401ce8 <square>
+
+-  40213b:	48 8b 55 e0          	mov    -0x20(%rbp),%rdx
+
+-  40213f:	48 63 cb             	movslq %ebx,%rcx
+
+-  402142:	89 04 8a             	mov    %eax,(%rdx,%rcx,4)
+
+-  402145:	83 45 d4 01          	addl   $0x1,-0x2c(%rbp)
+
+-  402149:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+
+-  40214c:	3b 45 c4             	cmp    -0x3c(%rbp),%eax
+
+-  40214f:	7c a3                	jl     4020f4 <sumOfPrimeSquares+0xeb>
+
+-  402151:	8b 55 d0             	mov    -0x30(%rbp),%edx
+
+-  402154:	48 8b 45 e0          	mov    -0x20(%rbp),%rax
+
+-  402158:	89 d6                	mov    %edx,%esi
+
+-  40215a:	48 89 c7             	mov    %rax,%rdi
+
+-  40215d:	e8 20 00 00 00       	call   402182 <sum>
+
+-  402162:	4c 89 e4             	mov    %r12,%rsp
+
+-  402165:	48 8b 55 e8          	mov    -0x18(%rbp),%rdx
+
+-  402169:	64 48 2b 14 25 28 00 	sub    %fs:0x28,%rdx
+
+-  402170:	00 00 
+
+-  402172:	74 05                	je     402179 <sumOfPrimeSquares+0x170>
+
+-  402174:	e8 87 0b 05 00       	call   452d00 <__stack_chk_fail>
+
+-  402179:	48 8d 65 f0          	lea    -0x10(%rbp),%rsp
+
+-  40217d:	5b                   	pop    %rbx
+
+-  40217e:	41 5c                	pop    %r12
+
+-  402180:	5d                   	pop    %rbp
+
+-  402181:	c3                   	ret    
+
++0000000000401f69 <sumOfPrimeSquares>:
+
++  401f69:	f3 0f 1e fa          	endbr64 
+
++  401f6d:	55                   	push   %rbp
+
++  401f6e:	48 89 e5             	mov    %rsp,%rbp
+
++  401f71:	41 54                	push   %r12
+
++  401f73:	53                   	push   %rbx
+
++  401f74:	48 83 ec 30          	sub    $0x30,%rsp
+
++  401f78:	48 89 7d c8          	mov    %rdi,-0x38(%rbp)
+
++  401f7c:	89 75 c4             	mov    %esi,-0x3c(%rbp)
+
++  401f7f:	64 48 8b 04 25 28 00 	mov    %fs:0x28,%rax
+
++  401f86:	00 00 
+
++  401f88:	48 89 45 e8          	mov    %rax,-0x18(%rbp)
+
++  401f8c:	31 c0                	xor    %eax,%eax
+
++  401f8e:	48 89 e0             	mov    %rsp,%rax
+
++  401f91:	49 89 c4             	mov    %rax,%r12
+
++  401f94:	8b 45 c4             	mov    -0x3c(%rbp),%eax
+
++  401f97:	48 63 d0             	movslq %eax,%rdx
+
++  401f9a:	48 83 ea 01          	sub    $0x1,%rdx
+
++  401f9e:	48 89 55 d8          	mov    %rdx,-0x28(%rbp)
+
++  401fa2:	48 63 d0             	movslq %eax,%rdx
+
++  401fa5:	49 89 d0             	mov    %rdx,%r8
+
++  401fa8:	41 b9 00 00 00 00    	mov    $0x0,%r9d
+
++  401fae:	48 63 d0             	movslq %eax,%rdx
+
++  401fb1:	48 89 d1             	mov    %rdx,%rcx
+
++  401fb4:	bb 00 00 00 00       	mov    $0x0,%ebx
+
++  401fb9:	48 98                	cltq   
+
++  401fbb:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
++  401fc2:	00 
+
++  401fc3:	b8 10 00 00 00       	mov    $0x10,%eax
+
++  401fc8:	48 83 e8 01          	sub    $0x1,%rax
+
++  401fcc:	48 01 d0             	add    %rdx,%rax
+
++  401fcf:	be 10 00 00 00       	mov    $0x10,%esi
+
++  401fd4:	ba 00 00 00 00       	mov    $0x0,%edx
+
++  401fd9:	48 f7 f6             	div    %rsi
+
++  401fdc:	48 6b c0 10          	imul   $0x10,%rax,%rax
+
++  401fe0:	48 89 c1             	mov    %rax,%rcx
+
++  401fe3:	48 81 e1 00 f0 ff ff 	and    $0xfffffffffffff000,%rcx
+
++  401fea:	48 89 e2             	mov    %rsp,%rdx
+
++  401fed:	48 29 ca             	sub    %rcx,%rdx
+
++  401ff0:	48 39 d4             	cmp    %rdx,%rsp
+
++  401ff3:	74 12                	je     402007 <sumOfPrimeSquares+0x9e>
+
++  401ff5:	48 81 ec 00 10 00 00 	sub    $0x1000,%rsp
+
++  401ffc:	48 83 8c 24 f8 0f 00 	orq    $0x0,0xff8(%rsp)
+
++  402003:	00 00 
+
++  402005:	eb e9                	jmp    401ff0 <sumOfPrimeSquares+0x87>
+
++  402007:	48 89 c2             	mov    %rax,%rdx
+
++  40200a:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+
++  402010:	48 29 d4             	sub    %rdx,%rsp
+
++  402013:	48 89 c2             	mov    %rax,%rdx
+
++  402016:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+
++  40201c:	48 85 d2             	test   %rdx,%rdx
+
++  40201f:	74 10                	je     402031 <sumOfPrimeSquares+0xc8>
+
++  402021:	25 ff 0f 00 00       	and    $0xfff,%eax
+
++  402026:	48 83 e8 08          	sub    $0x8,%rax
+
++  40202a:	48 01 e0             	add    %rsp,%rax
+
++  40202d:	48 83 08 00          	orq    $0x0,(%rax)
+
++  402031:	48 89 e0             	mov    %rsp,%rax
+
++  402034:	48 83 c0 03          	add    $0x3,%rax
+
++  402038:	48 c1 e8 02          	shr    $0x2,%rax
+
++  40203c:	48 c1 e0 02          	shl    $0x2,%rax
+
++  402040:	48 89 45 e0          	mov    %rax,-0x20(%rbp)
+
++  402044:	c7 45 d0 00 00 00 00 	movl   $0x0,-0x30(%rbp)
+
++  40204b:	c7 45 d4 00 00 00 00 	movl   $0x0,-0x2c(%rbp)
+
++  402052:	eb 55                	jmp    4020a9 <sumOfPrimeSquares+0x140>
+
++  402054:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+
++  402057:	48 98                	cltq   
+
++  402059:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
++  402060:	00 
+
++  402061:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+
++  402065:	48 01 d0             	add    %rdx,%rax
+
++  402068:	8b 00                	mov    (%rax),%eax
+
++  40206a:	89 c7                	mov    %eax,%edi
+
++  40206c:	e8 77 fc ff ff       	call   401ce8 <isPrime>
+
++  402071:	85 c0                	test   %eax,%eax
+
++  402073:	74 30                	je     4020a5 <sumOfPrimeSquares+0x13c>
+
++  402075:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+
++  402078:	48 98                	cltq   
+
++  40207a:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
++  402081:	00 
+
++  402082:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+
++  402086:	48 01 d0             	add    %rdx,%rax
+
++  402089:	8b 00                	mov    (%rax),%eax
+
++  40208b:	8b 5d d0             	mov    -0x30(%rbp),%ebx
+
++  40208e:	8d 53 01             	lea    0x1(%rbx),%edx
+
++  402091:	89 55 d0             	mov    %edx,-0x30(%rbp)
+
++  402094:	89 c7                	mov    %eax,%edi
+
++  402096:	e8 ad fb ff ff       	call   401c48 <square>
+
++  40209b:	48 8b 55 e0          	mov    -0x20(%rbp),%rdx
+
++  40209f:	48 63 cb             	movslq %ebx,%rcx
+
++  4020a2:	89 04 8a             	mov    %eax,(%rdx,%rcx,4)
+
++  4020a5:	83 45 d4 01          	addl   $0x1,-0x2c(%rbp)
+
++  4020a9:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+
++  4020ac:	3b 45 c4             	cmp    -0x3c(%rbp),%eax
+
++  4020af:	7c a3                	jl     402054 <sumOfPrimeSquares+0xeb>
+
++  4020b1:	8b 55 d0             	mov    -0x30(%rbp),%edx
+
++  4020b4:	48 8b 45 e0          	mov    -0x20(%rbp),%rax
+
++  4020b8:	89 d6                	mov    %edx,%esi
+
++  4020ba:	48 89 c7             	mov    %rax,%rdi
+
++  4020bd:	e8 20 00 00 00       	call   4020e2 <sum>
+
++  4020c2:	4c 89 e4             	mov    %r12,%rsp
+
++  4020c5:	48 8b 55 e8          	mov    -0x18(%rbp),%rdx
+
++  4020c9:	64 48 2b 14 25 28 00 	sub    %fs:0x28,%rdx
+
++  4020d0:	00 00 
+
++  4020d2:	74 05                	je     4020d9 <sumOfPrimeSquares+0x170>
+
++  4020d4:	e8 37 0c 05 00       	call   452d10 <__stack_chk_fail>
+
++  4020d9:	48 8d 65 f0          	lea    -0x10(%rbp),%rsp
+
++  4020dd:	5b                   	pop    %rbx
+
++  4020de:	41 5c                	pop    %r12
+
++  4020e0:	5d                   	pop    %rbp
+
++  4020e1:	c3                   	ret    
+
+ 
+

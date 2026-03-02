@@ -1,0 +1,377 @@
+--- averageOfSquares (FILE A)
++++ averageOfSquares (FILE B)
+@@ -1,94 +1,94 @@
+-0000000000401e75 <averageOfSquares>:
+
+-  401e75:	f3 0f 1e fa          	endbr64 
+
+-  401e79:	55                   	push   %rbp
+
+-  401e7a:	48 89 e5             	mov    %rsp,%rbp
+
+-  401e7d:	53                   	push   %rbx
+
+-  401e7e:	48 83 ec 38          	sub    $0x38,%rsp
+
+-  401e82:	48 89 7d c8          	mov    %rdi,-0x38(%rbp)
+
+-  401e86:	89 75 c4             	mov    %esi,-0x3c(%rbp)
+
+-  401e89:	64 48 8b 04 25 28 00 	mov    %fs:0x28,%rax
+
+-  401e90:	00 00 
+
+-  401e92:	48 89 45 e8          	mov    %rax,-0x18(%rbp)
+
+-  401e96:	31 c0                	xor    %eax,%eax
+
+-  401e98:	48 89 e0             	mov    %rsp,%rax
+
+-  401e9b:	48 89 c3             	mov    %rax,%rbx
+
+-  401e9e:	8b 45 c4             	mov    -0x3c(%rbp),%eax
+
+-  401ea1:	48 63 d0             	movslq %eax,%rdx
+
+-  401ea4:	48 83 ea 01          	sub    $0x1,%rdx
+
+-  401ea8:	48 89 55 d8          	mov    %rdx,-0x28(%rbp)
+
+-  401eac:	48 63 d0             	movslq %eax,%rdx
+
+-  401eaf:	49 89 d2             	mov    %rdx,%r10
+
+-  401eb2:	41 bb 00 00 00 00    	mov    $0x0,%r11d
+
+-  401eb8:	48 63 d0             	movslq %eax,%rdx
+
+-  401ebb:	49 89 d0             	mov    %rdx,%r8
+
+-  401ebe:	41 b9 00 00 00 00    	mov    $0x0,%r9d
+
+-  401ec4:	48 98                	cltq   
+
+-  401ec6:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
+-  401ecd:	00 
+
+-  401ece:	b8 10 00 00 00       	mov    $0x10,%eax
+
+-  401ed3:	48 83 e8 01          	sub    $0x1,%rax
+
+-  401ed7:	48 01 d0             	add    %rdx,%rax
+
+-  401eda:	be 10 00 00 00       	mov    $0x10,%esi
+
+-  401edf:	ba 00 00 00 00       	mov    $0x0,%edx
+
+-  401ee4:	48 f7 f6             	div    %rsi
+
+-  401ee7:	48 6b c0 10          	imul   $0x10,%rax,%rax
+
+-  401eeb:	48 89 c1             	mov    %rax,%rcx
+
+-  401eee:	48 81 e1 00 f0 ff ff 	and    $0xfffffffffffff000,%rcx
+
+-  401ef5:	48 89 e2             	mov    %rsp,%rdx
+
+-  401ef8:	48 29 ca             	sub    %rcx,%rdx
+
+-  401efb:	48 39 d4             	cmp    %rdx,%rsp
+
+-  401efe:	74 12                	je     401f12 <averageOfSquares+0x9d>
+
+-  401f00:	48 81 ec 00 10 00 00 	sub    $0x1000,%rsp
+
+-  401f07:	48 83 8c 24 f8 0f 00 	orq    $0x0,0xff8(%rsp)
+
+-  401f0e:	00 00 
+
+-  401f10:	eb e9                	jmp    401efb <averageOfSquares+0x86>
+
+-  401f12:	48 89 c2             	mov    %rax,%rdx
+
+-  401f15:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+
+-  401f1b:	48 29 d4             	sub    %rdx,%rsp
+
+-  401f1e:	48 89 c2             	mov    %rax,%rdx
+
+-  401f21:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+
+-  401f27:	48 85 d2             	test   %rdx,%rdx
+
+-  401f2a:	74 10                	je     401f3c <averageOfSquares+0xc7>
+
+-  401f2c:	25 ff 0f 00 00       	and    $0xfff,%eax
+
+-  401f31:	48 83 e8 08          	sub    $0x8,%rax
+
+-  401f35:	48 01 e0             	add    %rsp,%rax
+
+-  401f38:	48 83 08 00          	orq    $0x0,(%rax)
+
+-  401f3c:	48 89 e0             	mov    %rsp,%rax
+
+-  401f3f:	48 83 c0 03          	add    $0x3,%rax
+
+-  401f43:	48 c1 e8 02          	shr    $0x2,%rax
+
+-  401f47:	48 c1 e0 02          	shl    $0x2,%rax
+
+-  401f4b:	48 89 45 e0          	mov    %rax,-0x20(%rbp)
+
+-  401f4f:	c7 45 d4 00 00 00 00 	movl   $0x0,-0x2c(%rbp)
+
+-  401f56:	eb 2e                	jmp    401f86 <averageOfSquares+0x111>
+
+-  401f58:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+
+-  401f5b:	48 98                	cltq   
+
+-  401f5d:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
+-  401f64:	00 
+
+-  401f65:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+
+-  401f69:	48 01 d0             	add    %rdx,%rax
+
+-  401f6c:	8b 00                	mov    (%rax),%eax
+
+-  401f6e:	89 c7                	mov    %eax,%edi
+
+-  401f70:	e8 73 fd ff ff       	call   401ce8 <square>
+
+-  401f75:	48 8b 55 e0          	mov    -0x20(%rbp),%rdx
+
+-  401f79:	8b 4d d4             	mov    -0x2c(%rbp),%ecx
+
+-  401f7c:	48 63 c9             	movslq %ecx,%rcx
+
+-  401f7f:	89 04 8a             	mov    %eax,(%rdx,%rcx,4)
+
+-  401f82:	83 45 d4 01          	addl   $0x1,-0x2c(%rbp)
+
+-  401f86:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+
+-  401f89:	3b 45 c4             	cmp    -0x3c(%rbp),%eax
+
+-  401f8c:	7c ca                	jl     401f58 <averageOfSquares+0xe3>
+
+-  401f8e:	8b 55 c4             	mov    -0x3c(%rbp),%edx
+
+-  401f91:	48 8b 45 e0          	mov    -0x20(%rbp),%rax
+
+-  401f95:	89 d6                	mov    %edx,%esi
+
+-  401f97:	48 89 c7             	mov    %rax,%rdi
+
+-  401f9a:	e8 2c 02 00 00       	call   4021cb <average>
+
+-  401f9f:	48 89 dc             	mov    %rbx,%rsp
+
+-  401fa2:	48 8b 55 e8          	mov    -0x18(%rbp),%rdx
+
+-  401fa6:	64 48 2b 14 25 28 00 	sub    %fs:0x28,%rdx
+
+-  401fad:	00 00 
+
+-  401faf:	74 05                	je     401fb6 <averageOfSquares+0x141>
+
+-  401fb1:	e8 4a 0d 05 00       	call   452d00 <__stack_chk_fail>
+
+-  401fb6:	48 8b 5d f8          	mov    -0x8(%rbp),%rbx
+
+-  401fba:	c9                   	leave  
+
+-  401fbb:	c3                   	ret    
+
++0000000000401dd5 <averageOfSquares>:
+
++  401dd5:	f3 0f 1e fa          	endbr64 
+
++  401dd9:	55                   	push   %rbp
+
++  401dda:	48 89 e5             	mov    %rsp,%rbp
+
++  401ddd:	53                   	push   %rbx
+
++  401dde:	48 83 ec 38          	sub    $0x38,%rsp
+
++  401de2:	48 89 7d c8          	mov    %rdi,-0x38(%rbp)
+
++  401de6:	89 75 c4             	mov    %esi,-0x3c(%rbp)
+
++  401de9:	64 48 8b 04 25 28 00 	mov    %fs:0x28,%rax
+
++  401df0:	00 00 
+
++  401df2:	48 89 45 e8          	mov    %rax,-0x18(%rbp)
+
++  401df6:	31 c0                	xor    %eax,%eax
+
++  401df8:	48 89 e0             	mov    %rsp,%rax
+
++  401dfb:	48 89 c3             	mov    %rax,%rbx
+
++  401dfe:	8b 45 c4             	mov    -0x3c(%rbp),%eax
+
++  401e01:	48 63 d0             	movslq %eax,%rdx
+
++  401e04:	48 83 ea 01          	sub    $0x1,%rdx
+
++  401e08:	48 89 55 d8          	mov    %rdx,-0x28(%rbp)
+
++  401e0c:	48 63 d0             	movslq %eax,%rdx
+
++  401e0f:	49 89 d2             	mov    %rdx,%r10
+
++  401e12:	41 bb 00 00 00 00    	mov    $0x0,%r11d
+
++  401e18:	48 63 d0             	movslq %eax,%rdx
+
++  401e1b:	49 89 d0             	mov    %rdx,%r8
+
++  401e1e:	41 b9 00 00 00 00    	mov    $0x0,%r9d
+
++  401e24:	48 98                	cltq   
+
++  401e26:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
++  401e2d:	00 
+
++  401e2e:	b8 10 00 00 00       	mov    $0x10,%eax
+
++  401e33:	48 83 e8 01          	sub    $0x1,%rax
+
++  401e37:	48 01 d0             	add    %rdx,%rax
+
++  401e3a:	be 10 00 00 00       	mov    $0x10,%esi
+
++  401e3f:	ba 00 00 00 00       	mov    $0x0,%edx
+
++  401e44:	48 f7 f6             	div    %rsi
+
++  401e47:	48 6b c0 10          	imul   $0x10,%rax,%rax
+
++  401e4b:	48 89 c1             	mov    %rax,%rcx
+
++  401e4e:	48 81 e1 00 f0 ff ff 	and    $0xfffffffffffff000,%rcx
+
++  401e55:	48 89 e2             	mov    %rsp,%rdx
+
++  401e58:	48 29 ca             	sub    %rcx,%rdx
+
++  401e5b:	48 39 d4             	cmp    %rdx,%rsp
+
++  401e5e:	74 12                	je     401e72 <averageOfSquares+0x9d>
+
++  401e60:	48 81 ec 00 10 00 00 	sub    $0x1000,%rsp
+
++  401e67:	48 83 8c 24 f8 0f 00 	orq    $0x0,0xff8(%rsp)
+
++  401e6e:	00 00 
+
++  401e70:	eb e9                	jmp    401e5b <averageOfSquares+0x86>
+
++  401e72:	48 89 c2             	mov    %rax,%rdx
+
++  401e75:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+
++  401e7b:	48 29 d4             	sub    %rdx,%rsp
+
++  401e7e:	48 89 c2             	mov    %rax,%rdx
+
++  401e81:	81 e2 ff 0f 00 00    	and    $0xfff,%edx
+
++  401e87:	48 85 d2             	test   %rdx,%rdx
+
++  401e8a:	74 10                	je     401e9c <averageOfSquares+0xc7>
+
++  401e8c:	25 ff 0f 00 00       	and    $0xfff,%eax
+
++  401e91:	48 83 e8 08          	sub    $0x8,%rax
+
++  401e95:	48 01 e0             	add    %rsp,%rax
+
++  401e98:	48 83 08 00          	orq    $0x0,(%rax)
+
++  401e9c:	48 89 e0             	mov    %rsp,%rax
+
++  401e9f:	48 83 c0 03          	add    $0x3,%rax
+
++  401ea3:	48 c1 e8 02          	shr    $0x2,%rax
+
++  401ea7:	48 c1 e0 02          	shl    $0x2,%rax
+
++  401eab:	48 89 45 e0          	mov    %rax,-0x20(%rbp)
+
++  401eaf:	c7 45 d4 00 00 00 00 	movl   $0x0,-0x2c(%rbp)
+
++  401eb6:	eb 2e                	jmp    401ee6 <averageOfSquares+0x111>
+
++  401eb8:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+
++  401ebb:	48 98                	cltq   
+
++  401ebd:	48 8d 14 85 00 00 00 	lea    0x0(,%rax,4),%rdx
+
++  401ec4:	00 
+
++  401ec5:	48 8b 45 c8          	mov    -0x38(%rbp),%rax
+
++  401ec9:	48 01 d0             	add    %rdx,%rax
+
++  401ecc:	8b 00                	mov    (%rax),%eax
+
++  401ece:	89 c7                	mov    %eax,%edi
+
++  401ed0:	e8 73 fd ff ff       	call   401c48 <square>
+
++  401ed5:	48 8b 55 e0          	mov    -0x20(%rbp),%rdx
+
++  401ed9:	8b 4d d4             	mov    -0x2c(%rbp),%ecx
+
++  401edc:	48 63 c9             	movslq %ecx,%rcx
+
++  401edf:	89 04 8a             	mov    %eax,(%rdx,%rcx,4)
+
++  401ee2:	83 45 d4 01          	addl   $0x1,-0x2c(%rbp)
+
++  401ee6:	8b 45 d4             	mov    -0x2c(%rbp),%eax
+
++  401ee9:	3b 45 c4             	cmp    -0x3c(%rbp),%eax
+
++  401eec:	7c ca                	jl     401eb8 <averageOfSquares+0xe3>
+
++  401eee:	8b 55 c4             	mov    -0x3c(%rbp),%edx
+
++  401ef1:	48 8b 45 e0          	mov    -0x20(%rbp),%rax
+
++  401ef5:	89 d6                	mov    %edx,%esi
+
++  401ef7:	48 89 c7             	mov    %rax,%rdi
+
++  401efa:	e8 2c 02 00 00       	call   40212b <average>
+
++  401eff:	48 89 dc             	mov    %rbx,%rsp
+
++  401f02:	48 8b 55 e8          	mov    -0x18(%rbp),%rdx
+
++  401f06:	64 48 2b 14 25 28 00 	sub    %fs:0x28,%rdx
+
++  401f0d:	00 00 
+
++  401f0f:	74 05                	je     401f16 <averageOfSquares+0x141>
+
++  401f11:	e8 fa 0d 05 00       	call   452d10 <__stack_chk_fail>
+
++  401f16:	48 8b 5d f8          	mov    -0x8(%rbp),%rbx
+
++  401f1a:	c9                   	leave  
+
++  401f1b:	c3                   	ret    
+
+ 
+

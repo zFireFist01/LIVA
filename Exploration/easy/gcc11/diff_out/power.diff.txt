@@ -1,0 +1,113 @@
+--- power (FILE A)
++++ power (FILE B)
+@@ -1,28 +1,28 @@
+-0000000000401d2f <power>:
+
+-  401d2f:	f3 0f 1e fa          	endbr64 
+
+-  401d33:	55                   	push   %rbp
+
+-  401d34:	48 89 e5             	mov    %rsp,%rbp
+
+-  401d37:	48 83 ec 20          	sub    $0x20,%rsp
+
+-  401d3b:	89 7d ec             	mov    %edi,-0x14(%rbp)
+
+-  401d3e:	89 75 e8             	mov    %esi,-0x18(%rbp)
+
+-  401d41:	c7 45 f8 01 00 00 00 	movl   $0x1,-0x8(%rbp)
+
+-  401d48:	8b 55 e8             	mov    -0x18(%rbp),%edx
+
+-  401d4b:	8b 45 ec             	mov    -0x14(%rbp),%eax
+
+-  401d4e:	89 c6                	mov    %eax,%esi
+
+-  401d50:	48 8d 05 a9 74 09 00 	lea    0x974a9(%rip),%rax        # 499200 <_IO_stdin_used+0x200>
+
+-  401d57:	48 89 c7             	mov    %rax,%rdi
+
+-  401d5a:	b8 00 00 00 00       	mov    $0x0,%eax
+
+-  401d5f:	e8 dc a4 00 00       	call   40c240 <_IO_printf>
+
+-  401d64:	c7 45 fc 00 00 00 00 	movl   $0x0,-0x4(%rbp)
+
+-  401d6b:	eb 0e                	jmp    401d7b <power+0x4c>
+
+-  401d6d:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
+-  401d70:	0f af 45 ec          	imul   -0x14(%rbp),%eax
+
+-  401d74:	89 45 f8             	mov    %eax,-0x8(%rbp)
+
+-  401d77:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+
+-  401d7b:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401d7e:	3b 45 e8             	cmp    -0x18(%rbp),%eax
+
+-  401d81:	7c ea                	jl     401d6d <power+0x3e>
+
+-  401d83:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
+-  401d86:	c9                   	leave  
+
+-  401d87:	c3                   	ret    
+
++0000000000401c8f <power>:
+
++  401c8f:	f3 0f 1e fa          	endbr64 
+
++  401c93:	55                   	push   %rbp
+
++  401c94:	48 89 e5             	mov    %rsp,%rbp
+
++  401c97:	48 83 ec 20          	sub    $0x20,%rsp
+
++  401c9b:	89 7d ec             	mov    %edi,-0x14(%rbp)
+
++  401c9e:	89 75 e8             	mov    %esi,-0x18(%rbp)
+
++  401ca1:	c7 45 f8 01 00 00 00 	movl   $0x1,-0x8(%rbp)
+
++  401ca8:	8b 55 e8             	mov    -0x18(%rbp),%edx
+
++  401cab:	8b 45 ec             	mov    -0x14(%rbp),%eax
+
++  401cae:	89 c6                	mov    %eax,%esi
+
++  401cb0:	48 8d 05 61 75 09 00 	lea    0x97561(%rip),%rax        # 499218 <_IO_stdin_used+0x218>
+
++  401cb7:	48 89 c7             	mov    %rax,%rdi
+
++  401cba:	b8 00 00 00 00       	mov    $0x0,%eax
+
++  401cbf:	e8 dc a4 00 00       	call   40c1a0 <_IO_printf>
+
++  401cc4:	c7 45 fc 00 00 00 00 	movl   $0x0,-0x4(%rbp)
+
++  401ccb:	eb 0e                	jmp    401cdb <power+0x4c>
+
++  401ccd:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
++  401cd0:	0f af 45 ec          	imul   -0x14(%rbp),%eax
+
++  401cd4:	89 45 f8             	mov    %eax,-0x8(%rbp)
+
++  401cd7:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
+
++  401cdb:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  401cde:	3b 45 e8             	cmp    -0x18(%rbp),%eax
+
++  401ce1:	7c ea                	jl     401ccd <power+0x3e>
+
++  401ce3:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
++  401ce6:	c9                   	leave  
+
++  401ce7:	c3                   	ret    
+
+ 
+

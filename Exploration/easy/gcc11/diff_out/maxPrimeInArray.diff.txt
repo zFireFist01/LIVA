@@ -1,0 +1,113 @@
+--- maxPrimeInArray (FILE A)
++++ maxPrimeInArray (FILE B)
+@@ -1,28 +1,28 @@
+-0000000000401fbc <maxPrimeInArray>:
+
+-  401fbc:	f3 0f 1e fa          	endbr64 
+
+-  401fc0:	55                   	push   %rbp
+
+-  401fc1:	48 89 e5             	mov    %rsp,%rbp
+
+-  401fc4:	48 83 ec 20          	sub    $0x20,%rsp
+
+-  401fc8:	48 89 7d e8          	mov    %rdi,-0x18(%rbp)
+
+-  401fcc:	89 75 e4             	mov    %esi,-0x1c(%rbp)
+
+-  401fcf:	8b 55 e4             	mov    -0x1c(%rbp),%edx
+
+-  401fd2:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
+-  401fd6:	89 d6                	mov    %edx,%esi
+
+-  401fd8:	48 89 c7             	mov    %rax,%rdi
+
+-  401fdb:	e8 22 02 00 00       	call   402202 <findMax>
+
+-  401fe0:	89 45 fc             	mov    %eax,-0x4(%rbp)
+
+-  401fe3:	eb 17                	jmp    401ffc <maxPrimeInArray+0x40>
+
+-  401fe5:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401fe8:	89 c7                	mov    %eax,%edi
+
+-  401fea:	e8 99 fd ff ff       	call   401d88 <isPrime>
+
+-  401fef:	85 c0                	test   %eax,%eax
+
+-  401ff1:	74 05                	je     401ff8 <maxPrimeInArray+0x3c>
+
+-  401ff3:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  401ff6:	eb 0f                	jmp    402007 <maxPrimeInArray+0x4b>
+
+-  401ff8:	83 6d fc 01          	subl   $0x1,-0x4(%rbp)
+
+-  401ffc:	83 7d fc 01          	cmpl   $0x1,-0x4(%rbp)
+
+-  402000:	7f e3                	jg     401fe5 <maxPrimeInArray+0x29>
+
+-  402002:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+
+-  402007:	c9                   	leave  
+
+-  402008:	c3                   	ret    
+
++0000000000401f1c <maxPrimeInArray>:
+
++  401f1c:	f3 0f 1e fa          	endbr64 
+
++  401f20:	55                   	push   %rbp
+
++  401f21:	48 89 e5             	mov    %rsp,%rbp
+
++  401f24:	48 83 ec 20          	sub    $0x20,%rsp
+
++  401f28:	48 89 7d e8          	mov    %rdi,-0x18(%rbp)
+
++  401f2c:	89 75 e4             	mov    %esi,-0x1c(%rbp)
+
++  401f2f:	8b 55 e4             	mov    -0x1c(%rbp),%edx
+
++  401f32:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
++  401f36:	89 d6                	mov    %edx,%esi
+
++  401f38:	48 89 c7             	mov    %rax,%rdi
+
++  401f3b:	e8 22 02 00 00       	call   402162 <findMax>
+
++  401f40:	89 45 fc             	mov    %eax,-0x4(%rbp)
+
++  401f43:	eb 17                	jmp    401f5c <maxPrimeInArray+0x40>
+
++  401f45:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  401f48:	89 c7                	mov    %eax,%edi
+
++  401f4a:	e8 99 fd ff ff       	call   401ce8 <isPrime>
+
++  401f4f:	85 c0                	test   %eax,%eax
+
++  401f51:	74 05                	je     401f58 <maxPrimeInArray+0x3c>
+
++  401f53:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
++  401f56:	eb 0f                	jmp    401f67 <maxPrimeInArray+0x4b>
+
++  401f58:	83 6d fc 01          	subl   $0x1,-0x4(%rbp)
+
++  401f5c:	83 7d fc 01          	cmpl   $0x1,-0x4(%rbp)
+
++  401f60:	7f e3                	jg     401f45 <maxPrimeInArray+0x29>
+
++  401f62:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+
++  401f67:	c9                   	leave  
+
++  401f68:	c3                   	ret    
+
+ 
+

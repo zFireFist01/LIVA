@@ -25,8 +25,13 @@ cd gcc11
 gcc-11 -static ../main.c -L..  -lmylib -lstats -O3 -o calculator_static_opt
 gcc-11 -static ../main.c -L..  -lmylib -lstats -o calculator_static
 
+# Crea i file di disassemblaggio
 objdump -d calculator_static_opt > disass_opt.txt
 objdump -d calculator_static > disass.txt
+
+# Crea il contenuto di rodata
+objdump -s -j .rodata calculator_static > rodata.txt
+objdump -s -j .rodata calculator_static_opt > rodata_opt.txt
 
 cd ..
 
@@ -44,8 +49,13 @@ cd clang14
 clang-14 -static ../main.c -L.. -lmylib -lstats -O3 -o calculator_static_opt
 clang-14 -static ../main.c -L.. -lmylib -lstats -o calculator_static
 
+# Crea i file di disassemblaggio
 objdump -d calculator_static_opt > disass_opt.txt
 objdump -d calculator_static > disass.txt
+
+# Crea il contenuto di rodata
+objdump -s -j .rodata calculator_static > rodata.txt
+objdump -s -j .rodata calculator_static_opt > rodata_opt.txt
 
 cd ..
 

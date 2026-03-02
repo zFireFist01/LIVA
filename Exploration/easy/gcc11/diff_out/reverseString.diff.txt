@@ -1,0 +1,145 @@
+--- reverseString (FILE A)
++++ reverseString (FILE B)
+@@ -1,46 +1,26 @@
+-00000000004017b5 <reverseString>:
+
+-  4017b5:	f3 0f 1e fa          	endbr64 
+
+-  4017b9:	55                   	push   %rbp
+
+-  4017ba:	48 89 e5             	mov    %rsp,%rbp
+
+-  4017bd:	48 83 ec 20          	sub    $0x20,%rsp
+
+-  4017c1:	48 89 7d e8          	mov    %rdi,-0x18(%rbp)
+
+-  4017c5:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
+-  4017c9:	48 89 c7             	mov    %rax,%rdi
+
+-  4017cc:	e8 af f9 ff ff       	call   401180 <_init+0x180>
+
+-  4017d1:	89 45 fc             	mov    %eax,-0x4(%rbp)
+
+-  4017d4:	c7 45 f4 00 00 00 00 	movl   $0x0,-0xc(%rbp)
+
+-  4017db:	8b 45 fc             	mov    -0x4(%rbp),%eax
+
+-  4017de:	83 e8 01             	sub    $0x1,%eax
+
+-  4017e1:	89 45 f8             	mov    %eax,-0x8(%rbp)
+
+-  4017e4:	eb 4d                	jmp    401833 <reverseString+0x7e>
+
+-  4017e6:	8b 45 f4             	mov    -0xc(%rbp),%eax
+
+-  4017e9:	48 63 d0             	movslq %eax,%rdx
+
+-  4017ec:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
+-  4017f0:	48 01 d0             	add    %rdx,%rax
+
+-  4017f3:	0f b6 00             	movzbl (%rax),%eax
+
+-  4017f6:	88 45 f3             	mov    %al,-0xd(%rbp)
+
+-  4017f9:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
+-  4017fc:	48 63 d0             	movslq %eax,%rdx
+
+-  4017ff:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
+-  401803:	48 01 d0             	add    %rdx,%rax
+
+-  401806:	8b 55 f4             	mov    -0xc(%rbp),%edx
+
+-  401809:	48 63 ca             	movslq %edx,%rcx
+
+-  40180c:	48 8b 55 e8          	mov    -0x18(%rbp),%rdx
+
+-  401810:	48 01 ca             	add    %rcx,%rdx
+
+-  401813:	0f b6 00             	movzbl (%rax),%eax
+
+-  401816:	88 02                	mov    %al,(%rdx)
+
+-  401818:	8b 45 f8             	mov    -0x8(%rbp),%eax
+
+-  40181b:	48 63 d0             	movslq %eax,%rdx
+
+-  40181e:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
+-  401822:	48 01 c2             	add    %rax,%rdx
+
+-  401825:	0f b6 45 f3          	movzbl -0xd(%rbp),%eax
+
+-  401829:	88 02                	mov    %al,(%rdx)
+
+-  40182b:	83 45 f4 01          	addl   $0x1,-0xc(%rbp)
+
+-  40182f:	83 6d f8 01          	subl   $0x1,-0x8(%rbp)
+
+-  401833:	8b 45 f4             	mov    -0xc(%rbp),%eax
+
+-  401836:	3b 45 f8             	cmp    -0x8(%rbp),%eax
+
+-  401839:	7c ab                	jl     4017e6 <reverseString+0x31>
+
+-  40183b:	48 8b 45 e8          	mov    -0x18(%rbp),%rax
+
+-  40183f:	c9                   	leave  
+
+-  401840:	c3                   	ret    
+
++0000000000401a40 <reverseString>:
+
++  401a40:	f3 0f 1e fa          	endbr64 
+
++  401a44:	41 54                	push   %r12
+
++  401a46:	49 89 fc             	mov    %rdi,%r12
+
++  401a49:	e8 32 f7 ff ff       	call   401180 <_init+0x180>
+
++  401a4e:	83 e8 01             	sub    $0x1,%eax
+
++  401a51:	85 c0                	test   %eax,%eax
+
++  401a53:	7e 29                	jle    401a7e <reverseString+0x3e>
+
++  401a55:	48 98                	cltq   
+
++  401a57:	31 d2                	xor    %edx,%edx
+
++  401a59:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+
++  401a60:	41 0f b6 0c 14       	movzbl (%r12,%rdx,1),%ecx
+
++  401a65:	41 0f b6 34 04       	movzbl (%r12,%rax,1),%esi
+
++  401a6a:	41 88 34 14          	mov    %sil,(%r12,%rdx,1)
+
++  401a6e:	48 83 c2 01          	add    $0x1,%rdx
+
++  401a72:	41 88 0c 04          	mov    %cl,(%r12,%rax,1)
+
++  401a76:	48 83 e8 01          	sub    $0x1,%rax
+
++  401a7a:	39 d0                	cmp    %edx,%eax
+
++  401a7c:	7f e2                	jg     401a60 <reverseString+0x20>
+
++  401a7e:	4c 89 e0             	mov    %r12,%rax
+
++  401a81:	41 5c                	pop    %r12
+
++  401a83:	c3                   	ret    
+
++  401a84:	66 66 2e 0f 1f 84 00 	data16 cs nopw 0x0(%rax,%rax,1)
+
++  401a8b:	00 00 00 00 
+
++  401a8f:	90                   	nop
+
+ 
+

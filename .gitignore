@@ -1,6 +1,8 @@
-/libseeker_repo*
+
+Exploration/libseeker_repo*
 /easy/gcc*
 /easy/clang*
 /.vscode
 /PalmTree
 /cfg_json
+/log_tesi_rizzi
