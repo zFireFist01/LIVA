@@ -1,0 +1,87 @@
+Paper Letti: 
+	-LIBS: 
+		LLVM(compiler) IR(Intermediate Representation) per approccio multi architetturale
+		Funzione per Funzione con feature vector (WordVec + Altro)
+		IR Loader, Embedding Manager, Matcher, Result Agregator
+		Strutture Dati Particolari 
+
+	-BINSHAPE (2017): 
+		B++ Tree per indicizzare funzioni e feature di funzioni (Si basa su CFG)
+		Dipendenza Architetturale
+		Feature Manuali
+
+	-GMN (2019): 
+		GNN che prende 2 CFG di funzioni esegue Cross Graph Attention e produce uno score di similarità 
+		In coppie o triplet per training
+
+	-Mantilla (2025):
+		Usa radare2 per estrarre feature da binario
+		Usa KNN + majority voting per classificare
+		Feature statiche non simboliche
+		Multi Architetturale
+
+	-ASM2VEC (2019):
+		Representation Learning Model per assembly
+		Relazioni semantiche tra token co-occorenti
+		Funzione rappresentata come media pesata degli embedding
+
+	-PalmTree (2021):
+		Basato su BERT
+		A differenza di ASM2VEC va più nel dettaglio(anzichè lavorare direttamente sulle funzioni, lavora sulle singole instruzioni)
+		Usa data flow e instruction reordering detection
+		Masked Instruction Prediction
+
+	-Genius (2016):
+		Usa locality sensitive hashing 
+		Converte CFG in feature vettoriali numeriche
+
+	-LibSeeker (2025):
+		Creazione di embedding sulla sequenza di opcode delle istruzioni di ogni funzione con FastText
+		Si costruisce un mapping tra funzioni della Compilation Unit (CU) e le funzioni del binario per ogni CU
+		Dopo aver trovato la coppia migliore si esplora con un matching windows cercando di massimizzare la similarità
+		Hungarian Algorithm migliorabile secondo i Further Work -> Questa soluzione è sensibile a LTO
+
+
+
+
+Findings:
+1) 	Call_fini -> funzione che si trova sempre dopo le funzioni delle librerie, creata dal compilatore; presente sia per gcc che per clang; ci sono anche due funzioni che a volte si mettono sopra call_fini-> handle_amd e handle_zhaoxin che sono sempre funzioni del compilatore
+2) 	.rodata -> Contiene le strighe delle librerie come previsto, ma in caso di ottimazzioni il loro contenuto può venire spezzettato o riordinato per ottimizzazare -> Tendenzialmente però è molto affidabile. Anche se una funzione della libreria non viene chiamata il contenuto di .rodata di quella funzione viene comunque importata così come la funzione stessa
+3) 	Funzioni di libreria standard -> funzioni della libreria standard hanno un comportamento particolare. Prendiamo ad esempio la printf, anche se il file viene staticamente linkato non esiste un corrispettivo 1:1 per la printf ma una funzione chiamata IO_printf chiama altre n funzioni asseconda dei parametri passati. Non è neanche detto che una printf chiami IO_printf perchè per motivi di ottimizzazione potrebbe anche chiamare _IO_puts
+4) 	Function order -> Se l'ottimizzazione è forte le funzioni vengono raggruppate sopra call_fini e sotto main, ma tra il main e le funzioni di liberia ci possono essere altre funzioni in mezzo, tra cui anche sottofunzioni; nel caso di nessuna ottimizzazione, vengono importate a gruppi di compilation unit, una dietro l'altra seguendo l'ordine di dichiarazione lo stesso vale per le sottofunzioni che vengono messe sopra il main
+5) 	Script Angr -> Avevo creato uno scriptino angr per trovare call_fini basandomi sull'assembly, ma in caso di ottimizzazioni questo assembly cambia, quindi non ha troppo senso farlo ora, ha più senso nel caso serva usare direttamente un embedding di questa funzione e cercarla all'interno dell'elf.
+6) 	Se le funzioni di una compilation unit non vengono chiamate allora questa non viene importata come previsto, stessa cosa vale per il .rodata
+7) 	Il CFG resta uguale tra compilation unit ed elf -> Viene "importato" così com'è 
+8) 	Nel file della static library (.a) abbiamo le compilation unit una dietro l'altra per ordine di "archiviazione". Abbiamo una sezione .text per compilation unit. 
+9) 	Se una libreria statica (.a) dipende da un’altra libreria statica, allora viene importata l’intera compilation unit del caso anche quando nessuna funzione della seconda libreria viene effettivamente chiamata. Inoltre, l’ordine con cui i file .a vengono passati al linker è importante: se l’ordine è sbagliato, il processo di compilazione/linking può fallire.
+10) Il .rodata della libreria viene sempre imporato nello stesso ordine a prescindere da ottimizzazioni e non viene spezzettato
+11) Il .rodata delle CU è sempre dopo il .rodata del sorgente
+
+
+
+
+X -> Abbiamo lavorato a granularità compilation unit facendo match indipendente di ciascuna compilation unit <- perchè non tutte le compilation unit di una libreria vengono importate
+X -> Aggiungere rodata
+X -> Sfruttare le funzioni trovate che separano compilation unit e il codice sorgente per velocizzare l'individuazione di funzioni di compilation unit
+X -> Mantilla molto interessante -> radare2 per analizzare il binario (aaa),enumerare le funzioni (aflj), leggere metadati/feature per funzione (afij, pdfj, agcj, ecc.), estrarre riferimenti a stringhe (izj, axtj).
+								 -> filtra per ridurre rumore 
+								 -> estrazione feature per funzione ->  (noi potremmo lavorare su Compilation Unit -> come? PalmTree magari?)
+								 -> KNN 
+
+X -> Estraggo le compilation unit dalle librerie candidate, cerco nel binario una finestra di funzioni che assomigli a ciascuna CU -> LibSeeker
+	Se unissi Mantilla e LibSeeker? 
+
+
+X -> Si può cercare il .rodata delle compilation unit nel .rodata del file, se viene fatto matching con valore alto allora quella CU è presente se tante CU di una libreria sono presenti allora la libreria presente
+	 Conosco a priori la lunghezza del .rodata della CU <- Potrei cercare nel .rodata un match con quella lunghezza?
+	 Da un certo punto in poi il .rodata non ci serve <- Secondo me dai byte che contiene si può capire
+
+
+Aho–Corasick (find all known B strings in one pass) + backward dynamic programming (find the exact suffix segmentation and recover involved files).
+
+
+Pipeline Construction:
+
+
+1) Quando viene fatto fuction matching anche funzioni di pochissimi byte fanno match causando falsi positivi -> endbr64 e jmp con liblzma per b2sum 
+2) 
