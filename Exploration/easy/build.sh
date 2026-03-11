@@ -22,7 +22,7 @@ mkdir -p gcc13 gcc11 clang18 clang14
 # cd ..
 
 cd gcc11
-gcc-11 -static ../main.c -L..  -lmylib -lstats -O3 -o calculator_static_opt
+gcc-11 -static ../main.c -Wl,--trace -L..  -lmylib -lstats -O3 -o calculator_static_opt
 gcc-11 -static ../main.c -L..  -lmylib -lstats -o calculator_static
 
 # Crea i file di disassemblaggio
