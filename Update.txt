@@ -84,4 +84,5 @@ Pipeline Construction:
 
 
 1) Quando viene fatto fuction matching anche funzioni di pochissimi byte fanno match causando falsi positivi -> endbr64 e jmp con liblzma per b2sum 
-2) 
+2) Molto simili come implementazione di basso livello dei varargs, poco simili come comportamento finale. -> caso libgmp per b2sum lt24-initis.o
+3) 

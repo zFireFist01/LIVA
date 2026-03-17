@@ -1498,21 +1498,21 @@ LIBRERIE IDENTIFICATE (YES)
 
 ✅ libc_nonshared  (1/4 CU matchate)
 ----------------------------------------
-   ✅ atexit.oS                                     (score: 1.00, matched: 1)
+   ✅ atexit.oS                                     (score: 1.00, matched: 1) -> True Positive
    ❌ at_quick_exit.oS                              (best score: 0.88)
    ❌ pthread_atfork.oS                             (best score: 0.83)
-   ❌ stack_chk_fail_local.oS                       (best score: 0.90)
+   ❌ stack_chk_fail_local.oS                       (best score: 0.90) -> Falso Negativo
 
 ✅ libcrypto  (8/744 CU matchate)
 ----------------------------------------
-   ✅ libcrypto-lib-aes_misc.o                      (score: 1.00, matched: 1)
-   ✅ libcrypto-lib-getenv.o                        (score: 1.00, matched: 1)
-   ✅ libcrypto-lib-o_fopen.o                       (score: 1.00, matched: 1)
-   ✅ libcrypto-lib-o_init.o                        (score: 1.00, matched: 1)
-   ✅ libcrypto-lib-store_init.o                    (score: 1.00, matched: 1)
-   ✅ libcrypto-lib-tasn_scn.o                      (score: 1.00, matched: 1)
-   ✅ libcrypto-lib-ui_null.o                       (score: 1.00, matched: 1)
-   ✅ libdefault-lib-cipher_tdes_wrap_hw.o          (score: 1.00, matched: 1)
+   ✅ libcrypto-lib-aes_misc.o                      (score: 1.00, matched: 1) -> Falso Positivo
+   ✅ libcrypto-lib-getenv.o                        (score: 1.00, matched: 1) -> Falso Positivo
+   ✅ libcrypto-lib-o_fopen.o                       (score: 1.00, matched: 1) -> Falso Positivo
+   ✅ libcrypto-lib-o_init.o                        (score: 1.00, matched: 1) -> Falso Positivo
+   ✅ libcrypto-lib-store_init.o                    (score: 1.00, matched: 1) -> Falso Positivo
+   ✅ libcrypto-lib-tasn_scn.o                      (score: 1.00, matched: 1) -> Falso Positivo
+   ✅ libcrypto-lib-ui_null.o                       (score: 1.00, matched: 1) -> Falso Positivo
+   ✅ libdefault-lib-cipher_tdes_wrap_hw.o          (score: 1.00, matched: 1) -> Falso Positivo
    ❌ libcommon-lib-ciphercommon.o                  (best score: 0.00)
    ❌ libcommon-lib-ciphercommon_ccm.o              (best score: 0.00)
    ❌ libcommon-lib-ciphercommon_ccm_hw.o           (best score: 0.00)
@@ -2137,7 +2137,7 @@ LIBRERIE IDENTIFICATE (YES)
    ❌ libdefault-lib-bio_prov.o                     (best score: 0.00)
    ❌ libdefault-lib-blake2_prov.o                  (best score: 0.00)
    ❌ libdefault-lib-blake2b_mac.o                  (best score: 0.00)
-   ❌ libdefault-lib-blake2b_prov.o                 (best score: 0.00)
+   ❌ libdefault-lib-blake2b_prov.o                 (best score: 0.00) -> Falso Negativo -> blake2b_compress 
    ❌ libdefault-lib-blake2s_mac.o                  (best score: 0.00)
    ❌ libdefault-lib-blake2s_prov.o                 (best score: 0.00)
    ❌ libdefault-lib-cipher_aes.o                   (best score: 0.00)
@@ -2252,14 +2252,14 @@ LIBRERIE IDENTIFICATE (YES)
 
 ✅ libg  (1/1 CU matchate)
 ----------------------------------------
-   ✅ dummy.o                                       (score: 1.00, matched: 1)
+   ✅ dummy.o                                       (score: 1.00, matched: 1) -> Falso Positivo 
 
 ✅ libgmp  (4/311 CU matchate)
 ----------------------------------------
-   ✅ fscanffuns.o                                  (score: 1.00, matched: 1)
-   ✅ limbs_read.o                                  (score: 1.00, matched: 1)
-   ✅ lt24-inits.o                                  (score: 0.99, matched: 1)
-   ✅ randdef.o                                     (score: 1.00, matched: 1)
+   ✅ fscanffuns.o                                  (score: 1.00, matched: 1) -> Falso Positivo
+   ✅ limbs_read.o                                  (score: 1.00, matched: 1) -> Falso Positivo
+   ✅ lt24-inits.o                                  (score: 0.99, matched: 1) -> Falso Positivo
+   ✅ randdef.o                                     (score: 1.00, matched: 1) -> Falso Positivo
    ❌ 2fac_ui.o                                     (best score: 0.85)
    ❌ abs.o                                         (best score: 0.81)
    ❌ add.o                                         (best score: 0.93)
@@ -2570,8 +2570,8 @@ LIBRERIE IDENTIFICATE (YES)
 
 ✅ liblzma  (2/69 CU matchate)
 ----------------------------------------
-   ✅ liblzma_la-hardware_cputhreads.o              (score: 1.00, matched: 1)
-   ✅ liblzma_la-hardware_physmem.o                 (score: 1.00, matched: 1)
+   ✅ liblzma_la-hardware_cputhreads.o              (score: 1.00, matched: 1)   -> Falso Positivo
+   ✅ liblzma_la-hardware_physmem.o                 (score: 1.00, matched: 1)   -> Falso Positivo
    ❌ liblzma_la-alone_decoder.o                    (best score: 0.00)
    ❌ liblzma_la-alone_encoder.o                    (best score: 0.00)
    ❌ liblzma_la-arm.o                              (best score: 0.86)
