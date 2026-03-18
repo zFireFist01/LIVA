@@ -60,8 +60,8 @@ objdump -s -j .rodata calculator_static_opt > rodata_opt.txt
 cd ..
 
 # Pulisci i file temporanei
-rm libmylib.a libstats.a
-rm libraries/*.o
+#rm libmylib.a libstats.a
+#rm libraries/*.o
 
 echo "Build completata:"
 echo "  → calculator_static_opt (con -O3)"
