@@ -4,7 +4,7 @@ import os
 import re
 from itertools import groupby
 from subprocess import PIPE, run
-
+import r2pipe
 import numpy as np
 import networkx as nx
 from networkx import to_numpy_array
@@ -140,63 +140,96 @@ class Binary:
 
 
 def parse_r2_file(file_path: str, asm_model=None, graph_model=None) -> "Binary":
-    """Parse a binary file using r2pipe and return a Binary object.
+    """Parse a binary or object file using r2pipe and return a Binary object."""
+    r2 = r2pipe.open(file_path, flags=["-2"])
 
-    Extracts functions, their basic blocks, instructions, raw bytes and the
-    CFG (as a networkx DiGraph whose nodes are block addresses).
-    Replicates the filtering logic of parse_angr_file:
-      - PLT stubs         (r2 name prefix ``sym.imp.``)
-      - Unnamed/sub funcs (r2 name prefixes ``fcn.`` / ``sub.``)
-      - Zero-size functions
-    For ET_REL object files the same blob-grouping via readelf is applied.
-    """
-    import r2pipe
-
-    r2 = r2pipe.open(file_path, flags=["-2"])  # -2 silences stderr
     try:
-        r2.cmd("aaa")   # full analysis (functions, xrefs, …)
+        r2.cmd("aa")
 
-        # ── ELF type ────────────────────────────────────────────────────────
-        info     = r2.cmdj("ij") or {}
+        info = r2.cmdj("ij") or {}
         bin_type = info.get("bin", {}).get("type", "")
         elf_type = next(
             (v for k, v in ELF_TYPE.items() if k in bin_type.upper()),
             "ET_NONE",
         )
 
-        # ── Functions ───────────────────────────────────────────────────────
-        funcs_raw = r2.cmdj("aflj") or []
         functions: list[Function] = []
+
+        # ------------------------------------------------------------
+        # Case 1: normal binaries / shared libs
+        # ------------------------------------------------------------
+        funcs_raw = r2.cmdj("aflj") or []
+
+        # Fallback for ET_REL: use symbol table, because aflj is often poor
+        if elf_type == "ET_REL" or not funcs_raw:
+            readelf = run(
+                ["readelf", "--syms", "--wide", file_path],
+                stdout=PIPE,
+                universal_newlines=True,
+            )
+
+            funcs_raw = []
+            for line in readelf.stdout.splitlines():
+                if "FUNC" not in line:
+                    continue
+
+                parts = line.split()
+                # Typical shape:
+                # Num: Value Size Type Bind Vis Ndx Name
+                # e.g. 12: 0000000000000000 42 FUNC GLOBAL DEFAULT 1 myfunc
+                try:
+                    value_hex = parts[1]
+                    size = int(parts[2])
+                    typ = parts[3]
+                    name = parts[-1]
+                except Exception:
+                    continue
+
+                if typ != "FUNC":
+                    continue
+                if size == 0:
+                    continue
+
+                try:
+                    offset = int(value_hex, 16)
+                except ValueError:
+                    continue
+
+                funcs_raw.append({
+                    "name": name,
+                    "offset": offset,
+                    "size": size,
+                })
+
+        print(f"[DEBUG] parse_r2_file({os.path.basename(file_path)}): candidate funcs = {len(funcs_raw)}")
 
         for f in funcs_raw:
             name: str = f.get("name", "")
             addr: int = f.get("offset", 0)
             size: int = f.get("size", 0)
 
-            # mirror angr filters: no PLT, no unnamed/sub, no zero-size
             if size == 0:
                 continue
-            if name.startswith(("sym.imp.", "fcn.", "sub.")):
+            if name.startswith("sym.imp."):
                 continue
 
-            # ── CFG via agfj ────────────────────────────────────────────────
-            # Each node: offset, ops, fail (fallthrough addr), jump (branch target)
-            cfg_nodes = r2.cmdj(f"agfj @ {addr}") or []
-            if not cfg_nodes:
-                continue
+            # Force analysis of the function at addr if possible
+            try:
+                r2.cmd(f"af @ {addr}")
+            except Exception:
+                pass
 
-            blocks: list[Block] = []
-            cfg = nx.DiGraph()
+            blocks_json = r2.cmdj(f"afbj @ {addr}") or []
 
-            for node in cfg_nodes:
-                block_addr: int = node.get("offset", 0)
-                ops: list[dict] = node.get("ops", [])
+            # Fallback: create one pseudo-block from linear disasm
+            if not blocks_json:
+                ins_json = r2.cmdj(f"pDj {size} @ {addr}") or []
 
-                instructions: list[str] = []
-                raw_bytes_list: list[bytes] = []
+                instructions = []
+                raw_bytes_list = []
 
-                for op in ops:
-                    asm: str = op.get("disasm", "")
+                for op in ins_json:
+                    asm = op.get("disasm", "")
                     if not asm or op.get("type", "") == "invalid":
                         continue
 
@@ -204,46 +237,82 @@ def parse_r2_file(file_path: str, asm_model=None, graph_model=None) -> "Binary":
                     asm = re.sub(r"  +", " ", asm).strip()
                     instructions.append(asm)
 
-                    hex_bytes: str = op.get("bytes", "")
+                    hex_bytes = op.get("bytes", "")
+                    raw_bytes_list.append(bytes.fromhex(hex_bytes) if hex_bytes else b"")
+
+                if instructions:
+                    raw_bytes = b"".join(raw_bytes_list) if raw_bytes_list else None
+                    block = Block(address=addr, instructions=instructions, raw_bytes=raw_bytes)
+                    cfg = nx.DiGraph()
+                    cfg.add_node(addr)
+                    functions.append(Function(name=name, address=addr, blocks=[block], cfg=cfg))
+                continue
+
+            blocks: list[Block] = []
+            cfg = nx.DiGraph()
+
+            for bb in blocks_json:
+                block_addr = bb.get("addr", bb.get("offset", 0))
+                block_size = bb.get("size", 0)
+
+                ins_json = r2.cmdj(f"pDj {block_size} @ {block_addr}") or []
+                instructions = []
+                raw_bytes_list = []
+
+                for op in ins_json:
+                    asm = op.get("disasm", "")
+                    if not asm or op.get("type", "") == "invalid":
+                        continue
+
+                    asm = re.sub(r",", " ", asm)
+                    asm = re.sub(r"  +", " ", asm).strip()
+                    instructions.append(asm)
+
+                    hex_bytes = op.get("bytes", "")
                     raw_bytes_list.append(bytes.fromhex(hex_bytes) if hex_bytes else b"")
 
                 if not instructions:
                     continue
 
                 raw_bytes = b"".join(raw_bytes_list) if raw_bytes_list else None
-                blocks.append(Block(address=block_addr, instructions=instructions,
-                                    raw_bytes=raw_bytes))
+                blocks.append(Block(address=block_addr, instructions=instructions, raw_bytes=raw_bytes))
                 cfg.add_node(block_addr)
 
-                # Add edges: r2 exposes `fail` (fallthrough) and `jump` (branch)
-                for edge_key in ("fail", "jump"):
-                    target = node.get(edge_key)
+                for edge_key in ("jump", "fail"):
+                    target = bb.get(edge_key)
                     if target is not None and target != 0:
                         cfg.add_edge(block_addr, target)
 
             if not blocks:
                 continue
 
-            # Remove edges pointing outside the function's known block set
             known = {b.address for b in blocks}
             bad_edges = [(u, v) for u, v in cfg.edges() if v not in known]
             cfg.remove_edges_from(bad_edges)
 
-            functions.append(Function(name=name, address=addr,
-                                      blocks=blocks, cfg=cfg))
+            functions.append(Function(name=name, address=addr, blocks=blocks, cfg=cfg))
 
     finally:
         r2.quit()
 
-    # ── Blobs for ET_REL (object files) ─────────────────────────────────────
     blobs: list[list[Function]] | None = None
     if elf_type == "ET_REL":
         readelf = run(
             ["readelf", "--syms", "--wide", file_path],
-            stdout=PIPE, universal_newlines=True,
+            stdout=PIPE,
+            universal_newlines=True,
         )
         sym_lines = [l for l in readelf.stdout.splitlines() if "FUNC " in l]
-        sym_entries = [(int(l.split()[-2], 10), l.split()[-1]) for l in sym_lines]
+        sym_entries = []
+        for l in sym_lines:
+            parts = l.split()
+            try:
+                value = int(parts[1], 16)
+                name = parts[-1]
+                sym_entries.append((value, name))
+            except Exception:
+                continue
+
         sym_entries.sort(key=lambda x: x[0])
 
         lookup = {f.name: f for f in functions}
@@ -252,6 +321,8 @@ def parse_r2_file(file_path: str, asm_model=None, graph_model=None) -> "Binary":
             blob = [lookup[n] for _, n in group if n in lookup]
             if blob:
                 blobs.append(blob)
+
+    print(f"[DEBUG] Parsed {os.path.basename(file_path)}: {len(functions)} functions")
 
     b = Binary(
         name=os.path.basename(file_path),

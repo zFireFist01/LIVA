@@ -15,10 +15,10 @@ MODIFIER_NUM_ARGUMENTS = 0.3
 MODIFIER_RETURN_TYPE = 0.3
 
 # Matched functions ratio threshold
-FUNCTIONS_RATIO_THRESHOLD = 0.6
+FUNCTIONS_RATIO_THRESHOLD = 0.2
 
 # Similarity score threshold
-SIMILARITY_THRESHOLD = 0.95
+SIMILARITY_THRESHOLD = 0.4
 
 
 class FeatureVector(typing.NamedTuple):
@@ -111,6 +111,7 @@ def match_functions(source_bin_list: list[asm.Binary], target_cu_list: list[asm.
 
                 # Compute similarity matrix using assembly-level embeddings
                 sim_matrix = model.compute_similarity_matrix(source_bin.functions, blob)
+                print(f"[DEBUG] {target_cu.name}: blob_size={blob_size}, max_sim={sim_matrix.max():.4f}")
                 bin_idx, cu_idx = np.unravel_index(np.argmax(sim_matrix), sim_matrix.shape)
 
                 if sim_matrix[bin_idx][cu_idx] < SIMILARITY_THRESHOLD:
@@ -166,6 +167,13 @@ def match_functions(source_bin_list: list[asm.Binary], target_cu_list: list[asm.
                     )
                     for i, j in zip(global_row_indices, global_col_indices)
                 ]
+                good = sum(1 for fp in matched_functions if fp.features.similarity >= SIMILARITY_THRESHOLD)
+                print(
+                    f"[DEBUG] {target_cu.name}: best_window=({best_window.start},{best_window.stop}), "
+                    f"assigned={len(matched_functions)}, good={good}, "
+                    f"ratio={good/len(matched_functions):.3f}, "
+                    f"sum={similarities[best_idx]:.4f}"
+                )
                 matched_blob.append((similarities[best_idx], blob_size, matched_functions))
                 break  # only one blob can match
 
