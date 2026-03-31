@@ -243,7 +243,9 @@ if __name__ == "__main__":
 
     if not library_files:
         raise ValueError(f"No .a or .a.* files found in directory '{libraries_dir}'")
-
+    else:
+        print(f"Found {len(library_files)} library files in '{libraries_dir}'")
+        
     asm_model = PalmTree("Palm Tree")
     asm_model.load(args.asm_model)
 
@@ -275,14 +277,13 @@ if __name__ == "__main__":
                 ]
             )
 
-            print(f"[DEBUG] {library_file.name}: extracted {len(extracted_objects)} files")
+            #print(f"[DEBUG] {library_file.name}: extracted {len(extracted_objects)} files")
             for obj_file in extracted_objects:
                 print(f"         -> {obj_file.name}")
 
             for obj_file in extracted_objects:
                 try:
                     b = parse_r2_file(obj_file.as_posix(), asm_model, graph_model)
-                    print(f"[DEBUG] parsed {obj_file.name}: {b.get_num_functions()} functions")
                     if b.get_num_functions() > 0:
                         comp_units.append(b)
                 except Exception as e:

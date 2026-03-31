@@ -93,3 +93,14 @@ int main() {
 
     return 0;
 }
+
+
+// #include <stdio.h>
+// #include "libraries/scommessa.h"
+
+// int main(){
+//     printf("Hello, World!\n");
+//     int x = foo(10);
+//     printf("Result: %d\n", x);
+//     return 0;
+// }

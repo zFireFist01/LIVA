@@ -98,3 +98,11 @@ NO      | library=libmylib.a | score=  0.00% | matched_cu=0/2 | matched_function
 YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
 
 Done processing in 00:01:34
+Found 2 libraries to process
+Target binary: /home/paologennaro/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 14:37:46
+
+Found 2 libraries to process
+Target binary: /home/paologennaro/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:03:07
+
