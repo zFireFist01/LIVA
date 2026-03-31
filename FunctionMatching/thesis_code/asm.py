@@ -201,7 +201,7 @@ def parse_r2_file(file_path: str, asm_model=None, graph_model=None) -> "Binary":
                     "size": size,
                 })
 
-        print(f"[DEBUG] parse_r2_file({os.path.basename(file_path)}): candidate funcs = {len(funcs_raw)}")
+        #print(f"[DEBUG] parse_r2_file({os.path.basename(file_path)}): candidate funcs = {len(funcs_raw)}")
 
         for f in funcs_raw:
             name: str = f.get("name", "")
@@ -321,8 +321,6 @@ def parse_r2_file(file_path: str, asm_model=None, graph_model=None) -> "Binary":
             blob = [lookup[n] for _, n in group if n in lookup]
             if blob:
                 blobs.append(blob)
-
-    print(f"[DEBUG] Parsed {os.path.basename(file_path)}: {len(functions)} functions")
 
     b = Binary(
         name=os.path.basename(file_path),

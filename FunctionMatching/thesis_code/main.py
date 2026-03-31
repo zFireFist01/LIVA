@@ -4,22 +4,80 @@ import argparse
 from pathlib import Path
 import signal
 import re
+import site
+import glob
+import ctypes
+import warnings
+import sys
 import numpy as np
-import tensorflow as tf
 import tempfile
 import subprocess
 
+
+
+def _prepare_tf_gpu_runtime() -> None:
+    """Expose and preload pip-installed NVIDIA libs before importing TensorFlow."""
+    nvidia_lib_dirs: list[str] = []
+    for base in site.getsitepackages():
+        for lib_dir in glob.glob(os.path.join(base, "nvidia", "*", "lib")):
+            if os.path.isdir(lib_dir):
+                nvidia_lib_dirs.append(lib_dir)
+
+    if not nvidia_lib_dirs:
+        return
+
+    current = os.environ.get("LD_LIBRARY_PATH", "")
+    current_parts = [p for p in current.split(":") if p]
+    missing = [p for p in nvidia_lib_dirs if p not in current_parts]
+    if missing:
+        prefix = ":".join(nvidia_lib_dirs)
+        os.environ["LD_LIBRARY_PATH"] = f"{prefix}:{current}" if current else prefix
+
+    # Preload all NVIDIA shared libs so TensorFlow can resolve CUDA symbols
+    # even when the process started without a complete linker path.
+    for lib_dir in nvidia_lib_dirs:
+        for so_file in sorted(glob.glob(os.path.join(lib_dir, "lib*.so*"))):
+            try:
+                ctypes.CDLL(so_file, mode=ctypes.RTLD_GLOBAL)
+            except OSError:
+                continue
+
+
+def _configure_runtime_from_cli() -> None:
+    """Apply runtime options that must be set before importing TensorFlow."""
+    hide_warnings = ("--hide-warnings" in sys.argv)
+    if not hide_warnings:
+        return
+
+    # Hide informational TensorFlow logs that are noisy in CLI runs.
+    os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+    # Optional: disable oneDNN custom ops to avoid related startup notice.
+    os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
+
+    # Suppress a known Keras warning caused by optimizer state mismatch.
+    warnings.filterwarnings(
+        "ignore",
+        message=r"Skipping variable loading for optimizer 'adam'.*",
+        category=UserWarning,
+    )
+
+
+
+_prepare_tf_gpu_runtime()
+_configure_runtime_from_cli()
+
+import tensorflow as tf
 from model import PalmTree
 from struct2vec import GraphNetwork
 from asm import Binary, parse_r2_file
 from match import match_functions
-
 
 gpus = tf.config.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 print("TensorFlow GPUs:", gpus)
+
 
 PATH_TO_CALCULATOR = os.path.abspath(
     os.path.join(
@@ -113,6 +171,11 @@ def get_args():
         type=int,
         default=1,
         help="Minimum matched functions per compilation unit"
+    )
+    parser.add_argument(
+        "--hide-warnings",
+        action="store_true",
+        help="Hide non-critical TensorFlow/Keras startup warnings"
     )
 
     return parser.parse_args()
@@ -282,7 +345,7 @@ if __name__ == "__main__":
             for obj_file in extracted_objects:
                 try:
                     b = parse_r2_file(obj_file.as_posix(), asm_model, graph_model)
-                    print(f"[DEBUG] parsed {obj_file.name}: {b.get_num_functions()} functions")
+                    #print(f"[DEBUG] parsed {obj_file.name}: {b.get_num_functions()} functions")
                     if b.get_num_functions() > 0:
                         comp_units.append(b)
                 except Exception as e:

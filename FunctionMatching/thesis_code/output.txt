@@ -98,3 +98,146 @@ NO      | library=libmylib.a | score=  0.00% | matched_cu=0/2 | matched_function
 YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
 
 Done processing in 00:01:34
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:26:08
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:35:34
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:36:33
+
+NO      | library=libmylib.a | score=  0.00% | matched_cu=0/2 | matched_functions=0 | time=00:00:00
+    CU[000] score=1.0000 matched_functions=4
+YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
+
+Done processing in 00:01:32
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:41:01
+
+    CU[000] score=0.9000 matched_functions=4
+YES     | library=libmylib.a | score= 90.00% | matched_cu=1/2 | matched_functions=4 | time=00:00:00
+    CU[000] score=1.0000 matched_functions=4
+YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
+
+Done processing in 00:01:29
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:43:01
+
+    CU[000] score=0.9000 matched_functions=4
+YES     | library=libmylib.a | score= 90.00% | matched_cu=1/2 | matched_functions=4 | time=00:00:00
+    CU[000] score=1.0000 matched_functions=4
+YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
+
+Done processing in 00:01:29
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:47:35
+
+    CU[000] score=0.9000 matched_functions=4
+YES     | library=libmylib.a | score= 90.00% | matched_cu=1/2 | matched_functions=4 | time=00:00:00
+    CU[000] score=1.0000 matched_functions=4
+YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
+
+Done processing in 00:01:29
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:50:11
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:50:39
+
+    CU[000] score=0.9000 matched_functions=4
+YES     | library=libmylib.a | score= 90.00% | matched_cu=1/2 | matched_functions=4 | time=00:00:00
+    CU[000] score=1.0000 matched_functions=4
+YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
+
+Done processing in 00:01:28
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:54:43
+
+    CU[000] score=0.9000 matched_functions=4
+YES     | library=libmylib.a | score= 90.00% | matched_cu=1/2 | matched_functions=4 | time=00:00:00
+    CU[000] score=1.0000 matched_functions=4
+YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
+
+Done processing in 00:01:30
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:57:16
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 15:57:39
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 16:00:10
+
+    CU[000] score=0.9000 matched_functions=4
+YES     | library=libmylib.a | score= 90.00% | matched_cu=1/2 | matched_functions=4 | time=00:00:00
+    CU[000] score=1.0000 matched_functions=4
+YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
+
+Done processing in 00:01:29
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 16:02:55
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 16:06:00
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 16:08:32
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 16:10:11
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 16:10:59
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 16:11:24
+
+    CU[000] score=0.9000 matched_functions=4
+YES     | library=libmylib.a | score= 90.00% | matched_cu=1/2 | matched_functions=4 | time=00:00:00
+    CU[000] score=1.0000 matched_functions=4
+YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
+
+Done processing in 00:01:28
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 16:13:26
+
+    CU[000] score=0.9000 matched_functions=4
+YES     | library=libmylib.a | score= 90.00% | matched_cu=1/2 | matched_functions=4 | time=00:00:00
+    CU[000] score=1.0000 matched_functions=4
+YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
+
+Done processing in 00:01:28
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 16:18:48
+
+Found 2 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/easy/gcc11/calculator_static
+Start processing: 16:19:28
+
+    CU[000] score=0.9000 matched_functions=4
+YES     | library=libmylib.a | score= 90.00% | matched_cu=1/2 | matched_functions=4 | time=00:00:00
+    CU[000] score=1.0000 matched_functions=4
+YES     | library=libstats.a | score=100.00% | matched_cu=1/1 | matched_functions=4 | time=00:00:00
+
+Done processing in 00:01:28
