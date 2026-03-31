@@ -306,7 +306,9 @@ if __name__ == "__main__":
 
     if not library_files:
         raise ValueError(f"No .a or .a.* files found in directory '{libraries_dir}'")
-
+    else:
+        print(f"Found {len(library_files)} library files in '{libraries_dir}'")
+        
     asm_model = PalmTree("Palm Tree")
     asm_model.load(args.asm_model)
 
@@ -338,7 +340,7 @@ if __name__ == "__main__":
                 ]
             )
 
-            print(f"[DEBUG] {library_file.name}: extracted {len(extracted_objects)} files")
+            #print(f"[DEBUG] {library_file.name}: extracted {len(extracted_objects)} files")
             for obj_file in extracted_objects:
                 print(f"         -> {obj_file.name}")
 
