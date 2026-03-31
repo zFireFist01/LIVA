@@ -2,14 +2,14 @@
 set -e
 
 # Compila i file sorgente in oggetti
-gcc -c libraries/statistics.c -o libraries/statistics.o 
-gcc -c libraries/mylib.c -o libraries/mylib.o
-gcc -c libraries/mathops.c -o libraries/mathops.o
-gcc -c libraries/scommessa.c -o libraries/scommessa.o
+gcc -c libraries/statistics/statistics.c -o libraries/statistics/statistics.o 
+gcc -c libraries//mylib/mylib.c -o libraries/mylib/mylib.o
+gcc -c libraries/mathops/mathops.c -o libraries/mathops/mathops.o
+gcc -c libraries/scommessa/scommessa.c -o libraries/scomessa/scommessa.o
 
 # Crea la libreria statica
-ar rcs libmylib.a libraries/mylib.o libraries/mathops.o
-ar rcs libstats.a libraries/statistics.o
+ar rcs libraries/libmylib.a libraries/mylib/mylib.o libraries/mathops/mathops.o
+ar rcs libraries/libstats.a libraries/statistics/statistics.o
 
 # Crea le directory per i diversi compilatori
 mkdir -p gcc13 gcc11 clang18 clang14
