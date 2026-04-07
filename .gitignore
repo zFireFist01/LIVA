@@ -7,3 +7,7 @@ Exploration/libseeker_repo*
 /log_tesi_rizzi
 FunctionMatching/log_tesi_rizzi
 FunctionMatching/rizzi_thesis_code
+
+# Python cache files
+__pycache__/
+*.py[cod]

@@ -203,16 +203,27 @@ def log_line(line: str, output_file: str | None = None) -> None:
             print(line, file=f)
 
 
-def process_bin(binary_path: Path, lib: dict[str, list[Binary]], args, asm_model, graph_model):
-    """Process a single binary against all libraries."""
+def initialize_output_file(output_file: str | None) -> None:
+    """Prepare output file before writing logs."""
+    if not output_file:
+        return
+
+    output_path = Path(output_file)
+    if output_path.parent and not output_path.parent.exists():
+        raise ValueError(f"Output directory '{output_path.parent}' does not exist")
+
+    with open(output_file, "w", encoding="utf-8"):
+        pass
+
+
+def process_bin(binary: Binary, lib: dict[str, list[Binary]], args):
+    """Process a parsed binary against all libraries."""
     output_file = args.output if args.output else None
 
     if output_file:
         output_path = Path(output_file)
         if output_path.parent and not output_path.parent.exists():
             raise ValueError(f"Output directory '{output_path.parent}' does not exist")
-
-    binary = [parse_r2_file(binary_path.as_posix(), asm_model=asm_model, graph_model=graph_model)]
 
     # Perform function matching
     for library_name, comp_units in lib.items():
@@ -282,6 +293,7 @@ if __name__ == "__main__":
     start_main = time.time()
 
     args = get_args()
+    initialize_output_file(args.output)
 
     binary_path = Path(args.path_to_binary)
     if not binary_path.exists():
@@ -346,7 +358,7 @@ if __name__ == "__main__":
 
             for obj_file in extracted_objects:
                 try:
-                    b = parse_r2_file(obj_file.as_posix(), asm_model, graph_model)
+                    b = parse_r2_file(obj_file.as_posix(), asm_model=asm_model, graph_model=graph_model)
                     #print(f"[DEBUG] parsed {obj_file.name}: {b.get_num_functions()} functions")
                     if b.get_num_functions() > 0:
                         comp_units.append(b)
@@ -360,9 +372,11 @@ if __name__ == "__main__":
     log_line(f"Target binary: {binary_path}", args.output)
     log_line(f"Start processing: {time.strftime('%H:%M:%S', time.gmtime())}\n", args.output)
 
+    binary = parse_r2_file(binary_path.as_posix(), asm_model=asm_model, graph_model=graph_model)
+
     signal.alarm(3600 * 4)
     try:
-        process_bin(binary_path, lib, args, asm_model, graph_model)
+        process_bin(binary, lib, args)
     except TimeoutException as e:
         log_line(f"Timeout while processing binary '{binary_path.name}': {e}", args.output)
     finally:

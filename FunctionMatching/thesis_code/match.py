@@ -85,11 +85,11 @@ class Match:
         return round(float(score), 2)
 
 
-def match_functions(source_bin_list: list[asm.Binary], target_cu_list: list[asm.Binary]) -> list[Match]:
-    """Match assembly functions between source binaries and target compilation units.
+def match_functions(source_bin: asm.Binary, target_cu_list: list[asm.Binary]) -> list[Match]:
+    """Match assembly functions between a source binary and target compilation units.
 
     Args:
-        source_bin_list: List of source binaries (executables to analyze).
+        source_bin: Source binary (executable to analyze).
         target_cu_list: List of target compilation units (library object files).
 
     Returns:
@@ -97,99 +97,98 @@ def match_functions(source_bin_list: list[asm.Binary], target_cu_list: list[asm.
     """
 
     matches = []
-    for source_bin in source_bin_list:
-        n_bin_functions = source_bin.get_num_functions()
+    n_bin_functions = source_bin.get_num_functions()
 
-        for target_cu in target_cu_list:
-            cu_fun_size = target_cu.get_num_functions()
-            if cu_fun_size == 0:
+    for target_cu in target_cu_list:
+        cu_fun_size = target_cu.get_num_functions()
+        if cu_fun_size == 0:
+            continue
+
+        matched_blob = []
+        for blob in target_cu.blobs:
+            blob_size = len(blob)
+
+            # Compute similarity matrix using assembly-level embeddings
+            sim_matrix = model.compute_similarity_matrix(source_bin.functions, blob)
+            print(f"[DEBUG] {target_cu.name}: blob_size={blob_size}, max_sim={sim_matrix.max():.4f}")
+            bin_idx, cu_idx = np.unravel_index(np.argmax(sim_matrix), sim_matrix.shape)
+
+            if sim_matrix[bin_idx][cu_idx] < SIMILARITY_THRESHOLD:
+                # No match: max similarity is below the threshold for this blob
+                break
+
+            # Extract all possible matching windows per blob
+            matching_windows = [
+                slice(bin_idx - i, bin_idx - i + blob_size)
+                for i in range(blob_size)
+            ]
+            matching_windows = [
+                w for w in matching_windows
+                if w.start >= 0 and w.stop <= n_bin_functions
+            ]
+            if len(matching_windows) == 0:
                 continue
 
-            matched_blob = []
-            for blob in target_cu.blobs:
-                blob_size = len(blob)
+            # Extract sub matrices for each matching window
+            sub_matrices = [sim_matrix[w, :] for w in matching_windows]
 
-                # Compute similarity matrix using assembly-level embeddings
-                sim_matrix = model.compute_similarity_matrix(source_bin.functions, blob)
-                print(f"[DEBUG] {target_cu.name}: blob_size={blob_size}, max_sim={sim_matrix.max():.4f}")
-                bin_idx, cu_idx = np.unravel_index(np.argmax(sim_matrix), sim_matrix.shape)
+            # Perform linear sum assignment on each sub matrix
+            assignments = [
+                linear_sum_assignment(sub_matrix, maximize=True)
+                for sub_matrix in sub_matrices
+            ]
 
-                if sim_matrix[bin_idx][cu_idx] < SIMILARITY_THRESHOLD:
-                    # No match: max similarity is below the threshold for this blob
-                    break
+            # Sum assigned similarities
+            similarities = [
+                sub_matrix[rows, cols].sum()
+                for sub_matrix, (rows, cols) in zip(sub_matrices, assignments)
+            ]
 
-                # Extract all possible matching windows per blob
-                matching_windows = [
-                    slice(bin_idx - i, bin_idx - i + blob_size)
-                    for i in range(blob_size)
-                ]
-                matching_windows = [
-                    w for w in matching_windows
-                    if w.start >= 0 and w.stop <= n_bin_functions
-                ]
-                if len(matching_windows) == 0:
-                    continue
+            # Get best submatrix index
+            best_idx = np.argmax(similarities)
+            best_window = matching_windows[best_idx]
+            best_assignment = assignments[best_idx]
 
-                # Extract sub matrices for each matching window
-                sub_matrices = [sim_matrix[w, :] for w in matching_windows]
+            if similarities[best_idx] < (SIMILARITY_THRESHOLD - 0.1):
+                # No match: best similarity sum is below the threshold
+                continue
 
-                # Perform linear sum assignment on each sub matrix
-                assignments = [
-                    linear_sum_assignment(sub_matrix, maximize=True)
-                    for sub_matrix in sub_matrices
-                ]
+            # Reconstruct full indices from submatrix rows to global sim_matrix rows
+            global_row_indices = np.arange(best_window.start, best_window.stop)[best_assignment[0]]
+            global_col_indices = best_assignment[1]
 
-                # Sum assigned similarities
-                similarities = [
-                    sub_matrix[rows, cols].sum()
-                    for sub_matrix, (rows, cols) in zip(sub_matrices, assignments)
-                ]
-
-                # Get best submatrix index
-                best_idx = np.argmax(similarities)
-                best_window = matching_windows[best_idx]
-                best_assignment = assignments[best_idx]
-
-                if similarities[best_idx] < (SIMILARITY_THRESHOLD - 0.1):
-                    # No match: best similarity sum is below the threshold
-                    continue
-
-                # Reconstruct full indices from submatrix rows to global sim_matrix rows
-                global_row_indices = np.arange(best_window.start, best_window.stop)[best_assignment[0]]
-                global_col_indices = best_assignment[1]
-
-                # Create function match pairs
-                matched_functions = [
-                    FunctionPair(
-                        source_bin.functions[i],
-                        target_cu.functions[j],
-                        FeatureVector(sim_matrix[i][j]),
-                    )
-                    for i, j in zip(global_row_indices, global_col_indices)
-                ]
-                good = sum(1 for fp in matched_functions if fp.features.similarity >= SIMILARITY_THRESHOLD)
-                print(
-                    f"[DEBUG] {target_cu.name}: best_window=({best_window.start},{best_window.stop}), "
-                    f"assigned={len(matched_functions)}, good={good}, "
-                    f"ratio={good/len(matched_functions):.3f}, "
-                    f"sum={similarities[best_idx]:.4f}"
+            # Create function match pairs
+            matched_functions = [
+                FunctionPair(
+                    source_bin.functions[i],
+                    target_cu.functions[j],
+                    FeatureVector(sim_matrix[i][j]),
                 )
-                matched_blob.append((similarities[best_idx], blob_size, matched_functions))
-                break  # only one blob can match
-
-            if (
-                len(matched_blob) <= 0
-                or sum(s * b for s, b, _ in matched_blob) / sum(b for _, b, _ in matched_blob)
-                < SIMILARITY_THRESHOLD
-            ):
-                # No match: weighted average similarity is below the threshold
-                continue
-
-            matched = []
-            for _, _, functions in matched_blob:
-                matched.extend(functions)
-            matches.append(
-                Match(source_bin=source_bin, target_bin=target_cu, matched_functions=matched)
+                for i, j in zip(global_row_indices, global_col_indices)
+            ]
+            good = sum(1 for fp in matched_functions if fp.features.similarity >= SIMILARITY_THRESHOLD)
+            print(
+                f"[DEBUG] {target_cu.name}: best_window=({best_window.start},{best_window.stop}), "
+                f"assigned={len(matched_functions)}, good={good}, "
+                f"ratio={good/len(matched_functions):.3f}, "
+                f"sum={similarities[best_idx]:.4f}"
             )
+            matched_blob.append((similarities[best_idx], blob_size, matched_functions))
+            break  # only one blob can match
+
+        if (
+            len(matched_blob) <= 0
+            or sum(s * b for s, b, _ in matched_blob) / sum(b for _, b, _ in matched_blob)
+            < SIMILARITY_THRESHOLD
+        ):
+            # No match: weighted average similarity is below the threshold
+            continue
+
+        matched = []
+        for _, _, functions in matched_blob:
+            matched.extend(functions)
+        matches.append(
+            Match(source_bin=source_bin, target_bin=target_cu, matched_functions=matched)
+        )
 
     return matches

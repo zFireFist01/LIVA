@@ -2,20 +2,11 @@
 
 import os
 import re
-from itertools import groupby
 from subprocess import PIPE, run
 import r2pipe
 import numpy as np
 import networkx as nx
 from networkx import to_numpy_array
-
-
-ELF_TYPE: dict[str, str] = {
-    "REL":  "ET_REL",
-    "EXEC": "ET_EXEC",
-    "DYN":  "ET_DYN",
-    "CORE": "ET_CORE",
-}
 
 
 class Block:
@@ -142,16 +133,9 @@ class Binary:
 def parse_r2_file(file_path: str, asm_model=None, graph_model=None) -> "Binary":
     """Parse a binary or object file using r2pipe and return a Binary object."""
     r2 = r2pipe.open(file_path, flags=["-2"])
-
+    
     try:
         r2.cmd("aa")
-
-        info = r2.cmdj("ij") or {}
-        bin_type = info.get("bin", {}).get("type", "")
-        elf_type = next(
-            (v for k, v in ELF_TYPE.items() if k in bin_type.upper()),
-            "ET_NONE",
-        )
 
         functions: list[Function] = []
 
@@ -160,8 +144,8 @@ def parse_r2_file(file_path: str, asm_model=None, graph_model=None) -> "Binary":
         # ------------------------------------------------------------
         funcs_raw = r2.cmdj("aflj") or []
 
-        # Fallback for ET_REL: use symbol table, because aflj is often poor
-        if elf_type == "ET_REL" or not funcs_raw:
+        # Fallback: use symbol table when aflj is poor or empty
+        if not funcs_raw:
             readelf = run(
                 ["readelf", "--syms", "--wide", file_path],
                 stdout=PIPE,
@@ -295,38 +279,10 @@ def parse_r2_file(file_path: str, asm_model=None, graph_model=None) -> "Binary":
     finally:
         r2.quit()
 
-    blobs: list[list[Function]] | None = None
-    if elf_type == "ET_REL":
-        readelf = run(
-            ["readelf", "--syms", "--wide", file_path],
-            stdout=PIPE,
-            universal_newlines=True,
-        )
-        sym_lines = [l for l in readelf.stdout.splitlines() if "FUNC " in l]
-        sym_entries = []
-        for l in sym_lines:
-            parts = l.split()
-            try:
-                value = int(parts[1], 16)
-                name = parts[-1]
-                sym_entries.append((value, name))
-            except Exception:
-                continue
-
-        sym_entries.sort(key=lambda x: x[0])
-
-        lookup = {f.name: f for f in functions}
-        blobs = []
-        for _, group in groupby(sym_entries, key=lambda x: x[0]):
-            blob = [lookup[n] for _, n in group if n in lookup]
-            if blob:
-                blobs.append(blob)
-
     b = Binary(
         name=os.path.basename(file_path),
         file_path=file_path,
         functions=functions,
-        blobs=blobs,
     )
     b.compute_embeddings(asm_model=asm_model, graph_model=graph_model)
     return b
