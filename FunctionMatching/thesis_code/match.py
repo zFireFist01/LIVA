@@ -115,7 +115,7 @@ def match_functions(source_bin: asm.Binary, target_cu_list: list[asm.Binary]) ->
 
             if sim_matrix[bin_idx][cu_idx] < SIMILARITY_THRESHOLD:
                 # No match: max similarity is below the threshold for this blob
-                break
+                continue 
 
             # Extract all possible matching windows per blob
             matching_windows = [
@@ -148,9 +148,17 @@ def match_functions(source_bin: asm.Binary, target_cu_list: list[asm.Binary]) ->
             best_idx = np.argmax(similarities)
             best_window = matching_windows[best_idx]
             best_assignment = assignments[best_idx]
+            best_sum_similarity = float(similarities[best_idx])
+            best_num_assigned = len(best_assignment[0])
 
-            if similarities[best_idx] < (SIMILARITY_THRESHOLD - 0.1):
-                # No match: best similarity sum is below the threshold
+            if best_num_assigned == 0:
+                continue
+
+            # Normalize by number of assignments so thresholding is blob-size independent.
+            best_mean_similarity = best_sum_similarity / best_num_assigned
+
+            if best_mean_similarity < (SIMILARITY_THRESHOLD - 0.1):
+                # No match: best mean similarity is below the threshold
                 continue
 
             # Reconstruct full indices from submatrix rows to global sim_matrix rows
@@ -161,7 +169,7 @@ def match_functions(source_bin: asm.Binary, target_cu_list: list[asm.Binary]) ->
             matched_functions = [
                 FunctionPair(
                     source_bin.functions[i],
-                    target_cu.functions[j],
+                    blob[j],
                     FeatureVector(sim_matrix[i][j]),
                 )
                 for i, j in zip(global_row_indices, global_col_indices)
@@ -171,10 +179,11 @@ def match_functions(source_bin: asm.Binary, target_cu_list: list[asm.Binary]) ->
                 f"[DEBUG] {target_cu.name}: best_window=({best_window.start},{best_window.stop}), "
                 f"assigned={len(matched_functions)}, good={good}, "
                 f"ratio={good/len(matched_functions):.3f}, "
-                f"sum={similarities[best_idx]:.4f}"
+                f"mean={best_mean_similarity:.4f}, "
+                f"sum={best_sum_similarity:.4f}"
             )
-            matched_blob.append((similarities[best_idx], blob_size, matched_functions))
-            break  # only one blob can match
+            matched_blob.append((best_mean_similarity, best_num_assigned, matched_functions))
+            break  # only one blob can match -> se un blob successivo sarebbe migliore, non lo vedrai mai
 
         if (
             len(matched_blob) <= 0
