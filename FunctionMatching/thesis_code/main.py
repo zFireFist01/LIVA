@@ -69,7 +69,7 @@ _configure_runtime_from_cli()
 import tensorflow as tf
 from model import PalmTree
 from struct2vec import GraphNetwork
-from asm import Binary, parse_r2_file
+from asm import CodeUnit, parse_r2_file
 from match import match_functions
 
 gpus = tf.config.list_physical_devices("GPU")
@@ -216,7 +216,17 @@ def initialize_output_file(output_file: str | None) -> None:
         pass
 
 
-def process_bin(binary: Binary, lib: dict[str, list[Binary]], args):
+def log_parse_debug(code_unit: CodeUnit) -> None:
+    print(
+        f"[DEBUG] parsed {code_unit.name}: "
+        f"type={code_unit.unit_type}, "
+        f"functions={code_unit.get_num_functions()}, "
+        f"readelf_fallback_count={code_unit.readelf_fallback_count}, "
+        f"pseudo_block_fallback_count={code_unit.pseudo_block_fallback_count}"
+    )
+
+
+def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
     """Process a parsed binary against all libraries."""
     output_file = args.output if args.output else None
 
@@ -326,7 +336,7 @@ if __name__ == "__main__":
 
     graph_model = instantiate_gnn(args.graph_model)
 
-    lib: dict[str, list[Binary]] = {}
+    lib: dict[str, list[CodeUnit]] = {}
     for library_file in library_files:
         comp_units = []
 
@@ -358,8 +368,13 @@ if __name__ == "__main__":
 
             for obj_file in extracted_objects:
                 try:
-                    b = parse_r2_file(obj_file.as_posix(), asm_model=asm_model, graph_model=graph_model)
-                    #print(f"[DEBUG] parsed {obj_file.name}: {b.get_num_functions()} functions")
+                    b = parse_r2_file(
+                        obj_file.as_posix(),
+                        asm_model=asm_model,
+                        graph_model=graph_model,
+                        unit_type=CodeUnit.TYPE_CU,
+                    )
+                    log_parse_debug(b)
                     if b.get_num_functions() > 0:
                         comp_units.append(b)
                 except Exception as e:
@@ -372,7 +387,13 @@ if __name__ == "__main__":
     log_line(f"Target binary: {binary_path}", args.output)
     log_line(f"Start processing: {time.strftime('%H:%M:%S', time.gmtime())}\n", args.output)
 
-    binary = parse_r2_file(binary_path.as_posix(), asm_model=asm_model, graph_model=graph_model)
+    binary = parse_r2_file(
+        binary_path.as_posix(),
+        asm_model=asm_model,
+        graph_model=graph_model,
+        unit_type=CodeUnit.TYPE_ELF,
+    )
+    log_parse_debug(binary)
 
     signal.alarm(3600 * 4)
     try:

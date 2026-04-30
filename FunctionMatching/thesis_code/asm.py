@@ -38,16 +38,21 @@ class Function:
         self,
         name: str,
         address: int,
+        size: int = 0,
         blocks: list[Block] = None,
         cfg: nx.DiGraph = None,
+        call_targets: set[int] = None,
     ):
         self.name = name                            # Function name (from symbol table)
         self.address = address                      # Entry-point address
+        self.size = size                            # Function size in bytes, when known
         self.blocks: list[Block] = sorted(
             blocks or [], key=lambda b: b.address
         )
         # CFG: nodes are block addresses, edges are control-flow transitions.
         self.cfg: nx.DiGraph = cfg if cfg is not None else nx.DiGraph()
+        self.call_targets: set[int] = call_targets or set()
+        self.resolved_call_targets: set[int] = set()
         self.embedding: np.ndarray = None   # Graph-level function embedding
         self.graph_repr: np.ndarray = None  # Adjacency matrix of cfg
 
@@ -74,6 +79,17 @@ class Function:
 
     def get_num_blocks(self) -> int:
         return len(self.blocks)
+
+    def get_end_address(self) -> int:
+        """Best-effort exclusive end address for interval-based call resolution."""
+        if self.size > 0:
+            return self.address + self.size
+        if not self.blocks:
+            return self.address
+        return max(
+            block.address + (len(block.raw_bytes) if block.raw_bytes else 1)
+            for block in self.blocks
+        )
 
     def get_blocks_embeddings(self) -> list[np.ndarray]:
         return [b.embedding for b in self.blocks]
@@ -106,17 +122,40 @@ class Function:
             ).numpy()
 
 
-class Binary:
-    """Represents a binary file with its extracted assembly functions."""
+class CodeUnit:
+    """Represents an analyzed ELF binary or compilation unit."""
 
-    def __init__(self, name: str, file_path: str, functions: list[Function] = None, blobs: list[list[Function]] = None):
+    TYPE_ELF = "ELF"
+    TYPE_CU = "CU"
+
+    def __init__(
+        self,
+        name: str,
+        file_path: str,
+        functions: list[Function] = None,
+        blobs: list[list[Function]] = None,
+        unit_type: str = TYPE_ELF,
+        readelf_fallback_count: int = 0,
+        pseudo_block_fallback_count: int = 0,
+    ):
         self.name = name
         self.file_path = file_path
-        self.functions = functions or []
+        self.unit_type = unit_type
+        self.type = unit_type
+        self.readelf_fallback_count = readelf_fallback_count
+        self.pseudo_block_fallback_count = pseudo_block_fallback_count
+        self.functions = sorted(functions or [], key=lambda f: f.address)
         self.blobs = blobs or [self.functions]  # Default: all functions in one blob
+        self.call_graph: nx.DiGraph = nx.DiGraph()
+        self._resolve_internal_calls()
 
     def __repr__(self) -> str:
-        return f"<Binary {self.name}, {len(self.functions)} functions>"
+        return (
+            f"<CodeUnit {self.name}, type={self.unit_type}, "
+            f"{len(self.functions)} functions, "
+            f"readelf_fallback_count={self.readelf_fallback_count}, "
+            f"pseudo_block_fallback_count={self.pseudo_block_fallback_count}>"
+        )
 
     def __str__(self) -> str:
         return self.name
@@ -124,35 +163,125 @@ class Binary:
     def get_num_functions(self) -> int:
         return len(self.functions)
 
+    def _find_function_containing(self, address: int) -> Function | None:
+        for function in self.functions:
+            if function.address == address:
+                return function
+
+        candidates = [
+            function
+            for function in self.functions
+            if function.address <= address < function.get_end_address()
+        ]
+        if not candidates:
+            return None
+
+        return min(
+            candidates,
+            key=lambda function: function.get_end_address() - function.address,
+        )
+
+    def _resolve_internal_calls(self) -> None:
+        """Resolve numeric call targets to functions in this code unit, without symbols."""
+        self.call_graph.clear()
+        for function in self.functions:
+            function.resolved_call_targets.clear()
+            self.call_graph.add_node(function.address)
+
+        for caller in self.functions:
+            for target in caller.call_targets:
+                callee = self._find_function_containing(target)
+                if callee is None or callee.address == caller.address:
+                    continue
+                caller.resolved_call_targets.add(callee.address)
+                self.call_graph.add_edge(caller.address, callee.address)
+
     def compute_embeddings(self, asm_model, graph_model=None) -> None:
-        """Compute embeddings for all functions in the binary."""
+        """Compute embeddings for all functions in the code unit."""
         for function in self.functions:
             function.compute_embeddings(asm_model=asm_model, graph_model=graph_model)
 
 
-def parse_r2_file(file_path: str, asm_model=None, graph_model=None) -> "Binary":
-    """Parse a binary or object file using r2pipe and return a Binary object."""
+def _extract_relocation_targets(relocations: list[dict]) -> dict[int, int]:
+    """Map relocation field addresses to numeric symbol values, when available."""
+    relocation_targets = {}
+    for relocation in relocations:
+        relocation_address = relocation.get("vaddr")
+        symbol_address = relocation.get("sym_va")
+        if (
+            isinstance(relocation_address, int)
+            and isinstance(symbol_address, int)
+            and symbol_address > 0
+        ):
+            relocation_targets[relocation_address] = symbol_address
+    return relocation_targets
+
+
+def _extract_call_target(instruction: dict, relocation_targets: dict[int, int] = None) -> int | None:
+    """Return a numeric direct-call target from radare2 JSON, if present."""
+    if not str(instruction.get("type", "")).startswith("call"):
+        return None
+
+    relocation_targets = relocation_targets or {}
+    instruction_address = instruction.get("offset")
+    if isinstance(instruction_address, int):
+        for relocation_address in (instruction_address, instruction_address + 1):
+            relocated_target = relocation_targets.get(relocation_address)
+            if relocated_target is not None:
+                return relocated_target
+
+    if instruction.get("reloc"):
+        return None
+
+    for key in ("jump", "ptr", "val"):
+        call_target = instruction.get(key)
+        if isinstance(call_target, int) and call_target > 0:
+            return call_target
+        if isinstance(call_target, str):
+            try:
+                return int(call_target, 16)
+            except ValueError:
+                continue
+
+    match = re.search(r"\b0x[0-9a-fA-F]+\b", instruction.get("disasm", ""))
+    if match:
+        return int(match.group(0), 16)
+
+    return None
+
+
+def parse_r2_file(
+    file_path: str,
+    asm_model=None,
+    graph_model=None,
+    unit_type: str = CodeUnit.TYPE_ELF,
+) -> "CodeUnit":
+    """Parse a binary or object file using r2pipe and return a CodeUnit object."""
     r2 = r2pipe.open(file_path, flags=["-2"])
     
     try:
         r2.cmd("aa")
+        relocation_targets = _extract_relocation_targets(r2.cmdj("irj") or [])
 
         functions: list[Function] = []
+        readelf_fallback_count = 0
+        pseudo_block_fallback_count = 0
 
         # ------------------------------------------------------------
         # Case 1: normal binaries / shared libs
         # ------------------------------------------------------------
-        funcs_raw = r2.cmdj("aflj") or []
+        raw_functions = r2.cmdj("aflj") or []
 
         # Fallback: use symbol table when aflj is poor or empty
-        if not funcs_raw:
+        if not raw_functions:
+            readelf_fallback_count += 1
             readelf = run(
                 ["readelf", "--syms", "--wide", file_path],
                 stdout=PIPE,
                 universal_newlines=True,
             )
 
-            funcs_raw = []
+            raw_functions = []
             for line in readelf.stdout.splitlines():
                 if "FUNC" not in line:
                     continue
@@ -163,126 +292,159 @@ def parse_r2_file(file_path: str, asm_model=None, graph_model=None) -> "Binary":
                 # e.g. 12: 0000000000000000 42 FUNC GLOBAL DEFAULT 1 myfunc
                 try:
                     value_hex = parts[1]
-                    size = int(parts[2])
-                    typ = parts[3]
-                    name = parts[-1]
+                    function_size = int(parts[2])
+                    symbol_type = parts[3]
+                    function_name = parts[-1]
                 except Exception:
                     continue
 
-                if typ != "FUNC":
+                if symbol_type != "FUNC":
                     continue
-                if size == 0:
+                if function_size == 0:
                     continue
 
                 try:
-                    offset = int(value_hex, 16)
+                    function_address = int(value_hex, 16)
                 except ValueError:
                     continue
 
-                funcs_raw.append({
-                    "name": name,
-                    "offset": offset,
-                    "size": size,
+                raw_functions.append({
+                    "name": function_name,
+                    "offset": function_address,
+                    "size": function_size,
                 })
 
-        #print(f"[DEBUG] parse_r2_file({os.path.basename(file_path)}): candidate funcs = {len(funcs_raw)}")
+        #print(f"[DEBUG] parse_r2_file({os.path.basename(file_path)}): candidate funcs = {len(raw_functions)}")
 
-        for f in funcs_raw:
-            name: str = f.get("name", "")
-            addr: int = f.get("offset", 0)
-            size: int = f.get("size", 0)
+        for raw_function in raw_functions:
+            function_name: str = raw_function.get("name", "")
+            function_address: int = raw_function.get("offset", 0)
+            function_size: int = raw_function.get("size", 0)
 
-            if size == 0:
+            if function_size == 0:
                 continue
-            if name.startswith("sym.imp."):
+            if function_name.startswith("sym.imp."):
                 continue
 
-            # Force analysis of the function at addr if possible
+            # Force analysis of this function entry point if possible.
             try:
-                r2.cmd(f"af @ {addr}")
+                r2.cmd(f"af @ {function_address}")
             except Exception:
                 pass
 
-            blocks_json = r2.cmdj(f"afbj @ {addr}") or []
+            blocks_json = r2.cmdj(f"afbj @ {function_address}") or []
 
             # Fallback: create one pseudo-block from linear disasm
             if not blocks_json:
-                ins_json = r2.cmdj(f"pDj {size} @ {addr}") or []
+                pseudo_block_fallback_count += 1
+                instructions_json = r2.cmdj(f"pDj {function_size} @ {function_address}") or []
 
                 instructions = []
                 raw_bytes_list = []
+                call_targets = set()
 
-                for op in ins_json:
-                    asm = op.get("disasm", "")
-                    if not asm or op.get("type", "") == "invalid":
+                for instruction_json in instructions_json:
+                    asm = instruction_json.get("disasm", "")
+                    if not asm or instruction_json.get("type", "") == "invalid":
                         continue
 
                     asm = re.sub(r",", " ", asm)
                     asm = re.sub(r"  +", " ", asm).strip()
                     instructions.append(asm)
 
-                    hex_bytes = op.get("bytes", "")
+                    hex_bytes = instruction_json.get("bytes", "")
                     raw_bytes_list.append(bytes.fromhex(hex_bytes) if hex_bytes else b"")
+
+                    call_target = _extract_call_target(instruction_json, relocation_targets)
+                    if call_target is not None:
+                        call_targets.add(call_target)
 
                 if instructions:
                     raw_bytes = b"".join(raw_bytes_list) if raw_bytes_list else None
-                    block = Block(address=addr, instructions=instructions, raw_bytes=raw_bytes)
-                    cfg = nx.DiGraph()
-                    cfg.add_node(addr)
-                    functions.append(Function(name=name, address=addr, blocks=[block], cfg=cfg))
+                    block = Block(address=function_address, instructions=instructions, raw_bytes=raw_bytes)
+                    function_cfg = nx.DiGraph()
+                    function_cfg.add_node(function_address)
+                    functions.append(Function(
+                        name=function_name,
+                        address=function_address,
+                        size=function_size,
+                        blocks=[block],
+                        cfg=function_cfg,
+                        call_targets=call_targets,
+                    ))
                 continue
 
             blocks: list[Block] = []
-            cfg = nx.DiGraph()
+            function_cfg = nx.DiGraph()
+            call_targets = set()
 
-            for bb in blocks_json:
-                block_addr = bb.get("addr", bb.get("offset", 0))
-                block_size = bb.get("size", 0)
+            for block_json in blocks_json:
+                block_address = block_json.get("addr", block_json.get("offset", 0))
+                block_size = block_json.get("size", 0)
 
-                ins_json = r2.cmdj(f"pDj {block_size} @ {block_addr}") or []
+                instructions_json = r2.cmdj(f"pDj {block_size} @ {block_address}") or []
                 instructions = []
                 raw_bytes_list = []
 
-                for op in ins_json:
-                    asm = op.get("disasm", "")
-                    if not asm or op.get("type", "") == "invalid":
+                for instruction_json in instructions_json:
+                    asm = instruction_json.get("disasm", "")
+                    if not asm or instruction_json.get("type", "") == "invalid":
                         continue
 
                     asm = re.sub(r",", " ", asm)
                     asm = re.sub(r"  +", " ", asm).strip()
                     instructions.append(asm)
 
-                    hex_bytes = op.get("bytes", "")
+                    hex_bytes = instruction_json.get("bytes", "")
                     raw_bytes_list.append(bytes.fromhex(hex_bytes) if hex_bytes else b"")
+
+                    call_target = _extract_call_target(instruction_json, relocation_targets)
+                    if call_target is not None:
+                        call_targets.add(call_target)
 
                 if not instructions:
                     continue
 
                 raw_bytes = b"".join(raw_bytes_list) if raw_bytes_list else None
-                blocks.append(Block(address=block_addr, instructions=instructions, raw_bytes=raw_bytes))
-                cfg.add_node(block_addr)
+                blocks.append(Block(address=block_address, instructions=instructions, raw_bytes=raw_bytes))
+                function_cfg.add_node(block_address)
 
                 for edge_key in ("jump", "fail"):
-                    target = bb.get(edge_key)
-                    if target is not None and target != 0:
-                        cfg.add_edge(block_addr, target)
+                    edge_target = block_json.get(edge_key)
+                    if edge_target is not None and edge_target != 0:
+                        function_cfg.add_edge(block_address, edge_target)
 
             if not blocks:
                 continue
 
-            known = {b.address for b in blocks}
-            bad_edges = [(u, v) for u, v in cfg.edges() if v not in known]
-            cfg.remove_edges_from(bad_edges)
+            known_block_addresses = {block.address for block in blocks}
+            edges_outside_function = [
+                (source_block, target_block)
+                for source_block, target_block in function_cfg.edges()
+                if target_block not in known_block_addresses
+            ]
+            function_cfg.remove_edges_from(edges_outside_function)
 
-            functions.append(Function(name=name, address=addr, blocks=blocks, cfg=cfg))
+            functions.append(Function(
+                name=function_name,
+                address=function_address,
+                size=function_size,
+                blocks=blocks,
+                cfg=function_cfg,
+                call_targets=call_targets,
+            ))
 
     finally:
         r2.quit()
 
-    b = Binary(
+    parsed_code_unit = CodeUnit(
         name=os.path.basename(file_path),
         file_path=file_path,
+        unit_type=unit_type,
+        readelf_fallback_count=readelf_fallback_count,
+        pseudo_block_fallback_count=pseudo_block_fallback_count,
         functions=functions,
     )
-    b.compute_embeddings(asm_model=asm_model, graph_model=graph_model)
-    return b
+    if asm_model is not None:
+        parsed_code_unit.compute_embeddings(asm_model=asm_model, graph_model=graph_model)
+    return parsed_code_unit
