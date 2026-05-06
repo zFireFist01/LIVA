@@ -1,72 +1,115 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# Compila i file sorgente in oggetti
-gcc -c libraries/statistics/statistics.c -o libraries/statistics/statistics.o 
-gcc -c libraries//mylib/mylib.c -o libraries/mylib/mylib.o
-gcc -c libraries/mathops/mathops.c -o libraries/mathops/mathops.o
-gcc -c libraries/scommessa/scommessa.c -o libraries/scomessa/scommessa.o
+OPT_FLAGS="-O3"
+INCLUDE_FLAGS=(
+  -Ilibraries/mylib
+  -Ilibraries/mathops
+  -Ilibraries/statistics
+  -Ilibraries/scommessa
+)
+BINARY_INCLUDE_FLAGS=(
+  -I../.build_include
+  -I../libraries/mylib
+  -I../libraries/mathops
+  -I../libraries/statistics
+  -I../libraries/scommessa
+)
 
-# Crea la libreria statica
-ar rcs libraries/libmylib.a libraries/mylib/mylib.o libraries/mathops/mathops.o
-ar rcs libraries/libstats.a libraries/statistics/statistics.o
+LIB_SOURCES=(
+  "libraries/mylib/mylib.c"
+  "libraries/mathops/mathops.c"
+  "libraries/statistics/statistics.c"
+  "libraries/scommessa/scommessa.c"
+)
 
-# Crea le directory per i diversi compilatori
-mkdir -p gcc13 gcc11 clang18 clang14
+compile_libraries() {
+  local cc="$1"
+  local suffix="$2"
+  local opt_flags="$3"
 
-# # Compila il programma staticamente, con e senza ottimizzazione
-# cd gcc13
-# gcc-13 -static ../main.c -L.. -lmylib -O3 -o calculator_static_opt
-# gcc-13 -static ../main.c -L.. -lmylib -o calculator_static
-# objdump -d calculator_static_opt > disass_opt.txt
-# objdump -d calculator_static > disass.txt
-# cd ..
+  echo "Compilo librerie${suffix:+ ($suffix)} con $cc ${opt_flags:-senza ottimizzazioni}"
 
-cd gcc11
-gcc-11 -static ../main.c -Wl,--trace -L..  -lmylib -lstats -O3 -o calculator_static_opt
-gcc-11 -static ../main.c -L..  -lmylib -lstats -o calculator_static
+  for src in "${LIB_SOURCES[@]}"; do
+    local obj="${src%.c}${suffix}.o"
+    local disass="${src%.c}${suffix}.disass.txt"
+    "$cc" -c "$src" "${INCLUDE_FLAGS[@]}" $opt_flags -o "$obj"
+    objdump -d "$obj" > "$disass"
+  done
 
-# Crea i file di disassemblaggio
-objdump -d calculator_static_opt > disass_opt.txt
-objdump -d calculator_static > disass.txt
+  ar rcs "libraries/libmylib${suffix}.a" \
+    "libraries/mylib/mylib${suffix}.o" \
+    "libraries/mathops/mathops${suffix}.o"
+  ar rcs "libraries/libstats${suffix}.a" \
+    "libraries/statistics/statistics${suffix}.o"
+  ar rcs "libraries/libscommessa${suffix}.a" \
+    "libraries/scommessa/scommessa${suffix}.o"
+}
 
-# Crea il contenuto di rodata
-objdump -s -j .rodata calculator_static > rodata.txt
-objdump -s -j .rodata calculator_static_opt > rodata_opt.txt
+prepare_compat_headers() {
+  mkdir -p .build_include/libraries
+  ln -sf ../../libraries/mylib/mylib.h .build_include/libraries/mylib.h
+  ln -sf ../../libraries/mathops/mathops.h .build_include/libraries/mathops.h
+  ln -sf ../../libraries/statistics/statistics.h .build_include/libraries/statistics.h
+  ln -sf ../../libraries/scommessa/scommessa.h .build_include/libraries/scommessa.h
+}
 
-cd ..
+build_binary() {
+  local cc="$1"
+  local out_dir="$2"
 
-# # Compila il programma staticamente con clang, con e senza ottimizzazione
-# cd clang18
-# clang-18 -static ../main.c -L.. -lmylib -O3 -o calculator_static_opt
-# clang-18 -static ../main.c -L.. -lmylib -o calculator_static
+  if ! command -v "$cc" >/dev/null 2>&1; then
+    echo "Salto $out_dir: compilatore '$cc' non trovato."
+    return
+  fi
 
-#objdump -d calculator_static_opt > disass_opt.txt
-#objdump -d calculator_static > disass.txt
+  mkdir -p "$out_dir"
 
-# cd ..
+  (
+    cd "$out_dir"
 
-cd clang14
-clang-14 -static ../main.c -L.. -lmylib -lstats -O3 -o calculator_static_opt
-clang-14 -static ../main.c -L.. -lmylib -lstats -o calculator_static
+    "$cc" -static ../main.c "${BINARY_INCLUDE_FLAGS[@]}" \
+      -L../libraries -lmylib -lstats -O0 -o calculator_static
 
-# Crea i file di disassemblaggio
-objdump -d calculator_static_opt > disass_opt.txt
-objdump -d calculator_static > disass.txt
+    "$cc" -static ../main.c "${BINARY_INCLUDE_FLAGS[@]}" \
+      -L../libraries -lmylib_opt -lstats_opt $OPT_FLAGS -o calculator_static_opt
 
-# Crea il contenuto di rodata
-objdump -s -j .rodata calculator_static > rodata.txt
-objdump -s -j .rodata calculator_static_opt > rodata_opt.txt
+    "$cc" -static ../main.c "${BINARY_INCLUDE_FLAGS[@]}" \
+      -L../libraries -lmylib_opt -lstats_opt -O0 -o calculator_static_main_noopt_lib_opt
 
-cd ..
+    "$cc" -static ../main.c "${BINARY_INCLUDE_FLAGS[@]}" \
+      -L../libraries -lmylib -lstats $OPT_FLAGS -o calculator_static_main_opt_lib_noopt
 
-# Pulisci i file temporanei
-#rm libmylib.a libstats.a
-#rm libraries/*.o
+    objdump -d calculator_static > disass.txt
+    objdump -d calculator_static_opt > disass_opt.txt
+    objdump -d calculator_static_main_noopt_lib_opt > disass_main_noopt_lib_opt.txt
+    objdump -d calculator_static_main_opt_lib_noopt > disass_main_opt_lib_noopt.txt
+
+    objdump -s -j .rodata calculator_static > rodata.txt
+    objdump -s -j .rodata calculator_static_opt > rodata_opt.txt
+    objdump -s -j .rodata calculator_static_main_noopt_lib_opt > rodata_main_noopt_lib_opt.txt
+    objdump -s -j .rodata calculator_static_main_opt_lib_noopt > rodata_main_opt_lib_noopt.txt
+  )
+}
+
+if ! command -v gcc >/dev/null 2>&1; then
+  echo "Errore: gcc non trovato. Serve almeno gcc per creare le librerie."
+  exit 1
+fi
+
+prepare_compat_headers
+compile_libraries gcc "" "-O0"
+compile_libraries gcc "_opt" "$OPT_FLAGS"
+
+build_binary gcc-13 gcc13
+build_binary gcc-11 gcc11
+build_binary clang-18 clang18
+build_binary clang-14 clang14
 
 echo "Build completata:"
-echo "  → calculator_static_opt (con -O3)"
-echo "  → calculator_static (senza ottimizzazioni)"
-echo "  → calculator_static_opt_clang (con -O3)"
-echo "  → calculator_static_clang (senza ottimizzazioni)"
-echo "Eliminate librerie temporanee."
+echo "  - libraries/libmylib.a, libraries/libstats.a, libraries/libscommessa.a (senza ottimizzazioni)"
+echo "  - libraries/libmylib_opt.a, libraries/libstats_opt.a, libraries/libscommessa_opt.a (con $OPT_FLAGS)"
+echo "  - <compilatore>/calculator_static (main e librerie senza ottimizzazioni)"
+echo "  - <compilatore>/calculator_static_opt (main e librerie con $OPT_FLAGS)"
+echo "  - <compilatore>/calculator_static_main_noopt_lib_opt (main senza ottimizzazioni, librerie con $OPT_FLAGS)"
+echo "  - <compilatore>/calculator_static_main_opt_lib_noopt (main con $OPT_FLAGS, librerie senza ottimizzazioni)"

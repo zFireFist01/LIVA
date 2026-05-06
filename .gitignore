@@ -1,6 +1,10 @@
 Exploration/libseeker_repo*
-/easy/gcc*
-/easy/clang*
+Exploration/easy/gcc*
+Exploration/easy/clang*
+Exploration/easy/.build_include/
+Exploration/easy/libraries/*.a
+Exploration/easy/libraries/**/*.o
+Exploration/easy/libraries/**/*.disass.txt
 /.vscode
 /PalmTree
 /cfg_json
@@ -11,5 +15,4 @@ FunctionMatching/thesis_code/output.txt
 # Python cache files
 __pycache__/
 *.py[cod]
-
 
