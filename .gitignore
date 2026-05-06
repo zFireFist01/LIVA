@@ -1,3 +1,4 @@
+.gitignore
 Exploration/libseeker_repo*
 Exploration/easy/gcc*
 Exploration/easy/clang*
