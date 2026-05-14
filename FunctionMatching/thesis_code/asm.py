@@ -9,6 +9,12 @@ import networkx as nx
 from networkx import to_numpy_array
 
 
+def normalize_instruction_text(instruction: str) -> str:
+    """Normalize instruction text in the same way used by parse_r2_file."""
+    asm_text = re.sub(r",", " ", instruction)
+    return re.sub(r"  +", " ", asm_text).strip()
+
+
 class Block:
     """Represents a basic block inside a function's CFG."""
 
@@ -224,6 +230,8 @@ def _extract_call_target(instruction: dict, relocation_targets: dict[int, int] =
 
     relocation_targets = relocation_targets or {}
     instruction_address = instruction.get("offset")
+    if not isinstance(instruction_address, int):
+        instruction_address = instruction.get("addr")
     if isinstance(instruction_address, int):
         for relocation_address in (instruction_address, instruction_address + 1):
             relocated_target = relocation_targets.get(relocation_address)
@@ -318,7 +326,10 @@ def parse_r2_file(
 
         for raw_function in raw_functions:
             function_name: str = raw_function.get("name", "")
-            function_address: int = raw_function.get("offset", 0)
+            function_address: int = raw_function.get(
+                "offset",
+                raw_function.get("addr", 0),
+            )
             function_size: int = raw_function.get("size", 0)
 
             if function_size == 0:
@@ -348,8 +359,7 @@ def parse_r2_file(
                     if not asm or instruction_json.get("type", "") == "invalid":
                         continue
 
-                    asm = re.sub(r",", " ", asm)
-                    asm = re.sub(r"  +", " ", asm).strip()
+                    asm = normalize_instruction_text(asm)
                     instructions.append(asm)
 
                     hex_bytes = instruction_json.get("bytes", "")
@@ -391,8 +401,7 @@ def parse_r2_file(
                     if not asm or instruction_json.get("type", "") == "invalid":
                         continue
 
-                    asm = re.sub(r",", " ", asm)
-                    asm = re.sub(r"  +", " ", asm).strip()
+                    asm = normalize_instruction_text(asm)
                     instructions.append(asm)
 
                     hex_bytes = instruction_json.get("bytes", "")
