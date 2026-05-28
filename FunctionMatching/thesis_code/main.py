@@ -226,6 +226,13 @@ def log_parse_debug(code_unit: CodeUnit) -> None:
     )
 
 
+def filter_compilation_units(comp_units: list[CodeUnit]) -> tuple[list[CodeUnit], int]:
+    """Drop single-function compilation units before matching."""
+    eligible_comp_units = [cu for cu in comp_units if cu.get_num_functions() > 1]
+    excluded_single_function_cu = len(comp_units) - len(eligible_comp_units)
+    return eligible_comp_units, excluded_single_function_cu
+
+
 def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
     """Process a parsed binary against all libraries."""
     output_file = args.output if args.output else None
@@ -238,8 +245,25 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
     # Perform function matching
     for library_name, comp_units in lib.items():
         start_library = time.time()
+        eligible_comp_units, excluded_single_function_cu = filter_compilation_units(comp_units)
 
-        matches = match_functions(binary, comp_units)
+        if not eligible_comp_units:
+            stop_library = time.time()
+            elapsed_time = time.strftime("%H:%M:%S", time.gmtime(stop_library - start_library))
+            line = (
+                f"{'NO':7} | "
+                f"library={Path(library_name).name} | "
+                f"score={0.0:6.2f}% | "
+                f"matched_cu=0/0 | "
+                f"matched_functions=0 | "
+                f"time={elapsed_time} | "
+                f"no eligible compilation units | "
+                f"excluded_single_function_cu={excluded_single_function_cu}"
+            )
+            log_line(line, output_file)
+            continue
+
+        matches = match_functions(binary, eligible_comp_units)
         successful_matches = [m for m in matches if m.get_score() >= args.threshold]
 
         if successful_matches:
@@ -251,22 +275,9 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
         elapsed_time = time.strftime("%H:%M:%S", time.gmtime(stop_library - start_library))
 
         matched_cu = len(successful_matches)
-        total_cu = len(comp_units)
+        total_cu = len(eligible_comp_units)
         matched_functions = sum(m.get_num_matched_functions() for m in successful_matches)
         percentage = score_tot * 100.0
-
-        if total_cu == 0:
-            line = (
-                f"{'NO':7} | "
-                f"library={Path(library_name).name} | "
-                f"score={percentage:6.2f}% | "
-                f"matched_cu={matched_cu}/{total_cu} | "
-                f"matched_functions={matched_functions} | "
-                f"time={elapsed_time} | "
-                f"empty library parsing"
-            )
-            log_line(line, output_file)
-            continue
 
         enough_cu = matched_cu >= min(args.min_cu, total_cu)
         enough_functions = (

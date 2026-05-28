@@ -90,7 +90,7 @@ class Match:
         return round(float(score), 2)
 
 
-def _internal_call_edges(functions: list[asm.Function]) -> set[tuple[int, int]]:
+def internal_call_edges(functions: list[asm.Function]) -> set[tuple[int, int]]:
     """Return call edges whose caller and callee are both in `functions`."""
     addresses = {function.address for function in functions}
     edges = set()
@@ -103,7 +103,7 @@ def _internal_call_edges(functions: list[asm.Function]) -> set[tuple[int, int]]:
     return edges
 
 
-def _call_graph_assignment_score(
+def call_graph_assignment_score(
     source_functions: list[asm.Function],
     target_functions: list[asm.Function],
     target_to_source: dict[int, int],
@@ -113,11 +113,11 @@ def _call_graph_assignment_score(
     The score uses only numeric call targets resolved to local function addresses.
     Symbols and function names are not consulted.
     """
-    target_edges = _internal_call_edges(target_functions)
+    target_edges = internal_call_edges(target_functions)
     if not target_edges:
         return 0.0
 
-    source_edges = _internal_call_edges(source_functions)
+    source_edges = internal_call_edges(source_functions)
 
     matched_edges = 0
     for target_caller, target_callee in target_edges:
@@ -133,7 +133,7 @@ def _call_graph_assignment_score(
     return matched_edges / len(target_edges)
 
 
-def _combined_similarity(base_similarity: float, call_graph_similarity: float) -> float:
+def combined_similarity(base_similarity: float, call_graph_similarity: float) -> float:
     return min(
         1.0,
         base_similarity + (MODIFIER_CALL_GRAPH * call_graph_similarity),
@@ -213,13 +213,13 @@ def match_functions(source_bin: asm.CodeUnit, target_cu_list: list[asm.CodeUnit]
                     target_cu_functions[target_idx].address: source_functions[source_idx].address
                     for source_idx, target_idx in zip(source_global_rows, target_cols)
                 }
-                call_graph_score = _call_graph_assignment_score(
+                call_graph_score = call_graph_assignment_score(
                     source_functions,
                     target_cu_functions,
                     target_to_source,
                 )
                 assigned_similarities = [
-                    _combined_similarity(
+                    combined_similarity(
                         float(source_window_matrix[source_row][target_col]),
                         call_graph_score,
                     )
@@ -260,7 +260,7 @@ def match_functions(source_bin: asm.CodeUnit, target_cu_list: list[asm.CodeUnit]
                     source_functions[source_idx],
                     target_cu_functions[target_idx],
                     FeatureVector(
-                        _combined_similarity(sim_matrix[source_idx][target_idx], best_call_graph_score),
+                        combined_similarity(sim_matrix[source_idx][target_idx], best_call_graph_score),
                         best_call_graph_score,
                     ),
                 )
