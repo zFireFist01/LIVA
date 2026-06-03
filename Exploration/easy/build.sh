@@ -46,6 +46,14 @@ compile_libraries() {
     "libraries/scommessa/scommessa${suffix}.o"
 }
 
+cleanup_optimized_libraries() {
+  echo "Elimino solo gli archivi delle librerie ottimizzate, lasciando gli .o"
+  rm -f \
+    libraries/libmylib_opt.a \
+    libraries/libstats_opt.a \
+    libraries/libscommessa_opt.a
+}
+
 prepare_compat_headers() {
   mkdir -p .build_include/libraries
   ln -sf ../../libraries/mylib/mylib.h .build_include/libraries/mylib.h
@@ -106,9 +114,11 @@ build_binary gcc-11 gcc11
 build_binary clang-18 clang18
 build_binary clang-14 clang14
 
+cleanup_optimized_libraries
+
 echo "Build completata:"
 echo "  - libraries/libmylib.a, libraries/libstats.a, libraries/libscommessa.a (senza ottimizzazioni)"
-echo "  - libraries/libmylib_opt.a, libraries/libstats_opt.a, libraries/libscommessa_opt.a (con $OPT_FLAGS)"
+echo "  - gli archivi *_opt.a sono stati usati per il link e poi eliminati; gli *_opt.o restano disponibili"
 echo "  - <compilatore>/calculator_static (main e librerie senza ottimizzazioni)"
 echo "  - <compilatore>/calculator_static_opt (main e librerie con $OPT_FLAGS)"
 echo "  - <compilatore>/calculator_static_main_noopt_lib_opt (main senza ottimizzazioni, librerie con $OPT_FLAGS)"

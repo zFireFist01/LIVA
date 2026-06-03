@@ -85,4 +85,5 @@ Pipeline Construction:
 
 1) Quando viene fatto fuction matching anche funzioni di pochissimi byte fanno match causando falsi positivi -> endbr64 e jmp con liblzma per b2sum 
 2) Molto simili come implementazione di basso livello dei varargs, poco simili come comportamento finale. -> caso libgmp per b2sum lt24-initis.o
-3) 
+3) NO! CU con 1 sola funzione
+4) Controllare meglio assignment_values/Hungarian nel block matching: il vincolo 1:1 puo' penalizzare casi con ottimizzazioni, inlining o clonazione dove piu' blocchi target dovrebbero poter matchare lo stesso blocco/source region. Valutare una metrica many-to-one/top-k coverage o soglie diverse per assignment_mean.
