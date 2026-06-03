@@ -1,5 +1,0 @@
-binary,library,old_status,new_status,old_score,new_score,old_matched_cu,new_matched_cu,old_matched_functions,new_matched_functions,new_candidate_cu,new_primary_candidate_cu,new_recovery_candidate_cu,new_block_profile,new_block_candidate_mode,coarse_best,block_best
-grep.gcc.O0,libattr.a,,NO,,0.00,,0,,0,2/2,0,0,cross_optimization,all_cu,0.00,94.31
-grep.gcc.O0,libbz2.a,,NO,,0.00,,0,,0,4/4,4,0,cross_optimization,all_cu,99.00,91.56
-grep.gcc.O0,libpcre2-8.a,,YES,,99.42,,12,,114,16/16,16,0,cross_optimization,all_cu,100.00,100.00
-grep.gcc.O0,libuuid.a,,YES,,89.79,,4,,15,7/7,5,0,cross_optimization,all_cu,86.00,90.95

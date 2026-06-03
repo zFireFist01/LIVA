@@ -1,5 +1,0 @@
-binary,mode,library,status,score,function_best,block_best,block_scope,candidate_cu,primary_candidate_cu,recovery_candidate_cu,matched_cu,total_cu,matched_functions,time,log_path
-grep.gcc.O0,block,libattr.a,NO,0.00,65.00,94.31,all_cu,2/2,0,1,0,2,0,00:00:02,/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/current_allcu_primary_shortcut_compare/raw/grep.gcc.O0.block.raw.log
-grep.gcc.O0,block,libbz2.a,YES,88.94,99.00,91.41,all_cu,4/4,1,3,1,4,4,00:00:17,/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/current_allcu_primary_shortcut_compare/raw/grep.gcc.O0.block.raw.log
-grep.gcc.O0,block,libpcre2-8.a,YES,89.89,97.00,97.70,all_cu,16/16,5,6,6,16,24,00:03:32,/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/current_allcu_primary_shortcut_compare/raw/grep.gcc.O0.block.raw.log
-grep.gcc.O0,block,libuuid.a,YES,88.50,86.00,90.96,all_cu,7/7,1,5,4,7,14,00:00:02,/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/current_allcu_primary_shortcut_compare/raw/grep.gcc.O0.block.raw.log
