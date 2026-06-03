@@ -1,0 +1,8 @@
+binary,library,old_status,new_status,old_score,new_score,old_matched_cu,new_matched_cu,old_matched_functions,new_matched_functions,new_candidate_cu,new_primary_candidate_cu,new_recovery_candidate_cu,new_block_profile,new_block_candidate_mode,coarse_best,block_best
+grep.gcc.O0,libacl.a,YES,YES,88.60,84.16,5,8,12,19,9/9,7,2,cross_optimization,coarse,92.00,86.68
+grep.gcc.O0,libattr.a,NO,NO,0.00,0.00,0,0,0,0,0/2,0,0,cross_optimization,coarse,0.00,0.00
+grep.gcc.O0,libbz2.a,YES,YES,90.50,88.05,2,2,8,8,4/4,4,0,cross_optimization,coarse,99.00,89.15
+grep.gcc.O0,libncurses.a,YES,YES,86.16,82.90,31,42,95,154,93/101,81,12,cross_optimization,coarse,100.00,90.99
+grep.gcc.O0,libpcre2-8.a,YES,YES,95.64,97.24,14,14,120,120,16/16,16,0,cross_optimization,coarse,100.00,100.00
+grep.gcc.O0,libreadline.a,YES,YES,89.80,82.37,5,5,17,23,31/33,21,10,cross_optimization,coarse,100.00,88.97
+grep.gcc.O0,libuuid.a,YES,YES,83.00,83.62,2,2,7,6,5/7,5,0,cross_optimization,coarse,86.00,85.71

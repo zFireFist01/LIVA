@@ -1,0 +1,1109 @@
+$ /home/zfirefist/miniconda3/envs/thesis-code/bin/python main.py --hide-warnings --path_to_binary /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/libseeker_repo/exp_dataset/grep.gcc.O0 --libraries_dir /tmp/libseeker-batch-libs.dc_hqh4q --output /home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/grep_selected_results/reports/grep.gcc.O0.block.report.txt --candidate_threshold 0.65 --candidate_low_threshold 0.45 --block_profile cross_optimization --block_candidate_mode coarse --block_threshold 0.95 --block_assignment_threshold 0.95 --block_min_coverage_ratio 0.75 --block_locality_window_multiplier 3.0 --block_locality_window_padding 2 --block_min_edge_locality_ratio 0.5 --block_min_instructions 3 --block_min_function_concentration 0.45 --block_min_function_spread 0.5
+
+TensorFlow GPUs: []
+Found 7 library files in '/tmp/libseeker-batch-libs.dc_hqh4q'
+/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/palmtree/model/vocab
+Loading Vocab /home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/palmtree/model/vocab
+Vocab Size:  6631
+         -> high_water_alloc.o
+         -> la-__acl_extended_file.o
+         -> la-__acl_from_xattr.o
+         -> la-__acl_reorder_obj_p.o
+         -> la-__acl_to_any_text.o
+         -> la-__acl_to_xattr.o
+         -> la-__apply_mask_to_mode.o
+         -> la-__libobj.o
+         -> la-acl_add_perm.o
+         -> la-acl_calc_mask.o
+         -> la-acl_check.o
+         -> la-acl_clear_perms.o
+         -> la-acl_cmp.o
+         -> la-acl_copy_entry.o
+         -> la-acl_copy_ext.o
+         -> la-acl_copy_int.o
+         -> la-acl_create_entry.o
+         -> la-acl_delete_def_file.o
+         -> la-acl_delete_entry.o
+         -> la-acl_delete_perm.o
+         -> la-acl_dup.o
+         -> la-acl_entries.o
+         -> la-acl_equiv_mode.o
+         -> la-acl_error.o
+         -> la-acl_extended_fd.o
+         -> la-acl_extended_file.o
+         -> la-acl_extended_file_nofollow.o
+         -> la-acl_free.o
+         -> la-acl_from_mode.o
+         -> la-acl_from_text.o
+         -> la-acl_get_entry.o
+         -> la-acl_get_fd.o
+         -> la-acl_get_file.o
+         -> la-acl_get_perm.o
+         -> la-acl_get_permset.o
+         -> la-acl_get_qualifier.o
+         -> la-acl_get_tag_type.o
+         -> la-acl_init.o
+         -> la-acl_set_fd.o
+         -> la-acl_set_file.o
+         -> la-acl_set_permset.o
+         -> la-acl_set_qualifier.o
+         -> la-acl_set_tag_type.o
+         -> la-acl_size.o
+         -> la-acl_to_any_text.o
+         -> la-acl_to_text.o
+         -> la-acl_valid.o
+         -> la-perm_copy_fd.o
+         -> la-perm_copy_file.o
+         -> next_line.o
+         -> quote.o
+         -> uid_gid_lookup.o
+         -> unquote.o
+         -> walk_tree.o
+[DEBUG] parsed high_water_alloc.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__acl_extended_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__acl_from_xattr.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__acl_reorder_obj_p.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__acl_to_any_text.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__acl_to_xattr.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__apply_mask_to_mode.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__libobj.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_add_perm.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_calc_mask.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_check.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_clear_perms.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_cmp.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_copy_entry.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_copy_ext.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_copy_int.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_create_entry.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_delete_def_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_delete_entry.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_delete_perm.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_dup.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_entries.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_equiv_mode.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_error.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_extended_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_extended_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_extended_file_nofollow.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_free.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_from_mode.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_from_text.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_entry.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_perm.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_permset.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_qualifier.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_tag_type.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_init.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_set_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_set_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_set_permset.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_set_qualifier.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_set_tag_type.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_size.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_to_any_text.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_to_text.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_valid.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-perm_copy_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-perm_copy_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed next_line.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed quote.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed uid_gid_lookup.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed unquote.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed walk_tree.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libacl.a: loaded 54 object files
+         -> la-attr_copy_action.o
+         -> la-attr_copy_check.o
+         -> la-attr_copy_fd.o
+         -> la-attr_copy_file.o
+         -> la-libattr.o
+         -> la-syscalls.o
+[DEBUG] parsed la-attr_copy_action.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-attr_copy_check.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-attr_copy_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-attr_copy_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-libattr.o: type=CU, functions=12, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-syscalls.o: type=CU, functions=12, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libattr.a: loaded 6 object files
+         -> blocksort.o
+         -> bzlib.o
+         -> compress.o
+         -> crctable.o
+         -> decompress.o
+         -> huffman.o
+         -> randtable.o
+[DEBUG] parsed blocksort.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed bzlib.o: type=CU, functions=32, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed compress.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed crctable.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed decompress.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed huffman.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed randtable.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] libbz2.a: loaded 5 object files
+         -> access.o
+         -> add_tries.o
+         -> alloc_entry.o
+         -> alloc_ttype.o
+         -> captoinfo.o
+         -> codes.o
+         -> comp_captab.o
+         -> comp_error.o
+         -> comp_expand.o
+         -> comp_hash.o
+         -> comp_parse.o
+         -> comp_scan.o
+         -> comp_userdefs.o
+         -> db_iterator.o
+         -> define_key.o
+         -> doalloc.o
+         -> entries.o
+         -> expanded.o
+         -> fallback.o
+         -> free_ttype.o
+         -> getenv_num.o
+         -> hardscroll.o
+         -> hashed_db.o
+         -> hashmap.o
+         -> home_terminfo.o
+         -> init_keytry.o
+         -> key_defined.o
+         -> keybound.o
+         -> keyok.o
+         -> legacy_coding.o
+         -> lib_acs.o
+         -> lib_addch.o
+         -> lib_addstr.o
+         -> lib_baudrate.o
+         -> lib_beep.o
+         -> lib_bkgd.o
+         -> lib_box.o
+         -> lib_chgat.o
+         -> lib_clear.o
+         -> lib_clearok.o
+         -> lib_clrbot.o
+         -> lib_clreol.o
+         -> lib_color.o
+         -> lib_colorset.o
+         -> lib_cur_term.o
+         -> lib_data.o
+         -> lib_delch.o
+         -> lib_delwin.o
+         -> lib_dft_fgbg.o
+         -> lib_echo.o
+         -> lib_endwin.o
+         -> lib_erase.o
+         -> lib_flash.o
+         -> lib_freeall.o
+         -> lib_gen.o
+         -> lib_getch.o
+         -> lib_getstr.o
+         -> lib_has_cap.o
+         -> lib_hline.o
+         -> lib_immedok.o
+         -> lib_inchstr.o
+         -> lib_initscr.o
+         -> lib_insch.o
+         -> lib_insdel.o
+         -> lib_insnstr.o
+         -> lib_instr.o
+         -> lib_isendwin.o
+         -> lib_kernel.o
+         -> lib_keyname.o
+         -> lib_leaveok.o
+         -> lib_longname.o
+         -> lib_mouse.o
+         -> lib_move.o
+         -> lib_mvcur.o
+         -> lib_mvwin.o
+         -> lib_napms.o
+         -> lib_newterm.o
+         -> lib_newwin.o
+         -> lib_nl.o
+         -> lib_options.o
+         -> lib_overlay.o
+         -> lib_pad.o
+         -> lib_print.o
+         -> lib_printw.o
+         -> lib_raw.o
+         -> lib_redrawln.o
+         -> lib_refresh.o
+         -> lib_restart.o
+         -> lib_scanw.o
+         -> lib_screen.o
+         -> lib_scroll.o
+         -> lib_scrollok.o
+         -> lib_scrreg.o
+         -> lib_set_term.o
+         -> lib_setup.o
+         -> lib_slk.o
+         -> lib_slkatr_set.o
+         -> lib_slkatrof.o
+         -> lib_slkatron.o
+         -> lib_slkatrset.o
+         -> lib_slkattr.o
+         -> lib_slkclear.o
+         -> lib_slkcolor.o
+         -> lib_slkinit.o
+         -> lib_slklab.o
+         -> lib_slkrefr.o
+         -> lib_slkset.o
+         -> lib_slktouch.o
+         -> lib_termcap.o
+         -> lib_termname.o
+         -> lib_tgoto.o
+         -> lib_ti.o
+         -> lib_touch.o
+         -> lib_tparm.o
+         -> lib_tputs.o
+         -> lib_trace.o
+         -> lib_tstp.o
+         -> lib_ttyflags.o
+         -> lib_twait.o
+         -> lib_ungetch.o
+         -> lib_vidattr.o
+         -> lib_vline.o
+         -> lib_wattroff.o
+         -> lib_wattron.o
+         -> lib_winch.o
+         -> lib_window.o
+         -> name_match.o
+         -> names.o
+         -> nc_panel.o
+         -> new_pair.o
+         -> obsolete.o
+         -> parse_entry.o
+         -> read_entry.o
+         -> read_termcap.o
+         -> resizeterm.o
+         -> safe_sprintf.o
+         -> strings.o
+         -> tries.o
+         -> trim_sgr0.o
+         -> tty_update.o
+         -> unctrl.o
+         -> use_screen.o
+         -> use_window.o
+         -> varargs.o
+         -> version.o
+         -> visbuf.o
+         -> vsscanf.o
+         -> wresize.o
+         -> write_entry.o
+[DEBUG] parsed access.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed add_tries.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed alloc_entry.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed alloc_ttype.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed captoinfo.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed codes.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_captab.o: type=CU, functions=10, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_error.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_expand.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_hash.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_parse.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_scan.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_userdefs.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed db_iterator.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed define_key.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed doalloc.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed entries.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed expanded.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed fallback.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed free_ttype.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed getenv_num.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed hardscroll.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed hashed_db.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed hashmap.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed home_terminfo.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed init_keytry.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed key_defined.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed keybound.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed keyok.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed legacy_coding.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_acs.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_addch.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_addstr.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_baudrate.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_beep.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_bkgd.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_box.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_chgat.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_clear.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_clearok.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_clrbot.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_clreol.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_color.o: type=CU, functions=25, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_colorset.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_cur_term.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_data.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_delch.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_delwin.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_dft_fgbg.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_echo.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_endwin.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_erase.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_flash.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_freeall.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_gen.o: type=CU, functions=135, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_getch.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_getstr.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_has_cap.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_hline.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_immedok.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_inchstr.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_initscr.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_insch.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_insdel.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_insnstr.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_instr.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_isendwin.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_kernel.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_keyname.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_leaveok.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_longname.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_mouse.o: type=CU, functions=24, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_move.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_mvcur.o: type=CU, functions=16, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_mvwin.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_napms.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_newterm.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_newwin.o: type=CU, functions=9, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_nl.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_options.o: type=CU, functions=18, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_overlay.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_pad.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_print.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_printw.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_raw.o: type=CU, functions=14, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_redrawln.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_refresh.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_restart.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_scanw.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_screen.o: type=CU, functions=15, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_scroll.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_scrollok.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_scrreg.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_set_term.o: type=CU, functions=14, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_setup.o: type=CU, functions=17, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slk.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slkatr_set.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slkatrof.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slkatron.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slkatrset.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slkattr.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slkclear.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slkcolor.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slkinit.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slklab.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slkrefr.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slkset.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_slktouch.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_termcap.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_termname.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_tgoto.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_ti.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_touch.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_tparm.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_tputs.o: type=CU, functions=16, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_trace.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_tstp.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_ttyflags.o: type=CU, functions=16, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_twait.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_ungetch.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_vidattr.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_vline.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_wattroff.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_wattron.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_winch.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed lib_window.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed name_match.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed names.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed nc_panel.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed new_pair.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed obsolete.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed parse_entry.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed read_entry.o: type=CU, functions=9, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed read_termcap.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed resizeterm.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed safe_sprintf.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed strings.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed tries.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed trim_sgr0.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed tty_update.o: type=CU, functions=22, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed unctrl.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed use_screen.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed use_window.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed varargs.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed version.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed visbuf.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed vsscanf.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed wresize.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed write_entry.o: type=CU, functions=10, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libncurses.a: loaded 147 object files
+         -> pcre2_auto_possess.c.o
+         -> pcre2_chartables.c.o
+         -> pcre2_compile.c.o
+         -> pcre2_config.c.o
+         -> pcre2_context.c.o
+         -> pcre2_convert.c.o
+         -> pcre2_dfa_match.c.o
+         -> pcre2_error.c.o
+         -> pcre2_extuni.c.o
+         -> pcre2_find_bracket.c.o
+         -> pcre2_jit_compile.c.o
+         -> pcre2_maketables.c.o
+         -> pcre2_match.c.o
+         -> pcre2_match_data.c.o
+         -> pcre2_newline.c.o
+         -> pcre2_ord2utf.c.o
+         -> pcre2_pattern_info.c.o
+         -> pcre2_script_run.c.o
+         -> pcre2_serialize.c.o
+         -> pcre2_string_utils.c.o
+         -> pcre2_study.c.o
+         -> pcre2_substitute.c.o
+         -> pcre2_substring.c.o
+         -> pcre2_tables.c.o
+         -> pcre2_ucd.c.o
+         -> pcre2_valid_utf.c.o
+         -> pcre2_xclass.c.o
+[DEBUG] parsed pcre2_auto_possess.c.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_chartables.c.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_compile.c.o: type=CU, functions=33, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_config.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_context.c.o: type=CU, functions=32, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_convert.c.o: type=CU, functions=12, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_dfa_match.c.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_error.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_extuni.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_find_bracket.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_jit_compile.c.o: type=CU, functions=10, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_maketables.c.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_match.c.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_match_data.c.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_newline.c.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_ord2utf.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_pattern_info.c.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_script_run.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_serialize.c.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_string_utils.c.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_study.c.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_substitute.c.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_substring.c.o: type=CU, functions=11, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_tables.c.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_ucd.c.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_valid_utf.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_xclass.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libpcre2-8.a: loaded 24 object files
+         -> bind.o
+         -> callback.o
+         -> colors.o
+         -> compat.o
+         -> complete.o
+         -> display.o
+         -> funmap.o
+         -> histexpand.o
+         -> histfile.o
+         -> history.o
+         -> histsearch.o
+         -> input.o
+         -> isearch.o
+         -> keymaps.o
+         -> kill.o
+         -> macro.o
+         -> mbutil.o
+         -> misc.o
+         -> nls.o
+         -> parens.o
+         -> parse-colors.o
+         -> readline.o
+         -> rltty.o
+         -> search.o
+         -> shell.o
+         -> signals.o
+         -> terminal.o
+         -> text.o
+         -> tilde.o
+         -> undo.o
+         -> util.o
+         -> vi_mode.o
+         -> xfree.o
+         -> xmalloc.o
+[DEBUG] parsed bind.o: type=CU, functions=68, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed callback.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed colors.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed compat.o: type=CU, functions=10, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed complete.o: type=CU, functions=31, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed display.o: type=CU, functions=37, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed funmap.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed histexpand.o: type=CU, functions=9, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed histfile.o: type=CU, functions=9, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed history.o: type=CU, functions=26, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed histsearch.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed input.o: type=CU, functions=16, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed isearch.o: type=CU, functions=10, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed keymaps.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed kill.o: type=CU, functions=27, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed macro.o: type=CU, functions=13, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed mbutil.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed misc.o: type=CU, functions=32, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed nls.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed parens.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed parse-colors.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed readline.o: type=CU, functions=23, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed rltty.o: type=CU, functions=11, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed search.o: type=CU, functions=18, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed shell.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed signals.o: type=CU, functions=16, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed terminal.o: type=CU, functions=23, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed text.o: type=CU, functions=62, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed tilde.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed undo.o: type=CU, functions=12, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed util.o: type=CU, functions=22, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed vi_mode.o: type=CU, functions=72, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed xfree.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed xmalloc.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libreadline.a: loaded 34 object files
+         -> la-clear.o
+         -> la-compare.o
+         -> la-copy.o
+         -> la-gen_uuid.o
+         -> la-isnull.o
+         -> la-pack.o
+         -> la-parse.o
+         -> la-predefined.o
+         -> la-unpack.o
+         -> la-unparse.o
+         -> la-uuid_time.o
+         -> libuuid_la-md5.o
+         -> libuuid_la-randutils.o
+         -> libuuid_la-sha1.o
+[DEBUG] parsed la-clear.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-compare.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-copy.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-gen_uuid.o: type=CU, functions=13, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-isnull.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-pack.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-parse.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-predefined.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-unpack.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-unparse.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-uuid_time.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed libuuid_la-md5.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed libuuid_la-randutils.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed libuuid_la-sha1.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libuuid.a: loaded 14 object files
+Found 7 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/libseeker_repo/exp_dataset/grep.gcc.O0
+Start processing: 16:06:33
+
+[DEBUG] parsed grep.gcc.O0: type=ELF, functions=1957, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] la-__acl_reorder_obj_p.o: target_functions=3, max_sim=0.9461
+[DEBUG] la-__acl_reorder_obj_p.o: best_source_window=(1399,1402), assigned=3, good=2, ratio=0.667, mean=0.5796, sum=1.7387, call_graph=0.0000, locality=0.0000
+[DEBUG] la-__acl_to_any_text.o: target_functions=2, max_sim=0.8801
+[DEBUG] la-__acl_to_any_text.o: best_source_window=(340,342), assigned=2, good=1, ratio=0.500, mean=0.4799, sum=0.9599, call_graph=0.0000, locality=0.0000
+[DEBUG] la-__libobj.o: target_functions=5, max_sim=0.7931
+[DEBUG] la-__libobj.o: best_source_window=(871,876), assigned=5, good=2, ratio=0.400, mean=0.4182, sum=2.0909, call_graph=0.0000, locality=0.0000
+[DEBUG] la-acl_create_entry.o: target_functions=2, max_sim=0.8275
+[DEBUG] la-acl_create_entry.o: best_source_window=(1761,1763), assigned=2, good=1, ratio=0.500, mean=0.5429, sum=1.0858, call_graph=0.0000, locality=1.0000
+[DEBUG] la-acl_free.o: target_functions=2, max_sim=0.8527
+[DEBUG] la-acl_free.o: best_source_window=(1555,1557), assigned=2, good=2, ratio=1.000, mean=0.6486, sum=1.2971, call_graph=0.0000, locality=0.0000
+[DEBUG] la-acl_from_text.o: target_functions=3, max_sim=0.9702
+[DEBUG] la-acl_from_text.o: best_source_window=(1409,1412), assigned=3, good=3, ratio=1.000, mean=0.8992, sum=2.6976, call_graph=0.0000, locality=1.0000
+[DEBUG] la-acl_init.o: target_functions=2, max_sim=0.8379
+[DEBUG] la-acl_init.o: best_source_window=(1688,1690), assigned=2, good=2, ratio=1.000, mean=0.7076, sum=1.4152, call_graph=0.0000, locality=1.0000
+[DEBUG] uid_gid_lookup.o: target_functions=3, max_sim=0.7360
+[DEBUG] uid_gid_lookup.o: best_source_window=(422,425), assigned=3, good=2, ratio=0.667, mean=0.4330, sum=1.2990, call_graph=0.0000, locality=0.0000
+[DEBUG] walk_tree.o: target_functions=2, max_sim=0.8426
+[DEBUG] walk_tree.o: best_source_window=(1423,1425), assigned=2, good=1, ratio=0.500, mean=0.6534, sum=1.3068, call_graph=0.0000, locality=1.0000
+    BLOCK_CU[000] PASS band=primary coarse=0.9200 block=0.8627 coverage_mean=0.8627 coverage_min=0.7020 coverage_ratio=1.0000 assignment_mean=0.8841 assignment_min=0.6988 blocks=229/59 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5424 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[001] PASS band=primary coarse=0.9100 block=0.8312 coverage_mean=0.8312 coverage_min=0.6838 coverage_ratio=0.9231 assignment_mean=0.9067 assignment_min=0.8492 blocks=26/10 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[002] PASS band=primary coarse=0.9000 block=0.8376 coverage_mean=0.8376 coverage_min=0.7151 coverage_ratio=1.0000 assignment_mean=0.8245 assignment_min=0.6847 blocks=58/73 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5616 function_spread=0.6667 matched_functions=3
+    BLOCK_CU[003] PASS band=primary coarse=0.8800 block=0.7920 coverage_mean=0.7920 coverage_min=0.7128 coverage_ratio=1.0000 assignment_mean=0.7810 assignment_min=0.6971 blocks=13/33 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7273 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[004] PASS band=primary coarse=0.8200 block=0.8448 coverage_mean=0.8448 coverage_min=0.7282 coverage_ratio=1.0000 assignment_mean=0.7937 assignment_min=0.6453 blocks=15/22 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5909 function_spread=1.0000 matched_functions=3
+    BLOCK_CU[005] PASS band=primary coarse=0.7100 block=0.8668 coverage_mean=0.8668 coverage_min=0.7777 coverage_ratio=1.0000 assignment_mean=0.8202 assignment_min=0.7408 blocks=8/9 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8889 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[006] PASS band=primary coarse=0.6500 block=0.8535 coverage_mean=0.8535 coverage_min=0.7096 coverage_ratio=1.0000 assignment_mean=0.8763 assignment_min=0.8100 blocks=20/11 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6364 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[007] DROP band=recovery coarse=0.6100 block=0.7978 coverage_mean=0.7978 coverage_min=0.6173 coverage_ratio=0.8095 assignment_mean=0.8047 assignment_min=0.6954 blocks=21/11 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6364 function_spread=0.4000 matched_functions=5
+    BLOCK_CU[008] PASS band=recovery coarse=0.6000 block=0.8438 coverage_mean=0.8438 coverage_min=0.7635 coverage_ratio=1.0000 assignment_mean=0.7588 assignment_min=0.3747 blocks=35/28 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5000 function_spread=0.6667 matched_functions=3
+YES     | library=libacl.a | score= 84.16% | coarse_best= 92.00% | block_best= 86.68% | block_profile=cross_optimization | block_candidate_mode=coarse | candidate_cu=9/9 | primary_candidate_cu=7 | recovery_candidate_cu=2 | matched_cu=8/9 | matched_functions=19 | time=00:00:00
+[DEBUG] la-libattr.o: target_functions=12, max_sim=0.9302
+[DEBUG] la-libattr.o: best_source_window=(1321,1333), assigned=12, good=5, ratio=0.417, mean=0.3920, sum=4.7039, call_graph=0.0000, locality=1.0000
+[DEBUG] la-syscalls.o: target_functions=12, max_sim=0.9014
+NO      | library=libattr.a | score=  0.00% | coarse_best=  0.00% | block_best=  0.00% | block_profile=cross_optimization | block_candidate_mode=coarse | candidate_cu=0/2 | primary_candidate_cu=0 | recovery_candidate_cu=0 | matched_cu=0/2 | matched_functions=0 | time=00:00:00
+[DEBUG] blocksort.o: target_functions=4, max_sim=0.9126
+[DEBUG] blocksort.o: best_source_window=(1249,1253), assigned=4, good=3, ratio=0.750, mean=0.7146, sum=2.8586, call_graph=0.0000, locality=1.0000
+[DEBUG] bzlib.o: target_functions=32, max_sim=1.0000
+[DEBUG] bzlib.o: best_source_window=(1459,1491), assigned=32, good=26, ratio=0.812, mean=0.6041, sum=19.3325, call_graph=0.0000, locality=0.9130
+[DEBUG] compress.o: target_functions=4, max_sim=0.9133
+[DEBUG] compress.o: best_source_window=(955,959), assigned=4, good=1, ratio=0.250, mean=0.4290, sum=1.7159, call_graph=0.0000, locality=1.0000
+[DEBUG] huffman.o: target_functions=3, max_sim=0.9405
+[DEBUG] huffman.o: best_source_window=(1149,1152), assigned=3, good=2, ratio=0.667, mean=0.5003, sum=1.5010, call_graph=0.0000, locality=0.0000
+    BLOCK_CU[000] PASS band=primary coarse=0.9900 block=0.8915 coverage_mean=0.8915 coverage_min=0.7731 coverage_ratio=1.0000 assignment_mean=0.8808 assignment_min=0.7731 blocks=23/341 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5953 function_spread=0.7500 matched_functions=4
+    BLOCK_CU[001] PASS band=primary coarse=0.8200 block=0.8695 coverage_mean=0.8695 coverage_min=0.7608 coverage_ratio=1.0000 assignment_mean=0.8619 assignment_min=0.7389 blocks=103/262 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5763 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[002] DROP band=primary coarse=0.7100 block=0.7741 coverage_mean=0.7741 coverage_min=0.6572 coverage_ratio=0.9109 assignment_mean=0.7200 assignment_min=0.4830 blocks=101/70 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6286 function_spread=0.3333 matched_functions=3
+    BLOCK_CU[003] DROP band=primary coarse=0.6900 block=0.8740 coverage_mean=0.8740 coverage_min=0.6781 coverage_ratio=0.9974 assignment_mean=0.8326 assignment_min=0.6247 blocks=386/401 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3067 function_spread=0.3438 matched_functions=32
+YES     | library=libbz2.a | score= 88.05% | coarse_best= 99.00% | block_best= 89.15% | block_profile=cross_optimization | block_candidate_mode=coarse | candidate_cu=4/4 | primary_candidate_cu=4 | recovery_candidate_cu=0 | matched_cu=2/4 | matched_functions=8 | time=00:00:00
+[DEBUG] access.o: target_functions=7, max_sim=0.8706
+[DEBUG] access.o: best_source_window=(1770,1777), assigned=7, good=5, ratio=0.714, mean=0.4923, sum=3.4459, call_graph=0.0000, locality=0.0000
+[DEBUG] alloc_entry.o: target_functions=5, max_sim=0.9186
+[DEBUG] alloc_entry.o: best_source_window=(1291,1296), assigned=5, good=3, ratio=0.600, mean=0.4676, sum=2.3379, call_graph=0.0000, locality=1.0000
+[DEBUG] alloc_ttype.o: target_functions=8, max_sim=0.9029
+[DEBUG] alloc_ttype.o: best_source_window=(1271,1279), assigned=8, good=6, ratio=0.750, mean=0.6948, sum=5.5583, call_graph=0.0000, locality=1.0000
+[DEBUG] captoinfo.o: target_functions=7, max_sim=0.9357
+[DEBUG] captoinfo.o: best_source_window=(1894,1901), assigned=7, good=4, ratio=0.571, mean=0.5635, sum=3.9443, call_graph=0.0000, locality=1.0000
+[DEBUG] comp_captab.o: target_functions=10, max_sim=0.9474
+[DEBUG] comp_captab.o: best_source_window=(1065,1075), assigned=10, good=6, ratio=0.600, mean=0.4726, sum=4.7257, call_graph=0.0000, locality=0.0000
+[DEBUG] comp_error.o: target_functions=8, max_sim=1.0000
+[DEBUG] comp_error.o: best_source_window=(950,958), assigned=8, good=4, ratio=0.500, mean=0.4272, sum=3.4177, call_graph=0.0000, locality=1.0000
+[DEBUG] comp_hash.o: target_functions=3, max_sim=0.8459
+[DEBUG] comp_hash.o: best_source_window=(1018,1021), assigned=3, good=2, ratio=0.667, mean=0.5476, sum=1.6428, call_graph=0.0000, locality=0.0000
+[DEBUG] comp_parse.o: target_functions=7, max_sim=0.9495
+[DEBUG] comp_parse.o: best_source_window=(1850,1857), assigned=7, good=5, ratio=0.714, mean=0.5251, sum=3.6760, call_graph=0.0000, locality=1.0000
+[DEBUG] comp_scan.o: target_functions=7, max_sim=0.9319
+[DEBUG] comp_scan.o: best_source_window=(831,838), assigned=7, good=6, ratio=0.857, mean=0.6402, sum=4.4813, call_graph=0.0000, locality=1.0000
+[DEBUG] comp_userdefs.o: target_functions=4, max_sim=1.0000
+[DEBUG] comp_userdefs.o: best_source_window=(1475,1479), assigned=4, good=3, ratio=0.750, mean=0.5305, sum=2.1219, call_graph=0.0000, locality=0.0000
+[DEBUG] db_iterator.o: target_functions=7, max_sim=0.9799
+[DEBUG] db_iterator.o: best_source_window=(1401,1408), assigned=7, good=5, ratio=0.714, mean=0.5386, sum=3.7704, call_graph=0.2000, locality=1.0000
+[DEBUG] define_key.o: target_functions=2, max_sim=0.8461
+[DEBUG] define_key.o: best_source_window=(1043,1045), assigned=2, good=1, ratio=0.500, mean=0.5607, sum=1.1213, call_graph=0.0000, locality=0.0000
+[DEBUG] entries.o: target_functions=4, max_sim=1.0000
+[DEBUG] entries.o: best_source_window=(77,81), assigned=4, good=3, ratio=0.750, mean=0.5403, sum=2.1613, call_graph=0.0000, locality=0.0000
+[DEBUG] free_ttype.o: target_functions=2, max_sim=0.8332
+[DEBUG] free_ttype.o: best_source_window=(238,240), assigned=2, good=1, ratio=0.500, mean=0.4150, sum=0.8300, call_graph=0.0000, locality=0.0000
+[DEBUG] getenv_num.o: target_functions=2, max_sim=0.8619
+[DEBUG] getenv_num.o: best_source_window=(1877,1879), assigned=2, good=1, ratio=0.500, mean=0.5953, sum=1.1907, call_graph=0.0000, locality=0.0000
+[DEBUG] hardscroll.o: target_functions=2, max_sim=0.9423
+[DEBUG] hardscroll.o: best_source_window=(831,833), assigned=2, good=1, ratio=0.500, mean=0.4954, sum=0.9909, call_graph=0.0000, locality=0.0000
+[DEBUG] hashmap.o: target_functions=8, max_sim=0.9503
+[DEBUG] hashmap.o: best_source_window=(1849,1857), assigned=8, good=5, ratio=0.625, mean=0.5756, sum=4.6045, call_graph=0.0000, locality=1.0000
+[DEBUG] key_defined.o: target_functions=3, max_sim=0.8810
+[DEBUG] key_defined.o: best_source_window=(1841,1844), assigned=3, good=2, ratio=0.667, mean=0.4454, sum=1.3361, call_graph=0.0000, locality=0.0000
+[DEBUG] keybound.o: target_functions=2, max_sim=0.8209
+[DEBUG] keybound.o: best_source_window=(512,514), assigned=2, good=1, ratio=0.500, mean=0.4516, sum=0.9033, call_graph=0.0000, locality=0.0000
+[DEBUG] keyok.o: target_functions=2, max_sim=0.8076
+[DEBUG] keyok.o: best_source_window=(1227,1229), assigned=2, good=1, ratio=0.500, mean=0.4360, sum=0.8721, call_graph=0.0000, locality=0.0000
+[DEBUG] legacy_coding.o: target_functions=2, max_sim=0.8580
+[DEBUG] legacy_coding.o: best_source_window=(850,852), assigned=2, good=1, ratio=0.500, mean=0.6063, sum=1.2126, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_acs.o: target_functions=2, max_sim=0.8195
+[DEBUG] lib_acs.o: best_source_window=(1642,1644), assigned=2, good=1, ratio=0.500, mean=0.3990, sum=0.7980, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_addch.o: target_functions=5, max_sim=0.9487
+[DEBUG] lib_addch.o: best_source_window=(1239,1244), assigned=5, good=3, ratio=0.600, mean=0.6446, sum=3.2229, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_addstr.o: target_functions=2, max_sim=0.9236
+[DEBUG] lib_addstr.o: best_source_window=(979,981), assigned=2, good=1, ratio=0.500, mean=0.6205, sum=1.2411, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_baudrate.o: target_functions=4, max_sim=0.9129
+[DEBUG] lib_baudrate.o: best_source_window=(1726,1730), assigned=4, good=2, ratio=0.500, mean=0.5251, sum=2.1003, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_beep.o: target_functions=2, max_sim=0.7910
+[DEBUG] lib_beep.o: best_source_window=(625,627), assigned=2, good=1, ratio=0.500, mean=0.4250, sum=0.8500, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_bkgd.o: target_functions=2, max_sim=0.9234
+[DEBUG] lib_bkgd.o: best_source_window=(825,827), assigned=2, good=1, ratio=0.500, mean=0.4841, sum=0.9682, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_color.o: target_functions=25, max_sim=0.9647
+[DEBUG] lib_color.o: best_source_window=(371,396), assigned=25, good=17, ratio=0.680, mean=0.5127, sum=12.8176, call_graph=0.2000, locality=1.0000
+[DEBUG] lib_cur_term.o: target_functions=4, max_sim=0.8509
+[DEBUG] lib_cur_term.o: best_source_window=(1485,1489), assigned=4, good=4, ratio=1.000, mean=0.6177, sum=2.4709, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_dft_fgbg.o: target_functions=4, max_sim=0.9261
+[DEBUG] lib_dft_fgbg.o: best_source_window=(1381,1385), assigned=4, good=1, ratio=0.250, mean=0.4079, sum=1.6317, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_echo.o: target_functions=4, max_sim=0.9401
+[DEBUG] lib_echo.o: best_source_window=(785,789), assigned=4, good=3, ratio=0.750, mean=0.6247, sum=2.4986, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_endwin.o: target_functions=2, max_sim=0.8443
+[DEBUG] lib_endwin.o: best_source_window=(884,886), assigned=2, good=2, ratio=1.000, mean=0.4848, sum=0.9695, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_flash.o: target_functions=2, max_sim=0.7586
+[DEBUG] lib_flash.o: best_source_window=(1636,1638), assigned=2, good=2, ratio=1.000, mean=0.6847, sum=1.3693, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_freeall.o: target_functions=4, max_sim=1.0000
+[DEBUG] lib_freeall.o: best_source_window=(76,80), assigned=4, good=3, ratio=0.750, mean=0.5335, sum=2.1341, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_gen.o: target_functions=135, max_sim=0.9401
+[DEBUG] lib_gen.o: best_source_window=(781,916), assigned=135, good=91, ratio=0.674, mean=0.4725, sum=63.7838, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_getch.o: target_functions=6, max_sim=0.9625
+[DEBUG] lib_getch.o: best_source_window=(980,986), assigned=6, good=5, ratio=0.833, mean=0.6866, sum=4.1198, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_getstr.o: target_functions=2, max_sim=0.9225
+[DEBUG] lib_getstr.o: best_source_window=(1577,1579), assigned=2, good=2, ratio=1.000, mean=0.7409, sum=1.4818, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_has_cap.o: target_functions=4, max_sim=0.8924
+[DEBUG] lib_has_cap.o: best_source_window=(77,81), assigned=4, good=2, ratio=0.500, mean=0.4049, sum=1.6195, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_insch.o: target_functions=2, max_sim=0.7449
+[DEBUG] lib_insch.o: best_source_window=(1671,1673), assigned=2, good=1, ratio=0.500, mean=0.5785, sum=1.1570, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_isendwin.o: target_functions=2, max_sim=0.8440
+[DEBUG] lib_isendwin.o: best_source_window=(1343,1345), assigned=2, good=2, ratio=1.000, mean=0.7081, sum=1.4163, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_kernel.o: target_functions=6, max_sim=0.9329
+[DEBUG] lib_kernel.o: best_source_window=(953,959), assigned=6, good=2, ratio=0.333, mean=0.3790, sum=2.2741, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_keyname.o: target_functions=3, max_sim=0.8675
+[DEBUG] lib_keyname.o: best_source_window=(1225,1228), assigned=3, good=1, ratio=0.333, mean=0.3807, sum=1.1422, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_longname.o: target_functions=2, max_sim=0.7797
+[DEBUG] lib_longname.o: best_source_window=(1825,1827), assigned=2, good=1, ratio=0.500, mean=0.4047, sum=0.8093, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_mouse.o: target_functions=24, max_sim=0.9484
+[DEBUG] lib_mouse.o: best_source_window=(1190,1214), assigned=24, good=23, ratio=0.958, mean=0.6574, sum=15.7783, call_graph=0.0000, locality=0.8889
+[DEBUG] lib_mvcur.o: target_functions=16, max_sim=0.9725
+[DEBUG] lib_mvcur.o: best_source_window=(1884,1900), assigned=16, good=10, ratio=0.625, mean=0.4937, sum=7.8989, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_napms.o: target_functions=2, max_sim=0.9330
+[DEBUG] lib_napms.o: best_source_window=(109,111), assigned=2, good=2, ratio=1.000, mean=0.7202, sum=1.4405, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_newterm.o: target_functions=6, max_sim=0.9388
+[DEBUG] lib_newterm.o: best_source_window=(837,843), assigned=6, good=2, ratio=0.333, mean=0.5108, sum=3.0646, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_newwin.o: target_functions=9, max_sim=0.8971
+[DEBUG] lib_newwin.o: best_source_window=(859,868), assigned=9, good=6, ratio=0.667, mean=0.4962, sum=4.4657, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_nl.o: target_functions=4, max_sim=0.9401
+[DEBUG] lib_nl.o: best_source_window=(785,789), assigned=4, good=3, ratio=0.750, mean=0.6247, sum=2.4986, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_options.o: target_functions=18, max_sim=0.9247
+[DEBUG] lib_options.o: best_source_window=(1749,1767), assigned=18, good=10, ratio=0.556, mean=0.4936, sum=8.8852, call_graph=0.5000, locality=1.0000
+[DEBUG] lib_overlay.o: target_functions=4, max_sim=1.0000
+[DEBUG] lib_overlay.o: best_source_window=(838,842), assigned=4, good=2, ratio=0.500, mean=0.5080, sum=2.0321, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_pad.o: target_functions=6, max_sim=0.8479
+[DEBUG] lib_pad.o: best_source_window=(609,615), assigned=6, good=3, ratio=0.500, mean=0.4836, sum=2.9016, call_graph=0.5000, locality=1.0000
+[DEBUG] lib_print.o: target_functions=2, max_sim=0.8453
+[DEBUG] lib_print.o: best_source_window=(1533,1535), assigned=2, good=2, ratio=1.000, mean=0.6948, sum=1.3896, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_printw.o: target_functions=6, max_sim=0.9224
+[DEBUG] lib_printw.o: best_source_window=(110,116), assigned=6, good=2, ratio=0.333, mean=0.3009, sum=1.8055, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_raw.o: target_functions=14, max_sim=0.9557
+[DEBUG] lib_raw.o: best_source_window=(421,435), assigned=14, good=5, ratio=0.357, mean=0.3808, sum=5.3315, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_refresh.o: target_functions=2, max_sim=0.8422
+[DEBUG] lib_refresh.o: best_source_window=(695,697), assigned=2, good=1, ratio=0.500, mean=0.4639, sum=0.9278, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_restart.o: target_functions=2, max_sim=0.8693
+[DEBUG] lib_restart.o: best_source_window=(1533,1535), assigned=2, good=1, ratio=0.500, mean=0.5006, sum=1.0012, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_scanw.o: target_functions=6, max_sim=1.0000
+[DEBUG] lib_scanw.o: best_source_window=(972,978), assigned=6, good=3, ratio=0.500, mean=0.4337, sum=2.6025, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_screen.o: target_functions=15, max_sim=0.9782
+[DEBUG] lib_screen.o: best_source_window=(1748,1763), assigned=15, good=11, ratio=0.733, mean=0.5633, sum=8.4494, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_scroll.o: target_functions=2, max_sim=0.9309
+[DEBUG] lib_scroll.o: best_source_window=(1571,1573), assigned=2, good=2, ratio=1.000, mean=0.8594, sum=1.7188, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_set_term.o: target_functions=14, max_sim=1.0000
+[DEBUG] lib_set_term.o: best_source_window=(79,93), assigned=14, good=12, ratio=0.857, mean=0.5547, sum=7.7652, call_graph=0.5000, locality=1.0000
+[DEBUG] lib_setup.o: target_functions=17, max_sim=1.0000
+[DEBUG] lib_setup.o: best_source_window=(809,826), assigned=17, good=14, ratio=0.824, mean=0.6146, sum=10.4483, call_graph=0.5000, locality=1.0000
+[DEBUG] lib_slk.o: target_functions=4, max_sim=0.8914
+[DEBUG] lib_slk.o: best_source_window=(1809,1813), assigned=4, good=3, ratio=0.750, mean=0.5725, sum=2.2900, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_slkatr_set.o: target_functions=2, max_sim=0.8917
+[DEBUG] lib_slkatr_set.o: best_source_window=(1794,1796), assigned=2, good=2, ratio=1.000, mean=0.8094, sum=1.6188, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_slkatrof.o: target_functions=2, max_sim=0.8658
+[DEBUG] lib_slkatrof.o: best_source_window=(1342,1344), assigned=2, good=2, ratio=1.000, mean=0.7147, sum=1.4295, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_slkatron.o: target_functions=2, max_sim=0.8437
+[DEBUG] lib_slkatron.o: best_source_window=(1342,1344), assigned=2, good=2, ratio=1.000, mean=0.7393, sum=1.4785, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_slkatrset.o: target_functions=2, max_sim=0.8342
+[DEBUG] lib_slkatrset.o: best_source_window=(787,789), assigned=2, good=2, ratio=1.000, mean=0.7559, sum=1.5117, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_slkattr.o: target_functions=2, max_sim=0.8987
+[DEBUG] lib_slkattr.o: best_source_window=(746,748), assigned=2, good=2, ratio=1.000, mean=0.8984, sum=1.7968, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_slkclear.o: target_functions=2, max_sim=0.8834
+[DEBUG] lib_slkclear.o: best_source_window=(934,936), assigned=2, good=1, ratio=0.500, mean=0.4469, sum=0.8937, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_slkcolor.o: target_functions=2, max_sim=0.8591
+[DEBUG] lib_slkcolor.o: best_source_window=(1794,1796), assigned=2, good=2, ratio=1.000, mean=0.8022, sum=1.6044, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_slkinit.o: target_functions=2, max_sim=0.9078
+[DEBUG] lib_slkinit.o: best_source_window=(1810,1812), assigned=2, good=2, ratio=1.000, mean=0.7499, sum=1.4998, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_slklab.o: target_functions=2, max_sim=0.9055
+[DEBUG] lib_slklab.o: best_source_window=(1719,1721), assigned=2, good=2, ratio=1.000, mean=0.6865, sum=1.3730, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_slkrefr.o: target_functions=5, max_sim=0.8406
+[DEBUG] lib_slkrefr.o: best_source_window=(1241,1246), assigned=5, good=1, ratio=0.200, mean=0.4344, sum=2.1720, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_slkset.o: target_functions=2, max_sim=0.8436
+[DEBUG] lib_slkset.o: best_source_window=(756,758), assigned=2, good=1, ratio=0.500, mean=0.5030, sum=1.0061, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_slktouch.o: target_functions=2, max_sim=0.8163
+[DEBUG] lib_slktouch.o: best_source_window=(1343,1345), assigned=2, good=2, ratio=1.000, mean=0.6926, sum=1.3852, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_termcap.o: target_functions=8, max_sim=0.9753
+[DEBUG] lib_termcap.o: best_source_window=(1527,1535), assigned=8, good=5, ratio=0.625, mean=0.5268, sum=4.2146, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_termname.o: target_functions=2, max_sim=0.8895
+[DEBUG] lib_termname.o: best_source_window=(76,78), assigned=2, good=1, ratio=0.500, mean=0.4039, sum=0.8077, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_ti.o: target_functions=6, max_sim=0.8538
+[DEBUG] lib_touch.o: target_functions=3, max_sim=0.9345
+[DEBUG] lib_touch.o: best_source_window=(1059,1062), assigned=3, good=3, ratio=1.000, mean=0.7876, sum=2.3628, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_tparm.o: target_functions=7, max_sim=0.9407
+[DEBUG] lib_tparm.o: best_source_window=(1462,1469), assigned=7, good=4, ratio=0.571, mean=0.5570, sum=3.8988, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_tputs.o: target_functions=16, max_sim=0.9650
+[DEBUG] lib_tputs.o: best_source_window=(1210,1226), assigned=16, good=12, ratio=0.750, mean=0.5103, sum=8.1647, call_graph=0.2500, locality=1.0000
+[DEBUG] lib_tstp.o: target_functions=5, max_sim=0.8935
+[DEBUG] lib_tstp.o: best_source_window=(980,985), assigned=5, good=1, ratio=0.200, mean=0.3663, sum=1.8316, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_ttyflags.o: target_functions=16, max_sim=0.8903
+[DEBUG] lib_ttyflags.o: best_source_window=(1624,1640), assigned=16, good=12, ratio=0.750, mean=0.5775, sum=9.2398, call_graph=0.0000, locality=1.0000
+[DEBUG] lib_ungetch.o: target_functions=2, max_sim=0.8965
+[DEBUG] lib_ungetch.o: best_source_window=(1363,1365), assigned=2, good=1, ratio=0.500, mean=0.6016, sum=1.2032, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_vidattr.o: target_functions=6, max_sim=0.8696
+[DEBUG] lib_vidattr.o: best_source_window=(1485,1491), assigned=6, good=3, ratio=0.500, mean=0.3818, sum=2.2908, call_graph=0.0000, locality=0.0000
+[DEBUG] lib_window.o: target_functions=8, max_sim=0.9761
+[DEBUG] lib_window.o: best_source_window=(1370,1378), assigned=8, good=6, ratio=0.750, mean=0.5437, sum=4.3495, call_graph=0.0000, locality=1.0000
+[DEBUG] name_match.o: target_functions=2, max_sim=0.8902
+[DEBUG] name_match.o: best_source_window=(1939,1941), assigned=2, good=2, ratio=1.000, mean=0.7318, sum=1.4635, call_graph=0.0000, locality=0.0000
+[DEBUG] nc_panel.o: target_functions=2, max_sim=0.8659
+[DEBUG] nc_panel.o: best_source_window=(453,455), assigned=2, good=2, ratio=1.000, mean=0.7651, sum=1.5301, call_graph=0.0000, locality=0.0000
+[DEBUG] obsolete.o: target_functions=2, max_sim=1.0000
+[DEBUG] obsolete.o: best_source_window=(79,81), assigned=2, good=1, ratio=0.500, mean=0.6026, sum=1.2052, call_graph=0.0000, locality=0.0000
+[DEBUG] parse_entry.o: target_functions=5, max_sim=0.9063
+[DEBUG] parse_entry.o: best_source_window=(1877,1882), assigned=5, good=3, ratio=0.600, mean=0.5585, sum=2.7924, call_graph=0.2500, locality=1.0000
+[DEBUG] read_entry.o: target_functions=9, max_sim=0.9680
+[DEBUG] read_entry.o: best_source_window=(351,360), assigned=9, good=6, ratio=0.667, mean=0.5292, sum=4.7629, call_graph=0.0000, locality=1.0000
+[DEBUG] resizeterm.o: target_functions=8, max_sim=0.9320
+[DEBUG] resizeterm.o: best_source_window=(1478,1486), assigned=8, good=6, ratio=0.750, mean=0.5285, sum=4.2279, call_graph=0.0000, locality=1.0000
+[DEBUG] safe_sprintf.o: target_functions=2, max_sim=0.9753
+[DEBUG] safe_sprintf.o: best_source_window=(1533,1535), assigned=2, good=2, ratio=1.000, mean=0.6901, sum=1.3801, call_graph=0.0000, locality=0.0000
+[DEBUG] strings.o: target_functions=5, max_sim=0.9524
+[DEBUG] strings.o: best_source_window=(846,851), assigned=5, good=4, ratio=0.800, mean=0.6342, sum=3.1709, call_graph=0.0000, locality=0.0000
+[DEBUG] tries.o: target_functions=3, max_sim=0.8926
+[DEBUG] tries.o: best_source_window=(919,922), assigned=3, good=2, ratio=0.667, mean=0.6024, sum=1.8072, call_graph=0.0000, locality=0.0000
+[DEBUG] trim_sgr0.o: target_functions=5, max_sim=0.9012
+[DEBUG] trim_sgr0.o: best_source_window=(1407,1412), assigned=5, good=2, ratio=0.400, mean=0.5238, sum=2.6192, call_graph=0.0000, locality=1.0000
+[DEBUG] tty_update.o: target_functions=22, max_sim=1.0000
+[DEBUG] tty_update.o: best_source_window=(959,981), assigned=22, good=10, ratio=0.455, mean=0.4754, sum=10.4590, call_graph=0.0000, locality=0.9231
+[DEBUG] unctrl.o: target_functions=2, max_sim=0.8653
+[DEBUG] unctrl.o: best_source_window=(348,350), assigned=2, good=1, ratio=0.500, mean=0.5269, sum=1.0539, call_graph=0.0000, locality=0.0000
+[DEBUG] visbuf.o: target_functions=4, max_sim=0.9420
+[DEBUG] visbuf.o: best_source_window=(704,708), assigned=4, good=2, ratio=0.500, mean=0.5046, sum=2.0185, call_graph=0.0000, locality=0.0000
+[DEBUG] wresize.o: target_functions=3, max_sim=0.9450
+[DEBUG] wresize.o: best_source_window=(1273,1276), assigned=3, good=3, ratio=1.000, mean=0.8084, sum=2.4251, call_graph=0.5000, locality=1.0000
+[DEBUG] write_entry.o: target_functions=10, max_sim=0.9410
+[DEBUG] write_entry.o: best_source_window=(1242,1252), assigned=10, good=7, ratio=0.700, mean=0.5102, sum=5.1017, call_graph=0.0000, locality=1.0000
+    BLOCK_CU[000] DROP band=primary coarse=1.0000 block=0.0000 coverage_mean=0.0000 coverage_min=0.0000 coverage_ratio=0.0000 assignment_mean=0.0000 assignment_min=0.0000 blocks=2/0 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[001] PASS band=primary coarse=0.9400 block=0.8095 coverage_mean=0.8095 coverage_min=0.4360 coverage_ratio=0.9412 assignment_mean=0.7908 assignment_min=0.4294 blocks=17/25 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8400 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[002] DROP band=primary coarse=0.9200 block=0.7655 coverage_mean=0.7655 coverage_min=0.6250 coverage_ratio=0.7931 assignment_mean=0.7924 assignment_min=0.6690 blocks=58/23 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6957 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[003] PASS band=primary coarse=0.9200 block=0.8074 coverage_mean=0.8074 coverage_min=0.6080 coverage_ratio=0.9718 assignment_mean=0.8363 assignment_min=0.7334 blocks=248/32 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.9375 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[004] PASS band=primary coarse=0.9200 block=0.7922 coverage_mean=0.7922 coverage_min=0.6485 coverage_ratio=0.9716 assignment_mean=0.7778 assignment_min=0.5726 blocks=141/22 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8182 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[005] DROP band=primary coarse=0.9100 block=0.8516 coverage_mean=0.8516 coverage_min=0.7157 coverage_ratio=1.0000 assignment_mean=0.8455 assignment_min=0.6935 blocks=22/20 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4000 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[006] DROP band=primary coarse=0.9000 block=0.7653 coverage_mean=0.7653 coverage_min=0.7507 coverage_ratio=1.0000 assignment_mean=0.7437 assignment_min=0.7097 blocks=4/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[007] DROP band=primary coarse=0.9000 block=0.7841 coverage_mean=0.7841 coverage_min=0.6426 coverage_ratio=0.9091 assignment_mean=0.7223 assignment_min=0.6376 blocks=11/14 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[008] DROP band=primary coarse=0.8900 block=0.8165 coverage_mean=0.8165 coverage_min=0.6435 coverage_ratio=0.9184 assignment_mean=0.7782 assignment_min=0.6113 blocks=49/43 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5581 function_spread=0.4000 matched_functions=5
+    BLOCK_CU[009] PASS band=primary coarse=0.8900 block=0.9099 coverage_mean=0.9099 coverage_min=0.8118 coverage_ratio=1.0000 assignment_mean=0.9002 assignment_min=0.7828 blocks=3/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[010] DROP band=primary coarse=0.8800 block=0.7732 coverage_mean=0.7732 coverage_min=0.6133 coverage_ratio=0.8519 assignment_mean=0.7771 assignment_min=0.5887 blocks=27/12 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8333 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[011] PASS band=primary coarse=0.8700 block=0.8646 coverage_mean=0.8646 coverage_min=0.7173 coverage_ratio=1.0000 assignment_mean=0.8544 assignment_min=0.7294 blocks=14/11 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[012] DROP band=primary coarse=0.8700 block=0.7824 coverage_mean=0.7824 coverage_min=0.6512 coverage_ratio=0.6667 assignment_mean=0.7488 assignment_min=0.5808 blocks=6/9 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8889 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[013] PASS band=primary coarse=0.8600 block=0.8328 coverage_mean=0.8328 coverage_min=0.7349 coverage_ratio=1.0000 assignment_mean=0.8215 assignment_min=0.6966 blocks=9/12 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7500 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[014] PASS band=primary coarse=0.8600 block=0.8119 coverage_mean=0.8119 coverage_min=0.8016 coverage_ratio=1.0000 assignment_mean=0.7839 assignment_min=0.7457 blocks=2/3 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[015] PASS band=primary coarse=0.8600 block=0.7965 coverage_mean=0.7965 coverage_min=0.5821 coverage_ratio=0.9401 assignment_mean=0.8487 assignment_min=0.7486 blocks=284/31 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.9355 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[016] PASS band=primary coarse=0.8500 block=0.8775 coverage_mean=0.8775 coverage_min=0.7502 coverage_ratio=1.0000 assignment_mean=0.8724 assignment_min=0.7427 blocks=9/14 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8571 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[017] PASS band=primary coarse=0.8500 block=0.8370 coverage_mean=0.8370 coverage_min=0.7155 coverage_ratio=1.0000 assignment_mean=0.8184 assignment_min=0.6908 blocks=65/71 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5915 function_spread=0.6000 matched_functions=5
+    BLOCK_CU[018] DROP band=primary coarse=0.8400 block=0.8670 coverage_mean=0.8670 coverage_min=0.6080 coverage_ratio=0.9806 assignment_mean=0.8467 assignment_min=0.5897 blocks=155/165 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3333 function_spread=0.6250 matched_functions=8
+    BLOCK_CU[019] DROP band=primary coarse=0.8400 block=0.8169 coverage_mean=0.8169 coverage_min=0.5894 coverage_ratio=0.9313 assignment_mean=0.8027 assignment_min=0.5901 blocks=364/220 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5364 function_spread=0.2857 matched_functions=7
+    BLOCK_CU[020] DROP band=primary coarse=0.8300 block=0.7432 coverage_mean=0.7432 coverage_min=0.6357 coverage_ratio=0.7273 assignment_mean=0.7255 assignment_min=0.6274 blocks=11/8 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[021] PASS band=primary coarse=0.8200 block=0.8555 coverage_mean=0.8555 coverage_min=0.7948 coverage_ratio=1.0000 assignment_mean=0.7994 assignment_min=0.6430 blocks=8/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8333 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[022] DROP band=primary coarse=0.8200 block=0.8239 coverage_mean=0.8239 coverage_min=0.7393 coverage_ratio=1.0000 assignment_mean=0.8189 assignment_min=0.7393 blocks=46/174 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5460 function_spread=0.4000 matched_functions=5
+    BLOCK_CU[023] DROP band=primary coarse=0.8200 block=0.7423 coverage_mean=0.7423 coverage_min=0.6143 coverage_ratio=0.8298 assignment_mean=0.7507 assignment_min=0.6341 blocks=47/20 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[024] PASS band=primary coarse=0.8100 block=0.8223 coverage_mean=0.8223 coverage_min=0.5847 coverage_ratio=0.9474 assignment_mean=0.8146 assignment_min=0.7043 blocks=19/14 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8571 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[025] DROP band=primary coarse=0.8100 block=0.8642 coverage_mean=0.8642 coverage_min=0.6811 coverage_ratio=0.9773 assignment_mean=0.7948 assignment_min=0.3385 blocks=44/40 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4000 function_spread=0.6667 matched_functions=6
+    BLOCK_CU[026] PASS band=primary coarse=0.8100 block=0.8276 coverage_mean=0.8276 coverage_min=0.7768 coverage_ratio=1.0000 assignment_mean=0.7743 assignment_min=0.6553 blocks=12/10 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8000 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[027] DROP band=primary coarse=0.8100 block=0.8764 coverage_mean=0.8764 coverage_min=0.7006 coverage_ratio=1.0000 assignment_mean=0.8655 assignment_min=0.7006 blocks=169/290 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7655 function_spread=0.4000 matched_functions=5
+    BLOCK_CU[028] PASS band=primary coarse=0.8100 block=0.8401 coverage_mean=0.8401 coverage_min=0.7063 coverage_ratio=1.0000 assignment_mean=0.8066 assignment_min=0.5981 blocks=54/55 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7273 function_spread=0.6667 matched_functions=3
+    BLOCK_CU[029] PASS band=primary coarse=0.8000 block=0.7899 coverage_mean=0.7899 coverage_min=0.7228 coverage_ratio=1.0000 assignment_mean=0.8042 assignment_min=0.6839 blocks=12/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8333 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[030] DROP band=primary coarse=0.8000 block=0.8524 coverage_mean=0.8524 coverage_min=0.7212 coverage_ratio=1.0000 assignment_mean=0.8190 assignment_min=0.5322 blocks=21/17 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5294 function_spread=0.4000 matched_functions=5
+    BLOCK_CU[031] DROP band=primary coarse=0.7900 block=0.7459 coverage_mean=0.7459 coverage_min=0.4810 coverage_ratio=0.8103 assignment_mean=0.7698 assignment_min=0.6499 blocks=174/12 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.9167 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[032] DROP band=primary coarse=0.7900 block=0.7817 coverage_mean=0.7817 coverage_min=0.7181 coverage_ratio=1.0000 assignment_mean=0.7469 assignment_min=0.6489 blocks=16/14 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7143 function_spread=0.3333 matched_functions=3
+    BLOCK_CU[033] DROP band=primary coarse=0.7800 block=0.8441 coverage_mean=0.8441 coverage_min=0.6305 coverage_ratio=0.9588 assignment_mean=0.8194 assignment_min=0.5725 blocks=97/153 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5294 function_spread=0.3750 matched_functions=8
+    BLOCK_CU[034] PASS band=primary coarse=0.7800 block=0.8310 coverage_mean=0.8310 coverage_min=0.6719 coverage_ratio=0.9167 assignment_mean=0.8237 assignment_min=0.6719 blocks=48/142 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8451 function_spread=0.5000 matched_functions=6
+    BLOCK_CU[035] DROP band=primary coarse=0.7800 block=0.7425 coverage_mean=0.7425 coverage_min=0.5423 coverage_ratio=0.7153 assignment_mean=0.8608 assignment_min=0.8472 blocks=137/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6667 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[036] DROP band=primary coarse=0.7800 block=0.7776 coverage_mean=0.7776 coverage_min=0.6641 coverage_ratio=0.9585 assignment_mean=0.7930 assignment_min=0.6109 blocks=217/26 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5000 function_spread=0.7500 matched_functions=4
+    BLOCK_CU[037] DROP band=primary coarse=0.7700 block=0.7352 coverage_mean=0.7352 coverage_min=0.4521 coverage_ratio=0.7294 assignment_mean=0.7664 assignment_min=0.6350 blocks=85/19 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5789 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[038] DROP band=primary coarse=0.7700 block=0.7755 coverage_mean=0.7755 coverage_min=0.6681 coverage_ratio=0.7500 assignment_mean=0.7883 assignment_min=0.7476 blocks=4/3 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[039] PASS band=primary coarse=0.7600 block=0.8844 coverage_mean=0.8844 coverage_min=0.7711 coverage_ratio=1.0000 assignment_mean=0.8215 assignment_min=0.6788 blocks=26/35 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6286 function_spread=0.5000 matched_functions=8
+    BLOCK_CU[040] PASS band=primary coarse=0.7600 block=0.8480 coverage_mean=0.8480 coverage_min=0.7182 coverage_ratio=1.0000 assignment_mean=0.7826 assignment_min=0.5810 blocks=39/29 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6552 function_spread=0.7500 matched_functions=4
+    BLOCK_CU[041] PASS band=primary coarse=0.7600 block=0.7880 coverage_mean=0.7880 coverage_min=0.5963 coverage_ratio=0.8571 assignment_mean=0.7523 assignment_min=0.5078 blocks=7/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6667 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[042] DROP band=primary coarse=0.7600 block=0.8624 coverage_mean=0.8624 coverage_min=0.7376 coverage_ratio=1.0000 assignment_mean=0.8487 assignment_min=0.7088 blocks=16/28 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6786 function_spread=0.3333 matched_functions=3
+    BLOCK_CU[043] PASS band=primary coarse=0.7500 block=0.7813 coverage_mean=0.7813 coverage_min=0.6487 coverage_ratio=0.8667 assignment_mean=0.8127 assignment_min=0.7119 blocks=15/8 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6250 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[044] DROP band=primary coarse=0.7500 block=0.8657 coverage_mean=0.8657 coverage_min=0.6781 coverage_ratio=0.9611 assignment_mean=0.8592 assignment_min=0.6587 blocks=180/666 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.2327 function_spread=0.4286 matched_functions=22
+    BLOCK_CU[045] PASS band=primary coarse=0.7400 block=0.8185 coverage_mean=0.8185 coverage_min=0.6791 coverage_ratio=0.9457 assignment_mean=0.8706 assignment_min=0.7579 blocks=129/36 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.9722 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[046] PASS band=primary coarse=0.7400 block=0.8100 coverage_mean=0.8100 coverage_min=0.7409 coverage_ratio=1.0000 assignment_mean=0.7900 assignment_min=0.7154 blocks=6/10 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6000 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[047] PASS band=primary coarse=0.7400 block=0.8659 coverage_mean=0.8659 coverage_min=0.8194 coverage_ratio=1.0000 assignment_mean=0.8146 assignment_min=0.7166 blocks=2/32 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.9688 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[048] PASS band=primary coarse=0.7300 block=0.8224 coverage_mean=0.8224 coverage_min=0.6621 coverage_ratio=0.9764 assignment_mean=0.8587 assignment_min=0.6815 blocks=127/35 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5714 function_spread=0.5000 matched_functions=10
+    BLOCK_CU[049] DROP band=primary coarse=0.7300 block=0.8927 coverage_mean=0.8927 coverage_min=0.7755 coverage_ratio=1.0000 assignment_mean=0.8927 assignment_min=0.7755 blocks=5/26 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6154 function_spread=0.2500 matched_functions=4
+    BLOCK_CU[050] PASS band=primary coarse=0.7300 block=0.8014 coverage_mean=0.8014 coverage_min=0.6465 coverage_ratio=0.9502 assignment_mean=0.7720 assignment_min=0.5271 blocks=462/47 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7021 function_spread=0.8333 matched_functions=6
+    BLOCK_CU[051] DROP band=primary coarse=0.7300 block=0.7889 coverage_mean=0.7889 coverage_min=0.7162 coverage_ratio=1.0000 assignment_mean=0.7495 assignment_min=0.5288 blocks=10/18 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6667 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[052] DROP band=primary coarse=0.7200 block=0.7799 coverage_mean=0.7799 coverage_min=0.6277 coverage_ratio=0.8750 assignment_mean=0.7699 assignment_min=0.5794 blocks=8/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6667 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[053] DROP band=primary coarse=0.7100 block=0.8569 coverage_mean=0.8569 coverage_min=0.6051 coverage_ratio=0.9634 assignment_mean=0.8501 assignment_min=0.5992 blocks=82/240 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7625 function_spread=0.4286 matched_functions=7
+    BLOCK_CU[054] DROP band=primary coarse=0.7100 block=0.7557 coverage_mean=0.7557 coverage_min=0.4459 coverage_ratio=0.7059 assignment_mean=0.8573 assignment_min=0.7717 blocks=17/8 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7500 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[055] PASS band=primary coarse=0.7100 block=0.8039 coverage_mean=0.8039 coverage_min=0.6752 coverage_ratio=0.7500 assignment_mean=0.7640 assignment_min=0.6391 blocks=4/4 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7500 function_spread=0.6667 matched_functions=4
+    BLOCK_CU[056] PASS band=primary coarse=0.7100 block=0.8103 coverage_mean=0.8103 coverage_min=0.7714 coverage_ratio=1.0000 assignment_mean=0.8081 assignment_min=0.7650 blocks=4/4 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7500 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[057] DROP band=primary coarse=0.7100 block=0.7557 coverage_mean=0.7557 coverage_min=0.4459 coverage_ratio=0.7059 assignment_mean=0.8573 assignment_min=0.7717 blocks=17/8 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7500 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[058] PASS band=primary coarse=0.7100 block=0.8289 coverage_mean=0.8289 coverage_min=0.7477 coverage_ratio=1.0000 assignment_mean=0.7784 assignment_min=0.5795 blocks=6/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[059] DROP band=primary coarse=0.7100 block=0.8570 coverage_mean=0.8570 coverage_min=0.6807 coverage_ratio=0.9911 assignment_mean=0.8351 assignment_min=0.5224 blocks=112/78 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4231 function_spread=0.4375 matched_functions=16
+    BLOCK_CU[060] DROP band=primary coarse=0.7000 block=0.8701 coverage_mean=0.8701 coverage_min=0.5077 coverage_ratio=0.9854 assignment_mean=0.8504 assignment_min=0.4354 blocks=137/169 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4734 function_spread=0.4286 matched_functions=7
+    BLOCK_CU[061] DROP band=primary coarse=0.7000 block=0.8520 coverage_mean=0.8520 coverage_min=0.7425 coverage_ratio=1.0000 assignment_mean=0.8378 assignment_min=0.7287 blocks=31/81 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8765 function_spread=0.4286 matched_functions=7
+    BLOCK_CU[062] PASS band=primary coarse=0.6900 block=0.8923 coverage_mean=0.8923 coverage_min=0.7150 coverage_ratio=1.0000 assignment_mean=0.8701 assignment_min=0.5952 blocks=14/13 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[063] DROP band=primary coarse=0.6900 block=0.8510 coverage_mean=0.8510 coverage_min=0.6265 coverage_ratio=0.9856 assignment_mean=0.8866 assignment_min=0.6910 blocks=555/168 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.2976 function_spread=0.4667 matched_functions=15
+    BLOCK_CU[064] PASS band=primary coarse=0.6900 block=0.8175 coverage_mean=0.8175 coverage_min=0.7252 coverage_ratio=1.0000 assignment_mean=0.8142 assignment_min=0.7252 blocks=18/46 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5652 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[065] DROP band=primary coarse=0.6900 block=0.7562 coverage_mean=0.7562 coverage_min=0.5277 coverage_ratio=0.8077 assignment_mean=0.7967 assignment_min=0.6796 blocks=52/8 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[066] PASS band=primary coarse=0.6900 block=0.8084 coverage_mean=0.8084 coverage_min=0.7623 coverage_ratio=1.0000 assignment_mean=0.8024 assignment_min=0.7506 blocks=4/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8333 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[067] DROP band=primary coarse=0.6900 block=0.8632 coverage_mean=0.8632 coverage_min=0.7265 coverage_ratio=1.0000 assignment_mean=0.8529 assignment_min=0.7258 blocks=112/246 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4309 function_spread=0.4286 matched_functions=7
+    BLOCK_CU[068] PASS band=primary coarse=0.6900 block=0.8709 coverage_mean=0.8709 coverage_min=0.7569 coverage_ratio=1.0000 assignment_mean=0.8379 assignment_min=0.6976 blocks=14/12 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.9167 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[069] DROP band=primary coarse=0.6800 block=0.8159 coverage_mean=0.8159 coverage_min=0.6867 coverage_ratio=0.9804 assignment_mean=0.7960 assignment_min=0.5930 blocks=51/25 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4400 function_spread=1.0000 matched_functions=3
+    BLOCK_CU[070] PASS band=primary coarse=0.6800 block=0.7919 coverage_mean=0.7919 coverage_min=0.7447 coverage_ratio=1.0000 assignment_mean=0.8008 assignment_min=0.7535 blocks=11/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6667 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[071] DROP band=primary coarse=0.6800 block=0.8378 coverage_mean=0.8378 coverage_min=0.6011 coverage_ratio=0.9705 assignment_mean=0.8893 assignment_min=0.6435 blocks=576/100 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4100 function_spread=0.4444 matched_functions=18
+    BLOCK_CU[072] DROP band=primary coarse=0.6800 block=0.8368 coverage_mean=0.8368 coverage_min=0.5240 coverage_ratio=0.9647 assignment_mean=0.8821 assignment_min=0.6487 blocks=482/126 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5159 function_spread=0.4118 matched_functions=17
+    BLOCK_CU[073] DROP band=primary coarse=0.6700 block=0.8585 coverage_mean=0.8585 coverage_min=0.6987 coverage_ratio=0.9970 assignment_mean=0.8310 assignment_min=0.6781 blocks=331/230 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.2957 function_spread=0.5000 matched_functions=24
+    BLOCK_CU[074] DROP band=primary coarse=0.6700 block=0.8854 coverage_mean=0.8854 coverage_min=0.7281 coverage_ratio=1.0000 assignment_mean=0.8619 assignment_min=0.6948 blocks=59/107 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5047 function_spread=0.3750 matched_functions=8
+    BLOCK_CU[075] DROP band=primary coarse=0.6700 block=0.8671 coverage_mean=0.8671 coverage_min=0.7505 coverage_ratio=1.0000 assignment_mean=0.8305 assignment_min=0.7028 blocks=94/176 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3239 function_spread=0.5556 matched_functions=9
+    BLOCK_CU[076] PASS band=primary coarse=0.6600 block=0.8415 coverage_mean=0.8415 coverage_min=0.7061 coverage_ratio=1.0000 assignment_mean=0.7986 assignment_min=0.6143 blocks=27/28 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5000 function_spread=0.5714 matched_functions=7
+    BLOCK_CU[077] PASS band=primary coarse=0.6600 block=0.8203 coverage_mean=0.8203 coverage_min=0.5985 coverage_ratio=0.9215 assignment_mean=0.8439 assignment_min=0.6387 blocks=191/66 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5000 function_spread=0.8000 matched_functions=5
+    BLOCK_CU[078] PASS band=primary coarse=0.6600 block=0.8477 coverage_mean=0.8477 coverage_min=0.7771 coverage_ratio=1.0000 assignment_mean=0.8296 assignment_min=0.7771 blocks=5/9 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8889 function_spread=0.6667 matched_functions=4
+    BLOCK_CU[079] PASS band=primary coarse=0.6600 block=0.8477 coverage_mean=0.8477 coverage_min=0.6799 coverage_ratio=0.9706 assignment_mean=0.8067 assignment_min=0.5864 blocks=68/70 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4714 function_spread=0.6250 matched_functions=8
+    BLOCK_CU[080] DROP band=primary coarse=0.6500 block=0.8318 coverage_mean=0.8318 coverage_min=0.7027 coverage_ratio=1.0000 assignment_mean=0.8021 assignment_min=0.5720 blocks=11/12 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8333 function_spread=0.3333 matched_functions=3
+    BLOCK_CU[081] DROP band=recovery coarse=0.6400 block=0.8059 coverage_mean=0.8059 coverage_min=0.6007 coverage_ratio=0.8729 assignment_mean=0.8122 assignment_min=0.6409 blocks=472/252 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5000 function_spread=0.3125 matched_functions=16
+    BLOCK_CU[082] PASS band=recovery coarse=0.6300 block=0.8014 coverage_mean=0.8014 coverage_min=0.6416 coverage_ratio=0.9310 assignment_mean=0.8663 assignment_min=0.7464 blocks=58/11 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8182 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[083] DROP band=recovery coarse=0.6300 block=0.8810 coverage_mean=0.8810 coverage_min=0.7528 coverage_ratio=1.0000 assignment_mean=0.8364 assignment_min=0.6336 blocks=45/62 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4677 function_spread=0.3333 matched_functions=9
+    BLOCK_CU[084] PASS band=recovery coarse=0.6300 block=0.8553 coverage_mean=0.8553 coverage_min=0.6674 coverage_ratio=0.9769 assignment_mean=0.7850 assignment_min=0.5935 blocks=130/140 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5571 function_spread=0.5000 matched_functions=14
+    BLOCK_CU[085] DROP band=recovery coarse=0.6200 block=0.8801 coverage_mean=0.8801 coverage_min=0.6839 coverage_ratio=0.9974 assignment_mean=0.8313 assignment_min=0.5657 blocks=383/211 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3697 function_spread=0.3200 matched_functions=25
+    BLOCK_CU[086] PASS band=recovery coarse=0.6200 block=0.8394 coverage_mean=0.8394 coverage_min=0.5298 coverage_ratio=0.9333 assignment_mean=0.8600 assignment_min=0.7532 blocks=30/20 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6500 function_spread=0.7500 matched_functions=4
+    BLOCK_CU[087] DROP band=recovery coarse=0.6200 block=0.7927 coverage_mean=0.7927 coverage_min=0.6351 coverage_ratio=0.8889 assignment_mean=0.7437 assignment_min=0.4142 blocks=27/23 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5652 function_spread=0.4000 matched_functions=6
+    BLOCK_CU[088] DROP band=recovery coarse=0.6200 block=0.8340 coverage_mean=0.8340 coverage_min=0.6660 coverage_ratio=0.9769 assignment_mean=0.8776 assignment_min=0.7393 blocks=390/77 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4675 function_spread=0.4375 matched_functions=16
+    BLOCK_CU[089] DROP band=recovery coarse=0.6200 block=0.8681 coverage_mean=0.8681 coverage_min=0.6555 coverage_ratio=0.9932 assignment_mean=0.8405 assignment_min=0.5807 blocks=147/224 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4955 function_spread=0.4000 matched_functions=10
+    BLOCK_CU[090] DROP band=recovery coarse=0.6100 block=0.8148 coverage_mean=0.8148 coverage_min=0.4712 coverage_ratio=0.9302 assignment_mean=0.8949 assignment_min=0.7938 blocks=1476/230 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6391 function_spread=0.1481 matched_functions=135
+    BLOCK_CU[091] PASS band=recovery coarse=0.6000 block=0.8318 coverage_mean=0.8318 coverage_min=0.6983 coverage_ratio=0.9884 assignment_mean=0.8359 assignment_min=0.6686 blocks=86/46 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5217 function_spread=0.6250 matched_functions=8
+    BLOCK_CU[092] PASS band=recovery coarse=0.4800 block=0.7813 coverage_mean=0.7813 coverage_min=0.6612 coverage_ratio=0.7857 assignment_mean=0.8427 assignment_min=0.7413 blocks=14/5 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8000 function_spread=0.5000 matched_functions=2
+YES     | library=libncurses.a | score= 82.90% | coarse_best=100.00% | block_best= 90.99% | block_profile=cross_optimization | block_candidate_mode=coarse | candidate_cu=93/101 | primary_candidate_cu=81 | recovery_candidate_cu=12 | matched_cu=42/101 | matched_functions=154 | time=00:00:00
+[DEBUG] pcre2_auto_possess.c.o: target_functions=5, max_sim=1.0000
+[DEBUG] pcre2_auto_possess.c.o: best_source_window=(703,708), assigned=5, good=5, ratio=1.000, mean=0.9067, sum=4.5335, call_graph=1.0000, locality=1.0000
+[DEBUG] pcre2_compile.c.o: target_functions=33, max_sim=1.0000
+[DEBUG] pcre2_compile.c.o: best_source_window=(593,626), assigned=33, good=33, ratio=1.000, mean=1.0000, sum=33.0000, call_graph=1.0000, locality=1.0000
+[DEBUG] pcre2_context.c.o: target_functions=32, max_sim=1.0000
+[DEBUG] pcre2_context.c.o: best_source_window=(627,659), assigned=32, good=32, ratio=1.000, mean=1.0000, sum=32.0000, call_graph=1.0000, locality=1.0000
+[DEBUG] pcre2_convert.c.o: target_functions=12, max_sim=0.9679
+[DEBUG] pcre2_convert.c.o: best_source_window=(1917,1929), assigned=12, good=6, ratio=0.500, mean=0.4658, sum=5.5899, call_graph=0.0000, locality=1.0000
+[DEBUG] pcre2_dfa_match.c.o: target_functions=4, max_sim=0.9463
+[DEBUG] pcre2_dfa_match.c.o: best_source_window=(671,675), assigned=4, good=3, ratio=0.750, mean=0.6114, sum=2.4458, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_jit_compile.c.o: target_functions=10, max_sim=1.0000
+[DEBUG] pcre2_jit_compile.c.o: best_source_window=(661,671), assigned=10, good=10, ratio=1.000, mean=1.0000, sum=10.0000, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_maketables.c.o: target_functions=2, max_sim=1.0000
+[DEBUG] pcre2_maketables.c.o: best_source_window=(671,673), assigned=2, good=2, ratio=1.000, mean=1.0000, sum=2.0000, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_match.c.o: target_functions=4, max_sim=1.0000
+[DEBUG] pcre2_match.c.o: best_source_window=(673,677), assigned=4, good=3, ratio=0.750, mean=0.7794, sum=3.1175, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_match_data.c.o: target_functions=8, max_sim=1.0000
+[DEBUG] pcre2_match_data.c.o: best_source_window=(677,685), assigned=8, good=8, ratio=1.000, mean=1.0000, sum=8.0000, call_graph=1.0000, locality=1.0000
+[DEBUG] pcre2_newline.c.o: target_functions=2, max_sim=1.0000
+[DEBUG] pcre2_newline.c.o: best_source_window=(685,687), assigned=2, good=2, ratio=1.000, mean=1.0000, sum=2.0000, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_pattern_info.c.o: target_functions=2, max_sim=0.9450
+[DEBUG] pcre2_pattern_info.c.o: best_source_window=(703,705), assigned=2, good=1, ratio=0.500, mean=0.5522, sum=1.1043, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_serialize.c.o: target_functions=4, max_sim=0.9676
+[DEBUG] pcre2_serialize.c.o: best_source_window=(635,639), assigned=4, good=2, ratio=0.500, mean=0.4675, sum=1.8701, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_string_utils.c.o: target_functions=6, max_sim=1.0000
+[DEBUG] pcre2_string_utils.c.o: best_source_window=(689,695), assigned=6, good=6, ratio=1.000, mean=1.0000, sum=6.0000, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_study.c.o: target_functions=6, max_sim=1.0000
+[DEBUG] pcre2_study.c.o: best_source_window=(695,701), assigned=6, good=6, ratio=1.000, mean=1.0000, sum=6.0000, call_graph=1.0000, locality=1.0000
+[DEBUG] pcre2_substitute.c.o: target_functions=2, max_sim=0.8789
+[DEBUG] pcre2_substitute.c.o: best_source_window=(613,615), assigned=2, good=2, ratio=1.000, mean=0.8926, sum=1.7853, call_graph=1.0000, locality=1.0000
+[DEBUG] pcre2_substring.c.o: target_functions=11, max_sim=0.9676
+[DEBUG] pcre2_substring.c.o: best_source_window=(635,646), assigned=11, good=6, ratio=0.545, mean=0.4390, sum=4.8286, call_graph=0.0000, locality=1.0000
+    BLOCK_CU[000] PASS band=primary coarse=1.0000 block=0.9882 coverage_mean=0.9882 coverage_min=0.7970 coverage_ratio=1.0000 assignment_mean=0.9998 assignment_min=0.9204 blocks=1760/1041 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8098 function_spread=0.9394 matched_functions=33
+    BLOCK_CU[001] PASS band=primary coarse=1.0000 block=1.0000 coverage_mean=1.0000 coverage_min=1.0000 coverage_ratio=1.0000 assignment_mean=1.0000 assignment_min=1.0000 blocks=63/63 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.9206 function_spread=0.6250 matched_functions=32
+    BLOCK_CU[002] PASS band=primary coarse=1.0000 block=1.0000 coverage_mean=1.0000 coverage_min=1.0000 coverage_ratio=1.0000 assignment_mean=1.0000 assignment_min=1.0000 blocks=14/14 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.8000 matched_functions=10
+    BLOCK_CU[003] PASS band=primary coarse=1.0000 block=1.0000 coverage_mean=1.0000 coverage_min=1.0000 coverage_ratio=1.0000 assignment_mean=1.0000 assignment_min=1.0000 blocks=42/42 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[004] PASS band=primary coarse=1.0000 block=1.0000 coverage_mean=1.0000 coverage_min=1.0000 coverage_ratio=1.0000 assignment_mean=1.0000 assignment_min=1.0000 blocks=17/17 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.8750 matched_functions=8
+    BLOCK_CU[005] PASS band=primary coarse=1.0000 block=1.0000 coverage_mean=1.0000 coverage_min=1.0000 coverage_ratio=1.0000 assignment_mean=1.0000 assignment_min=1.0000 blocks=46/46 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8478 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[006] PASS band=primary coarse=1.0000 block=1.0000 coverage_mean=1.0000 coverage_min=1.0000 coverage_ratio=1.0000 assignment_mean=1.0000 assignment_min=1.0000 blocks=23/23 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8696 function_spread=0.5000 matched_functions=6
+    BLOCK_CU[007] PASS band=primary coarse=1.0000 block=0.9538 coverage_mean=0.9538 coverage_min=0.7659 coverage_ratio=1.0000 assignment_mean=0.9999 assignment_min=0.9905 blocks=264/97 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8866 function_spread=1.0000 matched_functions=6
+    BLOCK_CU[008] PASS band=primary coarse=0.9600 block=0.9561 coverage_mean=0.9561 coverage_min=0.7282 coverage_ratio=1.0000 assignment_mean=0.9998 assignment_min=0.9923 blocks=3213/124 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8871 function_spread=1.0000 matched_functions=4
+    BLOCK_CU[009] PASS band=primary coarse=0.9400 block=0.9073 coverage_mean=0.9073 coverage_min=0.8388 coverage_ratio=1.0000 assignment_mean=0.8821 assignment_min=0.7160 blocks=25/29 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[010] PASS band=primary coarse=0.9100 block=0.9715 coverage_mean=0.9715 coverage_min=0.8715 coverage_ratio=1.0000 assignment_mean=0.9975 assignment_min=0.6732 blocks=241/130 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.9308 function_spread=1.0000 matched_functions=5
+    BLOCK_CU[011] PASS band=primary coarse=0.8900 block=0.9294 coverage_mean=0.9294 coverage_min=0.7821 coverage_ratio=1.0000 assignment_mean=0.9283 assignment_min=0.7933 blocks=430/229 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.9432 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[012] PASS band=primary coarse=0.8500 block=0.9414 coverage_mean=0.9414 coverage_min=0.6890 coverage_ratio=0.9895 assignment_mean=0.9289 assignment_min=0.6890 blocks=95/184 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7609 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[013] PASS band=primary coarse=0.8400 block=0.9665 coverage_mean=0.9665 coverage_min=0.9448 coverage_ratio=1.0000 assignment_mean=0.9635 assignment_min=0.9363 blocks=9/43 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5581 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[014] DROP band=primary coarse=0.7000 block=0.8249 coverage_mean=0.8249 coverage_min=0.6159 coverage_ratio=0.9667 assignment_mean=0.8069 assignment_min=0.5452 blocks=90/233 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3433 function_spread=0.4167 matched_functions=12
+    BLOCK_CU[015] DROP band=primary coarse=0.6900 block=0.9647 coverage_mean=0.9647 coverage_min=0.8878 coverage_ratio=1.0000 assignment_mean=0.9229 assignment_min=0.6988 blocks=24/85 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4824 function_spread=0.3636 matched_functions=11
+YES     | library=libpcre2-8.a | score= 97.24% | coarse_best=100.00% | block_best=100.00% | block_profile=cross_optimization | block_candidate_mode=coarse | candidate_cu=16/16 | primary_candidate_cu=16 | recovery_candidate_cu=0 | matched_cu=14/16 | matched_functions=120 | time=00:00:00
+[DEBUG] bind.o: target_functions=68, max_sim=1.0000
+[DEBUG] bind.o: best_source_window=(974,1042), assigned=68, good=55, ratio=0.809, mean=0.5818, sum=39.5645, call_graph=0.0256, locality=0.5897
+[DEBUG] callback.o: target_functions=7, max_sim=0.8847
+[DEBUG] callback.o: best_source_window=(965,972), assigned=7, good=3, ratio=0.429, mean=0.4359, sum=3.0514, call_graph=0.0000, locality=1.0000
+[DEBUG] colors.o: target_functions=6, max_sim=0.7835
+[DEBUG] colors.o: best_source_window=(110,116), assigned=6, good=3, ratio=0.500, mean=0.4037, sum=2.4222, call_graph=0.0000, locality=1.0000
+[DEBUG] compat.o: target_functions=10, max_sim=1.0000
+[DEBUG] complete.o: target_functions=31, max_sim=0.9571
+[DEBUG] complete.o: best_source_window=(1235,1266), assigned=31, good=28, ratio=0.903, mean=0.6791, sum=21.0513, call_graph=0.0526, locality=0.8947
+[DEBUG] display.o: target_functions=37, max_sim=0.9697
+[DEBUG] display.o: best_source_window=(1230,1267), assigned=37, good=33, ratio=0.892, mean=0.6524, sum=24.1380, call_graph=0.1111, locality=0.7778
+[DEBUG] funmap.o: target_functions=3, max_sim=0.8645
+[DEBUG] funmap.o: best_source_window=(863,866), assigned=3, good=3, ratio=1.000, mean=0.6931, sum=2.0793, call_graph=0.0000, locality=1.0000
+[DEBUG] histexpand.o: target_functions=9, max_sim=0.9387
+[DEBUG] histexpand.o: best_source_window=(872,881), assigned=9, good=4, ratio=0.444, mean=0.4099, sum=3.6891, call_graph=0.0000, locality=1.0000
+[DEBUG] histfile.o: target_functions=9, max_sim=0.8576
+[DEBUG] histfile.o: best_source_window=(303,312), assigned=9, good=5, ratio=0.556, mean=0.4519, sum=4.0674, call_graph=0.1429, locality=1.0000
+[DEBUG] history.o: target_functions=26, max_sim=1.0000
+[DEBUG] history.o: best_source_window=(950,976), assigned=26, good=22, ratio=0.846, mean=0.6488, sum=16.8688, call_graph=0.0000, locality=1.0000
+[DEBUG] histsearch.o: target_functions=5, max_sim=1.0000
+[DEBUG] histsearch.o: best_source_window=(835,840), assigned=5, good=3, ratio=0.600, mean=0.5360, sum=2.6799, call_graph=0.0000, locality=1.0000
+[DEBUG] input.o: target_functions=16, max_sim=0.9655
+[DEBUG] input.o: best_source_window=(968,984), assigned=16, good=13, ratio=0.812, mean=0.6514, sum=10.4221, call_graph=0.1667, locality=1.0000
+[DEBUG] isearch.o: target_functions=10, max_sim=1.0000
+[DEBUG] isearch.o: best_source_window=(973,983), assigned=10, good=8, ratio=0.800, mean=0.6577, sum=6.5770, call_graph=0.0000, locality=1.0000
+[DEBUG] keymaps.o: target_functions=7, max_sim=1.0000
+[DEBUG] keymaps.o: best_source_window=(1372,1379), assigned=7, good=5, ratio=0.714, mean=0.5079, sum=3.5553, call_graph=0.0000, locality=1.0000
+[DEBUG] kill.o: target_functions=27, max_sim=1.0000
+[DEBUG] kill.o: best_source_window=(907,934), assigned=27, good=18, ratio=0.667, mean=0.5167, sum=13.9510, call_graph=0.0000, locality=0.8421
+[DEBUG] macro.o: target_functions=13, max_sim=0.8916
+[DEBUG] macro.o: best_source_window=(1236,1249), assigned=13, good=11, ratio=0.846, mean=0.5472, sum=7.1139, call_graph=0.0000, locality=1.0000
+[DEBUG] mbutil.o: target_functions=8, max_sim=1.0000
+[DEBUG] mbutil.o: best_source_window=(973,981), assigned=8, good=6, ratio=0.750, mean=0.5984, sum=4.7876, call_graph=0.0000, locality=1.0000
+[DEBUG] misc.o: target_functions=32, max_sim=0.9373
+[DEBUG] misc.o: best_source_window=(1027,1059), assigned=32, good=14, ratio=0.438, mean=0.4437, sum=14.1973, call_graph=0.0000, locality=0.8571
+[DEBUG] nls.o: target_functions=2, max_sim=0.8730
+[DEBUG] nls.o: best_source_window=(1952,1954), assigned=2, good=1, ratio=0.500, mean=0.5997, sum=1.1995, call_graph=0.0000, locality=1.0000
+[DEBUG] parens.o: target_functions=3, max_sim=0.9424
+[DEBUG] parens.o: best_source_window=(850,853), assigned=3, good=1, ratio=0.333, mean=0.3754, sum=1.1262, call_graph=0.0000, locality=0.0000
+[DEBUG] parse-colors.o: target_functions=2, max_sim=0.9470
+[DEBUG] parse-colors.o: best_source_window=(773,775), assigned=2, good=2, ratio=1.000, mean=0.8963, sum=1.7927, call_graph=1.0000, locality=1.0000
+[DEBUG] readline.o: target_functions=23, max_sim=1.0000
+[DEBUG] readline.o: best_source_window=(974,997), assigned=23, good=18, ratio=0.783, mean=0.6139, sum=14.1206, call_graph=0.0000, locality=1.0000
+[DEBUG] rltty.o: target_functions=11, max_sim=1.0000
+[DEBUG] rltty.o: best_source_window=(965,976), assigned=11, good=8, ratio=0.727, mean=0.5718, sum=6.2900, call_graph=0.3333, locality=1.0000
+[DEBUG] search.o: target_functions=18, max_sim=0.9293
+[DEBUG] search.o: best_source_window=(569,587), assigned=18, good=13, ratio=0.722, mean=0.5025, sum=9.0455, call_graph=0.0000, locality=1.0000
+[DEBUG] shell.o: target_functions=5, max_sim=0.8733
+[DEBUG] shell.o: best_source_window=(1242,1247), assigned=5, good=2, ratio=0.400, mean=0.4851, sum=2.4257, call_graph=0.0000, locality=0.0000
+[DEBUG] signals.o: target_functions=16, max_sim=0.9445
+[DEBUG] signals.o: best_source_window=(1198,1214), assigned=16, good=11, ratio=0.688, mean=0.4976, sum=7.9615, call_graph=0.0000, locality=1.0000
+[DEBUG] terminal.o: target_functions=23, max_sim=0.9569
+[DEBUG] terminal.o: best_source_window=(836,859), assigned=23, good=16, ratio=0.696, mean=0.5611, sum=12.9047, call_graph=0.0000, locality=0.8333
+[DEBUG] text.o: target_functions=62, max_sim=1.0000
+[DEBUG] text.o: best_source_window=(921,983), assigned=62, good=49, ratio=0.790, mean=0.5911, sum=36.6454, call_graph=0.0000, locality=0.8298
+[DEBUG] tilde.o: target_functions=3, max_sim=0.8747
+[DEBUG] tilde.o: best_source_window=(1409,1412), assigned=3, good=3, ratio=1.000, mean=0.6429, sum=1.9288, call_graph=0.0000, locality=1.0000
+[DEBUG] undo.o: target_functions=12, max_sim=0.8379
+[DEBUG] undo.o: best_source_window=(755,767), assigned=12, good=9, ratio=0.750, mean=0.5264, sum=6.3165, call_graph=0.3333, locality=1.0000
+[DEBUG] util.o: target_functions=22, max_sim=1.0000
+[DEBUG] util.o: best_source_window=(911,933), assigned=22, good=14, ratio=0.636, mean=0.5097, sum=11.2133, call_graph=0.0000, locality=1.0000
+[DEBUG] vi_mode.o: target_functions=72, max_sim=0.9621
+[DEBUG] vi_mode.o: best_source_window=(554,626), assigned=72, good=49, ratio=0.681, mean=0.4984, sum=35.8864, call_graph=0.0385, locality=0.6154
+[DEBUG] xmalloc.o: target_functions=3, max_sim=0.9155
+[DEBUG] xmalloc.o: best_source_window=(1831,1834), assigned=3, good=1, ratio=0.333, mean=0.4946, sum=1.4838, call_graph=0.5000, locality=1.0000
+    BLOCK_CU[000] DROP band=primary coarse=1.0000 block=0.7721 coverage_mean=0.7721 coverage_min=0.5864 coverage_ratio=0.7391 assignment_mean=0.8079 assignment_min=0.4691 blocks=23/8 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7500 function_spread=0.6667 matched_functions=3
+    BLOCK_CU[001] DROP band=primary coarse=0.9500 block=0.7748 coverage_mean=0.7748 coverage_min=0.5883 coverage_ratio=0.8482 assignment_mean=0.8596 assignment_min=0.7460 blocks=112/15 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[002] PASS band=primary coarse=0.9000 block=0.8532 coverage_mean=0.8532 coverage_min=0.6320 coverage_ratio=0.9487 assignment_mean=0.8162 assignment_min=0.5479 blocks=39/39 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8462 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[003] PASS band=primary coarse=0.8400 block=0.8001 coverage_mean=0.8001 coverage_min=0.6528 coverage_ratio=0.9231 assignment_mean=0.8315 assignment_min=0.7236 blocks=39/15 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4667 function_spread=0.5000 matched_functions=5
+    BLOCK_CU[004] DROP band=primary coarse=0.8000 block=0.8539 coverage_mean=0.8539 coverage_min=0.7663 coverage_ratio=1.0000 assignment_mean=0.8172 assignment_min=0.6716 blocks=38/47 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4043 function_spread=0.6000 matched_functions=5
+    BLOCK_CU[005] DROP band=primary coarse=0.7700 block=0.8571 coverage_mean=0.8571 coverage_min=0.7095 coverage_ratio=1.0000 assignment_mean=0.8244 assignment_min=0.6214 blocks=116/151 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3709 function_spread=0.5556 matched_functions=10
+    BLOCK_CU[006] DROP band=primary coarse=0.7500 block=0.8297 coverage_mean=0.8297 coverage_min=0.5957 coverage_ratio=0.9167 assignment_mean=0.8175 assignment_min=0.5643 blocks=24/60 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3833 function_spread=0.5000 matched_functions=7
+    BLOCK_CU[007] DROP band=primary coarse=0.7400 block=0.8359 coverage_mean=0.8359 coverage_min=0.7011 coverage_ratio=1.0000 assignment_mean=0.8014 assignment_min=0.5881 blocks=109/98 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3673 function_spread=0.4286 matched_functions=8
+    BLOCK_CU[008] DROP band=primary coarse=0.7300 block=0.8728 coverage_mean=0.8728 coverage_min=0.5655 coverage_ratio=0.9958 assignment_mean=0.8536 assignment_min=0.5654 blocks=471/689 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.2453 function_spread=0.4194 matched_functions=31
+    BLOCK_CU[009] DROP band=primary coarse=0.7300 block=0.8516 coverage_mean=0.8516 coverage_min=0.6867 coverage_ratio=0.9779 assignment_mean=0.8508 assignment_min=0.6824 blocks=136/102 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4412 function_spread=0.5625 matched_functions=16
+    BLOCK_CU[010] DROP band=primary coarse=0.7300 block=0.8579 coverage_mean=0.8579 coverage_min=0.6759 coverage_ratio=0.9457 assignment_mean=0.8313 assignment_min=0.5884 blocks=129/218 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3624 function_spread=0.4091 matched_functions=23
+    BLOCK_CU[011] DROP band=primary coarse=0.7100 block=0.8687 coverage_mean=0.8687 coverage_min=0.6819 coverage_ratio=0.9844 assignment_mean=0.8482 assignment_min=0.6651 blocks=128/112 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4375 function_spread=0.5000 matched_functions=26
+    BLOCK_CU[012] DROP band=primary coarse=0.7000 block=0.8845 coverage_mean=0.8845 coverage_min=0.7004 coverage_ratio=1.0000 assignment_mean=0.8683 assignment_min=0.6230 blocks=530/979 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.2278 function_spread=0.3784 matched_functions=37
+    BLOCK_CU[013] DROP band=primary coarse=0.7000 block=0.8482 coverage_mean=0.8482 coverage_min=0.6410 coverage_ratio=0.9388 assignment_mean=0.8293 assignment_min=0.6096 blocks=49/90 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5556 function_spread=0.3000 matched_functions=11
+    BLOCK_CU[014] PASS band=primary coarse=0.6900 block=0.8446 coverage_mean=0.8446 coverage_min=0.6872 coverage_ratio=0.9048 assignment_mean=0.8367 assignment_min=0.6857 blocks=21/15 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6000 function_spread=0.6667 matched_functions=3
+    BLOCK_CU[015] DROP band=primary coarse=0.6900 block=0.8776 coverage_mean=0.8776 coverage_min=0.7207 coverage_ratio=1.0000 assignment_mean=0.8477 assignment_min=0.5974 blocks=386/415 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3157 function_spread=0.3500 matched_functions=62
+    BLOCK_CU[016] DROP band=primary coarse=0.6800 block=0.8822 coverage_mean=0.8822 coverage_min=0.6659 coverage_ratio=0.9858 assignment_mean=0.8375 assignment_min=0.5818 blocks=141/127 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3543 function_spread=0.3043 matched_functions=23
+    BLOCK_CU[017] DROP band=primary coarse=0.6600 block=0.8897 coverage_mean=0.8897 coverage_min=0.6815 coverage_ratio=0.9927 assignment_mean=0.8721 assignment_min=0.6275 blocks=961/690 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.2362 function_spread=0.4478 matched_functions=68
+    BLOCK_CU[018] DROP band=primary coarse=0.6600 block=0.8533 coverage_mean=0.8533 coverage_min=0.6822 coverage_ratio=0.9908 assignment_mean=0.8428 assignment_min=0.5077 blocks=109/65 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3846 function_spread=0.4091 matched_functions=22
+    BLOCK_CU[019] DROP band=primary coarse=0.6500 block=0.8669 coverage_mean=0.8669 coverage_min=0.7394 coverage_ratio=1.0000 assignment_mean=0.8368 assignment_min=0.6793 blocks=163/178 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3483 function_spread=0.4074 matched_functions=27
+    BLOCK_CU[020] DROP band=primary coarse=0.6500 block=0.8640 coverage_mean=0.8640 coverage_min=0.6895 coverage_ratio=0.9901 assignment_mean=0.8715 assignment_min=0.6928 blocks=304/131 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4275 function_spread=0.3438 matched_functions=32
+    BLOCK_CU[021] PASS band=recovery coarse=0.6400 block=0.8059 coverage_mean=0.8059 coverage_min=0.6193 coverage_ratio=0.9589 assignment_mean=0.8402 assignment_min=0.7164 blocks=73/22 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5909 function_spread=0.5714 matched_functions=7
+    BLOCK_CU[022] DROP band=recovery coarse=0.6400 block=0.8293 coverage_mean=0.8293 coverage_min=0.6698 coverage_ratio=0.9655 assignment_mean=0.7928 assignment_min=0.6139 blocks=58/59 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6610 function_spread=0.3333 matched_functions=3
+    BLOCK_CU[023] DROP band=recovery coarse=0.6300 block=0.8780 coverage_mean=0.8780 coverage_min=0.7556 coverage_ratio=1.0000 assignment_mean=0.8717 assignment_min=0.7518 blocks=109/407 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5356 function_spread=0.3333 matched_functions=9
+    BLOCK_CU[024] DROP band=recovery coarse=0.6300 block=0.8514 coverage_mean=0.8514 coverage_min=0.6180 coverage_ratio=0.9814 assignment_mean=0.9120 assignment_min=0.7718 blocks=322/57 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3860 function_spread=0.5000 matched_functions=12
+    BLOCK_CU[025] DROP band=recovery coarse=0.6200 block=0.8526 coverage_mean=0.8526 coverage_min=0.6850 coverage_ratio=0.9750 assignment_mean=0.8235 assignment_min=0.4849 blocks=80/126 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3889 function_spread=0.2778 matched_functions=18
+    BLOCK_CU[026] DROP band=recovery coarse=0.6200 block=0.8611 coverage_mean=0.8611 coverage_min=0.6587 coverage_ratio=0.9932 assignment_mean=0.8612 assignment_min=0.6648 blocks=148/98 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4286 function_spread=0.3750 matched_functions=16
+    BLOCK_CU[027] DROP band=recovery coarse=0.6200 block=0.8604 coverage_mean=0.8604 coverage_min=0.6431 coverage_ratio=0.9995 assignment_mean=0.8273 assignment_min=0.5802 blocks=1897/675 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.2815 function_spread=0.3099 matched_functions=72
+    BLOCK_CU[028] DROP band=recovery coarse=0.5800 block=0.8361 coverage_mean=0.8361 coverage_min=0.6781 coverage_ratio=0.9891 assignment_mean=0.8416 assignment_min=0.6515 blocks=92/52 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4038 function_spread=0.4615 matched_functions=13
+    BLOCK_CU[029] PASS band=recovery coarse=0.5700 block=0.8149 coverage_mean=0.8149 coverage_min=0.5154 coverage_ratio=0.9500 assignment_mean=0.7999 assignment_min=0.4604 blocks=20/62 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5645 function_spread=0.5000 matched_functions=6
+    BLOCK_CU[030] DROP band=recovery coarse=0.5700 block=0.8663 coverage_mean=0.8663 coverage_min=0.7337 coverage_ratio=1.0000 assignment_mean=0.7818 assignment_min=0.4330 blocks=171/143 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6503 function_spread=0.3333 matched_functions=9
+YES     | library=libreadline.a | score= 82.37% | coarse_best=100.00% | block_best= 88.97% | block_profile=cross_optimization | block_candidate_mode=coarse | candidate_cu=31/33 | primary_candidate_cu=21 | recovery_candidate_cu=10 | matched_cu=5/33 | matched_functions=23 | time=00:00:00
+[DEBUG] la-gen_uuid.o: target_functions=13, max_sim=1.0000
+[DEBUG] la-gen_uuid.o: best_source_window=(970,983), assigned=13, good=8, ratio=0.615, mean=0.4923, sum=6.3994, call_graph=0.0000, locality=1.0000
+[DEBUG] la-parse.o: target_functions=2, max_sim=0.8623
+[DEBUG] la-parse.o: best_source_window=(1489,1491), assigned=2, good=1, ratio=0.500, mean=0.4194, sum=0.8388, call_graph=0.0000, locality=0.0000
+[DEBUG] la-unparse.o: target_functions=4, max_sim=0.9451
+[DEBUG] la-unparse.o: best_source_window=(353,357), assigned=4, good=2, ratio=0.500, mean=0.4017, sum=1.6067, call_graph=0.0000, locality=0.0000
+[DEBUG] la-uuid_time.o: target_functions=3, max_sim=0.7823
+[DEBUG] la-uuid_time.o: best_source_window=(352,355), assigned=3, good=1, ratio=0.333, mean=0.3075, sum=0.9224, call_graph=0.0000, locality=0.0000
+[DEBUG] libuuid_la-md5.o: target_functions=4, max_sim=0.9067
+[DEBUG] libuuid_la-md5.o: best_source_window=(1928,1932), assigned=4, good=3, ratio=0.750, mean=0.6046, sum=2.4185, call_graph=1.0000, locality=1.0000
+[DEBUG] libuuid_la-randutils.o: target_functions=5, max_sim=0.9744
+[DEBUG] libuuid_la-randutils.o: best_source_window=(754,759), assigned=5, good=2, ratio=0.400, mean=0.4924, sum=2.4621, call_graph=0.0000, locality=1.0000
+[DEBUG] libuuid_la-sha1.o: target_functions=5, max_sim=0.9272
+[DEBUG] libuuid_la-sha1.o: best_source_window=(691,696), assigned=5, good=1, ratio=0.200, mean=0.3621, sum=1.8105, call_graph=0.0000, locality=1.0000
+    BLOCK_CU[000] PASS band=primary coarse=0.8600 block=0.8550 coverage_mean=0.8550 coverage_min=0.7054 coverage_ratio=1.0000 assignment_mean=0.8424 assignment_min=0.7054 blocks=7/17 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7059 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[001] DROP band=primary coarse=0.8000 block=0.8571 coverage_mean=0.8571 coverage_min=0.7529 coverage_ratio=1.0000 assignment_mean=0.8403 assignment_min=0.7311 blocks=26/38 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.9474 function_spread=0.4000 matched_functions=5
+    BLOCK_CU[002] PASS band=primary coarse=0.7600 block=0.8174 coverage_mean=0.8174 coverage_min=0.7056 coverage_ratio=1.0000 assignment_mean=0.8054 assignment_min=0.6192 blocks=61/35 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8286 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[003] DROP band=primary coarse=0.6900 block=0.7805 coverage_mean=0.7805 coverage_min=0.7119 coverage_ratio=1.0000 assignment_mean=0.7859 assignment_min=0.7027 blocks=23/6 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6667 function_spread=0.2500 matched_functions=4
+    BLOCK_CU[004] DROP band=primary coarse=0.6600 block=0.8374 coverage_mean=0.8374 coverage_min=0.6597 coverage_ratio=0.9516 assignment_mean=0.8139 assignment_min=0.5578 blocks=124/106 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.3113 function_spread=0.4000 matched_functions=13
+YES     | library=libuuid.a | score= 83.62% | coarse_best= 86.00% | block_best= 85.71% | block_profile=cross_optimization | block_candidate_mode=coarse | candidate_cu=5/7 | primary_candidate_cu=5 | recovery_candidate_cu=0 | matched_cu=2/7 | matched_functions=6 | time=00:00:00
+
+Done processing in 00:03:58

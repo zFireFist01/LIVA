@@ -1,0 +1,216 @@
+$ /home/zfirefist/miniconda3/envs/thesis-code/bin/python main.py --hide-warnings --path_to_binary /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/libseeker_repo/exp_dataset3/grep.gcc.O0 --libraries_dir /tmp/libseeker-batch-libs.t6r6l1nt --output /home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/current_allcu_compare/reports/grep.gcc.O0.block.report.txt --function_threshold 0.8 --candidate_low_threshold 0.45 --block_scope all_cu --block_threshold 0.7 --block_assignment_threshold 0.75 --block_min_coverage_ratio 0.5 --block_locality_window_multiplier 3.0 --block_locality_window_padding 2 --block_min_edge_locality_ratio 0.5 --block_min_instructions 3 --block_min_function_concentration 0.45 --block_min_function_spread 0.5 --block_coverage_mean_threshold 0.78
+
+TensorFlow GPUs: [PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU')]
+Found 4 library files in '/tmp/libseeker-batch-libs.t6r6l1nt'
+/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/palmtree/model/vocab
+Loading Vocab /home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/palmtree/model/vocab
+Vocab Size:  6631
+         -> la-attr_copy_action.o
+         -> la-attr_copy_check.o
+         -> la-attr_copy_fd.o
+         -> la-attr_copy_file.o
+         -> la-libattr.o
+         -> la-syscalls.o
+[DEBUG] parsed la-attr_copy_action.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-attr_copy_check.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-attr_copy_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-attr_copy_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-libattr.o: type=CU, functions=12, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-syscalls.o: type=CU, functions=12, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libattr.a: loaded 6 object files
+         -> blocksort.o
+         -> bzlib.o
+         -> compress.o
+         -> crctable.o
+         -> decompress.o
+         -> huffman.o
+         -> randtable.o
+[DEBUG] parsed blocksort.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed bzlib.o: type=CU, functions=32, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed compress.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed crctable.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed decompress.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed huffman.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed randtable.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] libbz2.a: loaded 5 object files
+         -> pcre2_auto_possess.c.o
+         -> pcre2_chartables.c.o
+         -> pcre2_compile.c.o
+         -> pcre2_config.c.o
+         -> pcre2_context.c.o
+         -> pcre2_convert.c.o
+         -> pcre2_dfa_match.c.o
+         -> pcre2_error.c.o
+         -> pcre2_extuni.c.o
+         -> pcre2_find_bracket.c.o
+         -> pcre2_jit_compile.c.o
+         -> pcre2_maketables.c.o
+         -> pcre2_match.c.o
+         -> pcre2_match_data.c.o
+         -> pcre2_newline.c.o
+         -> pcre2_ord2utf.c.o
+         -> pcre2_pattern_info.c.o
+         -> pcre2_script_run.c.o
+         -> pcre2_serialize.c.o
+         -> pcre2_string_utils.c.o
+         -> pcre2_study.c.o
+         -> pcre2_substitute.c.o
+         -> pcre2_substring.c.o
+         -> pcre2_tables.c.o
+         -> pcre2_ucd.c.o
+         -> pcre2_valid_utf.c.o
+         -> pcre2_xclass.c.o
+[DEBUG] parsed pcre2_auto_possess.c.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_chartables.c.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_compile.c.o: type=CU, functions=33, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_config.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_context.c.o: type=CU, functions=32, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_convert.c.o: type=CU, functions=12, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_dfa_match.c.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_error.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_extuni.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_find_bracket.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_jit_compile.c.o: type=CU, functions=10, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_maketables.c.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_match.c.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_match_data.c.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_newline.c.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_ord2utf.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_pattern_info.c.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_script_run.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_serialize.c.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_string_utils.c.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_study.c.o: type=CU, functions=6, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_substitute.c.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_substring.c.o: type=CU, functions=11, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_tables.c.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_ucd.c.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_valid_utf.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed pcre2_xclass.c.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libpcre2-8.a: loaded 24 object files
+         -> la-clear.o
+         -> la-compare.o
+         -> la-copy.o
+         -> la-gen_uuid.o
+         -> la-isnull.o
+         -> la-pack.o
+         -> la-parse.o
+         -> la-predefined.o
+         -> la-unpack.o
+         -> la-unparse.o
+         -> la-uuid_time.o
+         -> libuuid_la-md5.o
+         -> libuuid_la-randutils.o
+         -> libuuid_la-sha1.o
+[DEBUG] parsed la-clear.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-compare.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-copy.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-gen_uuid.o: type=CU, functions=13, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-isnull.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-pack.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-parse.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-predefined.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-unpack.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-unparse.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-uuid_time.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed libuuid_la-md5.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed libuuid_la-randutils.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed libuuid_la-sha1.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libuuid.a: loaded 14 object files
+Found 4 libraries to process
+Target binary: /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/libseeker_repo/exp_dataset3/grep.gcc.O0
+Start processing: 16:54:58
+
+[DEBUG] parsed grep.gcc.O0: type=ELF, functions=1970, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] la-libattr.o: target_functions=12, max_sim=0.9361
+[DEBUG] la-libattr.o: best_source_window=(1326,1338), assigned=12, good=5, ratio=0.417, mean=0.4005, sum=4.8059, call_graph=0.0000, locality=1.0000
+[DEBUG] la-syscalls.o: target_functions=12, max_sim=0.9218
+    BLOCK_CU[000] DROP band=recovery function=0.6500 block=0.9143 coverage_mean=0.9143 coverage_min=0.8020 coverage_ratio=1.0000 assignment_mean=0.9059 assignment_min=0.7537 blocks=128/1595 locality_span=38 edge_locality_ratio=1.0000 function_concentration=0.2656 function_spread=0.5833 matched_functions=12
+    BLOCK_CU[001] DROP band=all_cu function=0.0000 block=0.9431 coverage_mean=0.9431 coverage_min=0.9168 coverage_ratio=1.0000 assignment_mean=0.9162 assignment_min=0.8793 blocks=12/220 locality_span=38 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.2500 matched_functions=12
+NO      | library=libattr.a | score=  0.00% | function_best= 65.00% | block_best= 94.31% | block_scope=all_cu | candidate_cu=2/2 | primary_candidate_cu=0 | recovery_candidate_cu=1 | matched_cu=0/2 | matched_functions=0 | time=00:00:02
+[DEBUG] blocksort.o: target_functions=4, max_sim=0.9347
+[DEBUG] blocksort.o: best_source_window=(1239,1243), assigned=4, good=4, ratio=1.000, mean=0.7258, sum=2.9033, call_graph=0.0000, locality=1.0000
+[DEBUG] bzlib.o: target_functions=32, max_sim=1.0000
+[DEBUG] bzlib.o: best_source_window=(650,682), assigned=32, good=17, ratio=0.531, mean=0.4778, sum=15.2898, call_graph=0.0435, locality=0.7826
+[DEBUG] compress.o: target_functions=4, max_sim=0.9133
+[DEBUG] compress.o: best_source_window=(950,954), assigned=4, good=1, ratio=0.250, mean=0.4349, sum=1.7395, call_graph=0.0000, locality=1.0000
+[DEBUG] huffman.o: target_functions=3, max_sim=0.9405
+[DEBUG] huffman.o: best_source_window=(1143,1146), assigned=3, good=2, ratio=0.667, mean=0.5003, sum=1.5010, call_graph=0.0000, locality=0.0000
+    BLOCK_CU[000] PASS band=recovery function=0.7300 block=0.8753 coverage_mean=0.8753 coverage_min=0.7527 coverage_ratio=1.0000 assignment_mean=0.8677 assignment_min=0.7527 blocks=89/262 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6298 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[001] DROP band=recovery function=0.6800 block=0.9141 coverage_mean=0.9141 coverage_min=0.7293 coverage_ratio=1.0000 assignment_mean=0.9054 assignment_min=0.7152 blocks=401/4935 locality_span=98 edge_locality_ratio=0.7826 function_concentration=0.2993 function_spread=0.4062 matched_functions=32
+    BLOCK_CU[002] PASS band=primary function=0.9900 block=0.8894 coverage_mean=0.8894 coverage_min=0.7731 coverage_ratio=1.0000 assignment_mean=0.8822 assignment_min=0.7731 blocks=21/341 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.4868 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[003] DROP band=recovery function=0.7100 block=0.8531 coverage_mean=0.8531 coverage_min=0.6847 coverage_ratio=0.9714 assignment_mean=0.8497 assignment_min=0.6835 blocks=70/807 locality_span=11 edge_locality_ratio=1.0000 function_concentration=0.4286 function_spread=0.6667 matched_functions=3
+YES     | library=libbz2.a | score= 88.24% | function_best= 99.00% | block_best= 91.41% | block_scope=all_cu | candidate_cu=4/4 | primary_candidate_cu=1 | recovery_candidate_cu=3 | matched_cu=2/4 | matched_functions=8 | time=00:00:14
+[DEBUG] pcre2_auto_possess.c.o: target_functions=5, max_sim=0.9504
+[DEBUG] pcre2_auto_possess.c.o: best_source_window=(1464,1469), assigned=5, good=4, ratio=0.800, mean=0.6664, sum=3.3319, call_graph=0.0000, locality=1.0000
+[DEBUG] pcre2_compile.c.o: target_functions=33, max_sim=0.9724
+[DEBUG] pcre2_compile.c.o: best_source_window=(334,367), assigned=33, good=18, ratio=0.545, mean=0.4748, sum=15.6692, call_graph=0.0000, locality=0.5926
+[DEBUG] pcre2_context.c.o: target_functions=32, max_sim=1.0000
+[DEBUG] pcre2_context.c.o: best_source_window=(187,219), assigned=32, good=22, ratio=0.688, mean=0.5813, sum=18.6025, call_graph=0.0000, locality=0.7500
+[DEBUG] pcre2_convert.c.o: target_functions=12, max_sim=0.9679
+[DEBUG] pcre2_convert.c.o: best_source_window=(1930,1942), assigned=12, good=6, ratio=0.500, mean=0.4658, sum=5.5899, call_graph=0.0000, locality=1.0000
+[DEBUG] pcre2_dfa_match.c.o: target_functions=4, max_sim=0.9056
+[DEBUG] pcre2_dfa_match.c.o: best_source_window=(118,122), assigned=4, good=1, ratio=0.250, mean=0.3661, sum=1.4642, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_jit_compile.c.o: target_functions=10, max_sim=1.0000
+[DEBUG] pcre2_jit_compile.c.o: best_source_window=(78,88), assigned=10, good=6, ratio=0.600, mean=0.5332, sum=5.3321, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_maketables.c.o: target_functions=2, max_sim=0.9416
+[DEBUG] pcre2_maketables.c.o: best_source_window=(120,122), assigned=2, good=1, ratio=0.500, mean=0.5780, sum=1.1559, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_match.c.o: target_functions=4, max_sim=0.8423
+[DEBUG] pcre2_match.c.o: best_source_window=(449,453), assigned=4, good=1, ratio=0.250, mean=0.3524, sum=1.4097, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_match_data.c.o: target_functions=8, max_sim=1.0000
+[DEBUG] pcre2_match_data.c.o: best_source_window=(167,175), assigned=8, good=5, ratio=0.625, mean=0.5608, sum=4.4866, call_graph=0.0000, locality=1.0000
+[DEBUG] pcre2_newline.c.o: target_functions=2, max_sim=0.8551
+[DEBUG] pcre2_newline.c.o: best_source_window=(226,228), assigned=2, good=2, ratio=1.000, mean=0.7842, sum=1.5684, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_pattern_info.c.o: target_functions=2, max_sim=0.9661
+[DEBUG] pcre2_pattern_info.c.o: best_source_window=(691,693), assigned=2, good=1, ratio=0.500, mean=0.5683, sum=1.1366, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_serialize.c.o: target_functions=4, max_sim=0.9131
+[DEBUG] pcre2_serialize.c.o: best_source_window=(229,233), assigned=4, good=2, ratio=0.500, mean=0.3873, sum=1.5492, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_string_utils.c.o: target_functions=6, max_sim=0.9499
+[DEBUG] pcre2_string_utils.c.o: best_source_window=(96,102), assigned=6, good=2, ratio=0.333, mean=0.3770, sum=2.2620, call_graph=0.0000, locality=0.0000
+[DEBUG] pcre2_study.c.o: target_functions=6, max_sim=0.9730
+[DEBUG] pcre2_study.c.o: best_source_window=(257,263), assigned=6, good=4, ratio=0.667, mean=0.6643, sum=3.9857, call_graph=0.0000, locality=1.0000
+[DEBUG] pcre2_substitute.c.o: target_functions=2, max_sim=0.9310
+[DEBUG] pcre2_substitute.c.o: best_source_window=(695,697), assigned=2, good=2, ratio=1.000, mean=0.8593, sum=1.7186, call_graph=0.0000, locality=1.0000
+[DEBUG] pcre2_substring.c.o: target_functions=11, max_sim=0.9576
+[DEBUG] pcre2_substring.c.o: best_source_window=(478,489), assigned=11, good=2, ratio=0.182, mean=0.3197, sum=3.5165, call_graph=0.0000, locality=1.0000
+    BLOCK_CU[000] DROP band=recovery function=0.7600 block=0.9207 coverage_mean=0.9207 coverage_min=0.7907 coverage_ratio=1.0000 assignment_mean=0.8975 assignment_min=0.7194 blocks=130/284 locality_span=17 edge_locality_ratio=0.6000 function_concentration=0.3769 function_spread=0.8000 matched_functions=5
+    BLOCK_CU[001] DROP band=recovery function=0.7500 block=0.9388 coverage_mean=0.9388 coverage_min=0.7574 coverage_ratio=1.0000 assignment_mean=0.8869 assignment_min=0.6123 blocks=1041/1117 locality_span=101 edge_locality_ratio=0.5556 function_concentration=0.2421 function_spread=0.4545 matched_functions=33
+    BLOCK_CU[002] DROP band=recovery function=0.7600 block=0.9770 coverage_mean=0.9770 coverage_min=0.9473 coverage_ratio=1.0000 assignment_mean=0.9687 assignment_min=0.8790 blocks=63/650 locality_span=98 edge_locality_ratio=0.2500 function_concentration=0.5556 function_spread=0.4062 matched_functions=32
+    BLOCK_CU[003] DROP band=recovery function=0.7000 block=0.9428 coverage_mean=0.9428 coverage_min=0.7989 coverage_ratio=1.0000 assignment_mean=0.9171 assignment_min=0.7766 blocks=233/596 locality_span=38 edge_locality_ratio=0.8500 function_concentration=0.2318 function_spread=0.5833 matched_functions=12
+    BLOCK_CU[004] DROP band=all_cu function=0.0000 block=0.9286 coverage_mean=0.9286 coverage_min=0.7723 coverage_ratio=1.0000 assignment_mean=0.8988 assignment_min=0.7373 blocks=184/274 locality_span=14 edge_locality_ratio=1.0000 function_concentration=0.5761 function_spread=0.2500 matched_functions=4
+    BLOCK_CU[005] DROP band=recovery function=0.7800 block=0.9721 coverage_mean=0.9721 coverage_min=0.9267 coverage_ratio=1.0000 assignment_mean=0.9624 assignment_min=0.9267 blocks=14/275 locality_span=32 edge_locality_ratio=1.0000 function_concentration=0.8571 function_spread=0.4000 matched_functions=10
+    BLOCK_CU[006] PASS band=primary function=0.9400 block=0.8754 coverage_mean=0.8754 coverage_min=0.7196 coverage_ratio=1.0000 assignment_mean=0.8711 assignment_min=0.7196 blocks=12/42 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8333 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[007] PASS band=all_cu function=0.0000 block=0.9323 coverage_mean=0.9323 coverage_min=0.7713 coverage_ratio=1.0000 assignment_mean=0.8819 assignment_min=0.6859 blocks=124/191 locality_span=14 edge_locality_ratio=1.0000 function_concentration=0.5968 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[008] PASS band=primary function=0.8000 block=0.8951 coverage_mean=0.8951 coverage_min=0.6776 coverage_ratio=0.9853 assignment_mean=0.9113 assignment_min=0.7535 blocks=68/17 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7059 function_spread=0.5000 matched_functions=8
+    BLOCK_CU[009] PASS band=recovery function=0.7800 block=0.8903 coverage_mean=0.8903 coverage_min=0.8786 coverage_ratio=1.0000 assignment_mean=0.8887 assignment_min=0.8786 blocks=3/46 locality_span=0 edge_locality_ratio=1.0000 function_concentration=1.0000 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[010] DROP band=primary function=0.9700 block=0.9264 coverage_mean=0.9264 coverage_min=0.7968 coverage_ratio=1.0000 assignment_mean=0.8933 assignment_min=0.7968 blocks=29/46 locality_span=8 edge_locality_ratio=1.0000 function_concentration=0.4138 function_spread=1.0000 matched_functions=2
+    BLOCK_CU[011] DROP band=all_cu function=0.0000 block=0.9464 coverage_mean=0.9464 coverage_min=0.8068 coverage_ratio=1.0000 assignment_mean=0.9425 assignment_min=0.8068 blocks=43/319 locality_span=14 edge_locality_ratio=1.0000 function_concentration=0.3488 function_spread=0.7500 matched_functions=4
+    BLOCK_CU[012] PASS band=all_cu function=0.0000 block=0.9513 coverage_mean=0.9513 coverage_min=0.8498 coverage_ratio=1.0000 assignment_mean=0.9225 assignment_min=0.8110 blocks=23/128 locality_span=20 edge_locality_ratio=1.0000 function_concentration=0.4783 function_spread=0.6667 matched_functions=6
+    BLOCK_CU[013] DROP band=primary function=0.9100 block=0.9253 coverage_mean=0.9253 coverage_min=0.7814 coverage_ratio=1.0000 assignment_mean=0.9099 assignment_min=0.7814 blocks=97/395 locality_span=20 edge_locality_ratio=0.5000 function_concentration=0.3402 function_spread=0.6667 matched_functions=6
+    BLOCK_CU[014] PASS band=primary function=0.8600 block=0.8201 coverage_mean=0.8201 coverage_min=0.5863 coverage_ratio=0.9677 assignment_mean=0.7712 assignment_min=0.5722 blocks=124/229 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8297 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[015] DROP band=all_cu function=0.0000 block=0.9497 coverage_mean=0.9497 coverage_min=0.7202 coverage_ratio=1.0000 assignment_mean=0.9396 assignment_min=0.7202 blocks=85/558 locality_span=35 edge_locality_ratio=0.7778 function_concentration=0.2941 function_spread=0.5455 matched_functions=11
+YES     | library=libpcre2-8.a | score= 89.41% | function_best= 97.00% | block_best= 97.70% | block_scope=all_cu | candidate_cu=16/16 | primary_candidate_cu=5 | recovery_candidate_cu=6 | matched_cu=6/16 | matched_functions=24 | time=00:03:32
+[DEBUG] la-gen_uuid.o: target_functions=13, max_sim=1.0000
+[DEBUG] la-gen_uuid.o: best_source_window=(612,625), assigned=13, good=10, ratio=0.769, mean=0.6041, sum=7.8538, call_graph=0.2500, locality=1.0000
+[DEBUG] la-parse.o: target_functions=2, max_sim=0.8623
+[DEBUG] la-parse.o: best_source_window=(1492,1494), assigned=2, good=1, ratio=0.500, mean=0.4194, sum=0.8388, call_graph=0.0000, locality=0.0000
+[DEBUG] la-unparse.o: target_functions=4, max_sim=0.9451
+[DEBUG] la-unparse.o: best_source_window=(354,358), assigned=4, good=2, ratio=0.500, mean=0.4017, sum=1.6067, call_graph=0.0000, locality=0.0000
+[DEBUG] la-uuid_time.o: target_functions=3, max_sim=0.7823
+[DEBUG] la-uuid_time.o: best_source_window=(353,356), assigned=3, good=1, ratio=0.333, mean=0.3075, sum=0.9224, call_graph=0.0000, locality=0.0000
+[DEBUG] libuuid_la-md5.o: target_functions=4, max_sim=0.9067
+[DEBUG] libuuid_la-md5.o: best_source_window=(1941,1945), assigned=4, good=3, ratio=0.750, mean=0.6046, sum=2.4185, call_graph=1.0000, locality=1.0000
+[DEBUG] libuuid_la-randutils.o: target_functions=5, max_sim=0.9744
+[DEBUG] libuuid_la-randutils.o: best_source_window=(748,753), assigned=5, good=3, ratio=0.600, mean=0.5682, sum=2.8412, call_graph=0.5000, locality=1.0000
+[DEBUG] libuuid_la-sha1.o: target_functions=5, max_sim=0.9074
+[DEBUG] libuuid_la-sha1.o: best_source_window=(410,415), assigned=5, good=3, ratio=0.600, mean=0.5015, sum=2.5073, call_graph=0.0000, locality=1.0000
+    BLOCK_CU[000] DROP band=recovery function=0.7200 block=0.9096 coverage_mean=0.9096 coverage_min=0.7347 coverage_ratio=1.0000 assignment_mean=0.9036 assignment_min=0.7347 blocks=106/1579 locality_span=41 edge_locality_ratio=0.7500 function_concentration=0.2830 function_spread=0.4000 matched_functions=13
+    BLOCK_CU[001] PASS band=primary function=0.8600 block=0.8550 coverage_mean=0.8550 coverage_min=0.7054 coverage_ratio=1.0000 assignment_mean=0.8424 assignment_min=0.7054 blocks=7/17 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.7059 function_spread=0.5000 matched_functions=2
+    BLOCK_CU[002] PASS band=recovery function=0.6900 block=0.9075 coverage_mean=0.9075 coverage_min=0.8508 coverage_ratio=1.0000 assignment_mean=0.8927 assignment_min=0.8508 blocks=6/168 locality_span=14 edge_locality_ratio=1.0000 function_concentration=0.8333 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[003] PASS band=all_cu function=0.0000 block=0.8755 coverage_mean=0.8755 coverage_min=0.7622 coverage_ratio=1.0000 assignment_mean=0.8740 assignment_min=0.7622 blocks=11/511 locality_span=11 edge_locality_ratio=1.0000 function_concentration=0.5455 function_spread=0.6667 matched_functions=3
+    BLOCK_CU[004] PASS band=recovery function=0.7600 block=0.8174 coverage_mean=0.8174 coverage_min=0.7056 coverage_ratio=1.0000 assignment_mean=0.8054 assignment_min=0.6192 blocks=61/35 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.8286 function_spread=0.5000 matched_functions=4
+    BLOCK_CU[005] PASS band=recovery function=0.7600 block=0.8632 coverage_mean=0.8632 coverage_min=0.7529 coverage_ratio=1.0000 assignment_mean=0.8347 assignment_min=0.7311 blocks=33/38 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.6579 function_spread=0.6000 matched_functions=5
+    BLOCK_CU[006] PASS band=recovery function=0.6700 block=0.8306 coverage_mean=0.8306 coverage_min=0.7220 coverage_ratio=1.0000 assignment_mean=0.8164 assignment_min=0.7220 blocks=14/28 locality_span=0 edge_locality_ratio=1.0000 function_concentration=0.5000 function_spread=0.8000 matched_functions=5
+YES     | library=libuuid.a | score= 85.82% | function_best= 86.00% | block_best= 90.96% | block_scope=all_cu | candidate_cu=7/7 | primary_candidate_cu=1 | recovery_candidate_cu=5 | matched_cu=6/7 | matched_functions=23 | time=00:00:01
+
+Done processing in 00:06:33

@@ -351,10 +351,6 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
             id(match.target_unit): match.get_score()
             for match in matches
         }
-        matches_by_cu = {
-            id(match.target_unit): match
-            for match in matches
-        }
         function_best_score = max((m.get_score() for m in matches), default=0.0)
         block_best_score = 0.0
         block_results = []
@@ -387,22 +383,6 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
                     )
                 )
                 for candidate_match in candidate_matches:
-                    function_match = matches_by_cu.get(id(candidate_match.target_unit))
-                    if function_match is not None:
-                        block_result = evaluate_block_match(
-                            function_match,
-                            args.block_threshold,
-                            args.block_assignment_threshold,
-                            args.block_min_coverage_ratio,
-                            args.block_coverage_mean_threshold,
-                            args.block_min_instructions,
-                            args.block_min_function_concentration,
-                            args.block_min_function_spread,
-                        )
-                        if block_result.passed:
-                            block_results.append((function_match, block_result))
-                            continue
-
                     block_result = evaluate_block_presence(
                         binary,
                         candidate_match.target_unit,

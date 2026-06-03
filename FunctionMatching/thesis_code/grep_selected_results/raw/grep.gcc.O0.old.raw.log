@@ -1,0 +1,349 @@
+$ /home/zfirefist/miniconda3/envs/thesis-code/bin/python main.py --hide-warnings --path_to_binary /home/zfirefist/Desktop/Thesis_Binary_Analysis/Exploration/libseeker_repo/exp_dataset/grep.gcc.O0 --libraries_dir /tmp/libseeker-batch-libs.jevory54 --output /home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/grep_selected_results/reports/grep.gcc.O0.old.report.txt --disable_block_matching
+
+TensorFlow GPUs: []
+Found 7 library files in '/tmp/libseeker-batch-libs.jevory54'
+/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/palmtree/model/vocab
+Loading Vocab /home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/palmtree/model/vocab
+Vocab Size:  6631
+         -> high_water_alloc.o
+         -> la-__acl_extended_file.o
+         -> la-__acl_from_xattr.o
+         -> la-__acl_reorder_obj_p.o
+         -> la-__acl_to_any_text.o
+         -> la-__acl_to_xattr.o
+         -> la-__apply_mask_to_mode.o
+         -> la-__libobj.o
+         -> la-acl_add_perm.o
+         -> la-acl_calc_mask.o
+         -> la-acl_check.o
+         -> la-acl_clear_perms.o
+         -> la-acl_cmp.o
+         -> la-acl_copy_entry.o
+         -> la-acl_copy_ext.o
+         -> la-acl_copy_int.o
+         -> la-acl_create_entry.o
+         -> la-acl_delete_def_file.o
+         -> la-acl_delete_entry.o
+         -> la-acl_delete_perm.o
+         -> la-acl_dup.o
+         -> la-acl_entries.o
+         -> la-acl_equiv_mode.o
+         -> la-acl_error.o
+         -> la-acl_extended_fd.o
+         -> la-acl_extended_file.o
+         -> la-acl_extended_file_nofollow.o
+         -> la-acl_free.o
+         -> la-acl_from_mode.o
+         -> la-acl_from_text.o
+         -> la-acl_get_entry.o
+         -> la-acl_get_fd.o
+         -> la-acl_get_file.o
+         -> la-acl_get_perm.o
+         -> la-acl_get_permset.o
+         -> la-acl_get_qualifier.o
+         -> la-acl_get_tag_type.o
+         -> la-acl_init.o
+         -> la-acl_set_fd.o
+         -> la-acl_set_file.o
+         -> la-acl_set_permset.o
+         -> la-acl_set_qualifier.o
+         -> la-acl_set_tag_type.o
+         -> la-acl_size.o
+         -> la-acl_to_any_text.o
+         -> la-acl_to_text.o
+         -> la-acl_valid.o
+         -> la-perm_copy_fd.o
+         -> la-perm_copy_file.o
+         -> next_line.o
+         -> quote.o
+         -> uid_gid_lookup.o
+         -> unquote.o
+         -> walk_tree.o
+[DEBUG] parsed high_water_alloc.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__acl_extended_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__acl_from_xattr.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__acl_reorder_obj_p.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__acl_to_any_text.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__acl_to_xattr.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__apply_mask_to_mode.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-__libobj.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_add_perm.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_calc_mask.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_check.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_clear_perms.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_cmp.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_copy_entry.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_copy_ext.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_copy_int.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_create_entry.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_delete_def_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_delete_entry.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_delete_perm.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_dup.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_entries.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_equiv_mode.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_error.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_extended_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_extended_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_extended_file_nofollow.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_free.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_from_mode.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_from_text.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_entry.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_perm.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_permset.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_qualifier.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_get_tag_type.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_init.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_set_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_set_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_set_permset.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_set_qualifier.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_set_tag_type.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_size.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_to_any_text.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_to_text.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-acl_valid.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-perm_copy_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-perm_copy_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed next_line.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed quote.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed uid_gid_lookup.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed unquote.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed walk_tree.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libacl.a: loaded 54 object files
+         -> la-attr_copy_action.o
+         -> la-attr_copy_check.o
+         -> la-attr_copy_fd.o
+         -> la-attr_copy_file.o
+         -> la-libattr.o
+         -> la-syscalls.o
+[DEBUG] parsed la-attr_copy_action.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-attr_copy_check.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-attr_copy_fd.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-attr_copy_file.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-libattr.o: type=CU, functions=12, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed la-syscalls.o: type=CU, functions=12, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] libattr.a: loaded 6 object files
+         -> blocksort.o
+         -> bzlib.o
+         -> compress.o
+         -> crctable.o
+         -> decompress.o
+         -> huffman.o
+         -> randtable.o
+[DEBUG] parsed blocksort.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed bzlib.o: type=CU, functions=32, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed compress.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed crctable.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed decompress.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed huffman.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed randtable.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] libbz2.a: loaded 5 object files
+         -> access.o
+         -> add_tries.o
+         -> alloc_entry.o
+         -> alloc_ttype.o
+         -> captoinfo.o
+         -> codes.o
+         -> comp_captab.o
+         -> comp_error.o
+         -> comp_expand.o
+         -> comp_hash.o
+         -> comp_parse.o
+         -> comp_scan.o
+         -> comp_userdefs.o
+         -> db_iterator.o
+         -> define_key.o
+         -> doalloc.o
+         -> entries.o
+         -> expanded.o
+         -> fallback.o
+         -> free_ttype.o
+         -> getenv_num.o
+         -> hardscroll.o
+         -> hashed_db.o
+         -> hashmap.o
+         -> home_terminfo.o
+         -> init_keytry.o
+         -> key_defined.o
+         -> keybound.o
+         -> keyok.o
+         -> legacy_coding.o
+         -> lib_acs.o
+         -> lib_addch.o
+         -> lib_addstr.o
+         -> lib_baudrate.o
+         -> lib_beep.o
+         -> lib_bkgd.o
+         -> lib_box.o
+         -> lib_chgat.o
+         -> lib_clear.o
+         -> lib_clearok.o
+         -> lib_clrbot.o
+         -> lib_clreol.o
+         -> lib_color.o
+         -> lib_colorset.o
+         -> lib_cur_term.o
+         -> lib_data.o
+         -> lib_delch.o
+         -> lib_delwin.o
+         -> lib_dft_fgbg.o
+         -> lib_echo.o
+         -> lib_endwin.o
+         -> lib_erase.o
+         -> lib_flash.o
+         -> lib_freeall.o
+         -> lib_gen.o
+         -> lib_getch.o
+         -> lib_getstr.o
+         -> lib_has_cap.o
+         -> lib_hline.o
+         -> lib_immedok.o
+         -> lib_inchstr.o
+         -> lib_initscr.o
+         -> lib_insch.o
+         -> lib_insdel.o
+         -> lib_insnstr.o
+         -> lib_instr.o
+         -> lib_isendwin.o
+         -> lib_kernel.o
+         -> lib_keyname.o
+         -> lib_leaveok.o
+         -> lib_longname.o
+         -> lib_mouse.o
+         -> lib_move.o
+         -> lib_mvcur.o
+         -> lib_mvwin.o
+         -> lib_napms.o
+         -> lib_newterm.o
+         -> lib_newwin.o
+         -> lib_nl.o
+         -> lib_options.o
+         -> lib_overlay.o
+         -> lib_pad.o
+         -> lib_print.o
+         -> lib_printw.o
+         -> lib_raw.o
+         -> lib_redrawln.o
+         -> lib_refresh.o
+         -> lib_restart.o
+         -> lib_scanw.o
+         -> lib_screen.o
+         -> lib_scroll.o
+         -> lib_scrollok.o
+         -> lib_scrreg.o
+         -> lib_set_term.o
+         -> lib_setup.o
+         -> lib_slk.o
+         -> lib_slkatr_set.o
+         -> lib_slkatrof.o
+         -> lib_slkatron.o
+         -> lib_slkatrset.o
+         -> lib_slkattr.o
+         -> lib_slkclear.o
+         -> lib_slkcolor.o
+         -> lib_slkinit.o
+         -> lib_slklab.o
+         -> lib_slkrefr.o
+         -> lib_slkset.o
+         -> lib_slktouch.o
+         -> lib_termcap.o
+         -> lib_termname.o
+         -> lib_tgoto.o
+         -> lib_ti.o
+         -> lib_touch.o
+         -> lib_tparm.o
+         -> lib_tputs.o
+         -> lib_trace.o
+         -> lib_tstp.o
+         -> lib_ttyflags.o
+         -> lib_twait.o
+         -> lib_ungetch.o
+         -> lib_vidattr.o
+         -> lib_vline.o
+         -> lib_wattroff.o
+         -> lib_wattron.o
+         -> lib_winch.o
+         -> lib_window.o
+         -> name_match.o
+         -> names.o
+         -> nc_panel.o
+         -> new_pair.o
+         -> obsolete.o
+         -> parse_entry.o
+         -> read_entry.o
+         -> read_termcap.o
+         -> resizeterm.o
+         -> safe_sprintf.o
+         -> strings.o
+         -> tries.o
+         -> trim_sgr0.o
+         -> tty_update.o
+         -> unctrl.o
+         -> use_screen.o
+         -> use_window.o
+         -> varargs.o
+         -> version.o
+         -> visbuf.o
+         -> vsscanf.o
+         -> wresize.o
+         -> write_entry.o
+[DEBUG] parsed access.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed add_tries.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed alloc_entry.o: type=CU, functions=5, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed alloc_ttype.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed captoinfo.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed codes.o: type=CU, functions=0, readelf_fallback_count=1, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_captab.o: type=CU, functions=10, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_error.o: type=CU, functions=8, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_expand.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_hash.o: type=CU, functions=3, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_parse.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_scan.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed comp_userdefs.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed db_iterator.o: type=CU, functions=7, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed define_key.o: type=CU, functions=2, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed doalloc.o: type=CU, functions=1, readelf_fallback_count=0, pseudo_block_fallback_count=0
+[DEBUG] parsed entries.o: type=CU, functions=4, readelf_fallback_count=0, pseudo_block_fallback_count=0
+Traceback (most recent call last):
+  File "/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/main.py", line 650, in <module>
+    b = parse_r2_file(
+        ^^^^^^^^^^^^^^
+  File "/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/asm.py", line 458, in parse_r2_file
+    parsed_code_unit.compute_embeddings(asm_model=asm_model, graph_model=graph_model)
+  File "/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/asm.py", line 208, in compute_embeddings
+    function.compute_embeddings(asm_model=asm_model, graph_model=graph_model)
+  File "/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/asm.py", line 110, in compute_embeddings
+    all_embeddings = asm_model.get_embedding(flat_instrs)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/model.py", line 84, in get_embedding
+    i_embed = self._model.encode(instructions[:window+context])[:window]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zfirefist/Desktop/Thesis_Binary_Analysis/FunctionMatching/thesis_code/palmtree/eval_utils.py", line 92, in encode
+    encoded = self.model.forward(sequence, segment_label)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zfirefist/miniconda3/envs/thesis-code/lib/python3.11/site-packages/bert_pytorch/model/bert.py", line 46, in forward
+    x = transformer.forward(x, mask)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zfirefist/miniconda3/envs/thesis-code/lib/python3.11/site-packages/bert_pytorch/model/transformer.py", line 30, in forward
+    x = self.output_sublayer(x, self.feed_forward)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zfirefist/miniconda3/envs/thesis-code/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zfirefist/miniconda3/envs/thesis-code/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zfirefist/miniconda3/envs/thesis-code/lib/python3.11/site-packages/bert_pytorch/model/utils/sublayer.py", line 18, in forward
+    return x + self.dropout(sublayer(self.norm(x)))
+                                     ^^^^^^^^^^^^
+  File "/home/zfirefist/miniconda3/envs/thesis-code/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zfirefist/miniconda3/envs/thesis-code/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
