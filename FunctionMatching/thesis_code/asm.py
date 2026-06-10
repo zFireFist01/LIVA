@@ -2,11 +2,9 @@
 
 import os
 import re
-from subprocess import PIPE, run
 import r2pipe
 import numpy as np
 import networkx as nx
-from networkx import to_numpy_array
 
 
 def normalize_instruction_text(instruction: str) -> str:
@@ -59,8 +57,6 @@ class Function:
         self.cfg: nx.DiGraph = cfg if cfg is not None else nx.DiGraph()
         self.call_targets: set[int] = call_targets or set()
         self.resolved_call_targets: set[int] = set()
-        self.embedding: np.ndarray = None   # Graph-level function embedding
-        self.graph_repr: np.ndarray = None  # Adjacency matrix of cfg
 
     # ------------------------------------------------------------------
     # Convenience helpers
@@ -97,12 +93,8 @@ class Function:
             for block in self.blocks
         )
 
-    def get_blocks_embeddings(self) -> list[np.ndarray]:
-        return [b.embedding for b in self.blocks]
-
-    def compute_embeddings(self, asm_model, graph_model=None) -> None:
-        """Compute instruction→block embeddings (PalmTree) and optionally
-        the graph-level function embedding (struct2vec GraphNetwork)."""
+    def compute_embeddings(self, asm_model) -> None:
+        """Compute instruction embeddings and mean-pool them per block."""
         flat_instrs = self.instructions          # property: flat list of str
         if not flat_instrs:
             return
@@ -116,17 +108,6 @@ class Function:
             block.compute_embedding(all_embeddings[idx : idx + n])
             idx += n
 
-        # Adjacency matrix with rows/cols ordered by sorted block addresses
-        nodelist = [b.address for b in self.blocks]
-        self.graph_repr = to_numpy_array(self.cfg, nodelist=nodelist)
-
-        if graph_model is not None:
-            import tensorflow as tf
-            embeddings_t = tf.constant(self.get_blocks_embeddings(), dtype=tf.float32)
-            self.embedding = graph_model(
-                self.graph_repr, embeddings_t, training=False
-            ).numpy()
-
 
 class CodeUnit:
     """Represents an analyzed ELF binary or compilation unit."""
@@ -139,28 +120,35 @@ class CodeUnit:
         name: str,
         file_path: str,
         functions: list[Function] = None,
-        blobs: list[list[Function]] = None,
         unit_type: str = TYPE_ELF,
-        readelf_fallback_count: int = 0,
+        symbol_fallback_count: int = 0,
         pseudo_block_fallback_count: int = 0,
+        rodata_bytes: bytes = b"",
+        rodata_strings: list[str] = None,
+        rodata_section_count: int = 0,
     ):
         self.name = name
         self.file_path = file_path
         self.unit_type = unit_type
         self.type = unit_type
-        self.readelf_fallback_count = readelf_fallback_count
+        self.symbol_fallback_count = symbol_fallback_count
         self.pseudo_block_fallback_count = pseudo_block_fallback_count
+        self.rodata_bytes = rodata_bytes
+        self.rodata_strings = rodata_strings or []
+        self.rodata_section_count = rodata_section_count
         self.functions = sorted(functions or [], key=lambda f: f.address)
-        self.blobs = blobs or [self.functions]  # Default: all functions in one blob
         self.call_graph: nx.DiGraph = nx.DiGraph()
-        self._resolve_internal_calls()
+        self.resolve_internal_calls()
 
     def __repr__(self) -> str:
         return (
             f"<CodeUnit {self.name}, type={self.unit_type}, "
             f"{len(self.functions)} functions, "
-            f"readelf_fallback_count={self.readelf_fallback_count}, "
-            f"pseudo_block_fallback_count={self.pseudo_block_fallback_count}>"
+            f"symbol_fallback_count={self.symbol_fallback_count}, "
+            f"pseudo_block_fallback_count={self.pseudo_block_fallback_count}, "
+            f"rodata_sections={self.rodata_section_count}, "
+            f"rodata_bytes={len(self.rodata_bytes)}, "
+            f"rodata_strings={len(self.rodata_strings)}>"
         )
 
     def __str__(self) -> str:
@@ -169,7 +157,10 @@ class CodeUnit:
     def get_num_functions(self) -> int:
         return len(self.functions)
 
-    def _find_function_containing(self, address: int) -> Function | None:
+    def get_rodata_size(self) -> int:
+        return len(self.rodata_bytes)
+
+    def find_function_containing(self, address: int) -> Function | None:
         for function in self.functions:
             if function.address == address:
                 return function
@@ -187,7 +178,7 @@ class CodeUnit:
             key=lambda function: function.get_end_address() - function.address,
         )
 
-    def _resolve_internal_calls(self) -> None:
+    def resolve_internal_calls(self) -> None:
         """Resolve numeric call targets to functions in this code unit, without symbols."""
         self.call_graph.clear()
         for function in self.functions:
@@ -196,19 +187,19 @@ class CodeUnit:
 
         for caller in self.functions:
             for target in caller.call_targets:
-                callee = self._find_function_containing(target)
+                callee = self.find_function_containing(target)
                 if callee is None or callee.address == caller.address:
                     continue
                 caller.resolved_call_targets.add(callee.address)
                 self.call_graph.add_edge(caller.address, callee.address)
 
-    def compute_embeddings(self, asm_model, graph_model=None) -> None:
-        """Compute embeddings for all functions in the code unit."""
+    def compute_embeddings(self, asm_model) -> None:
+        """Compute block embeddings for all functions in the code unit."""
         for function in self.functions:
-            function.compute_embeddings(asm_model=asm_model, graph_model=graph_model)
+            function.compute_embeddings(asm_model=asm_model)
 
 
-def _extract_relocation_targets(relocations: list[dict]) -> dict[int, int]:
+def extract_relocation_targets(relocations: list[dict]) -> dict[int, int]:
     """Map relocation field addresses to numeric symbol values, when available."""
     relocation_targets = {}
     for relocation in relocations:
@@ -223,7 +214,7 @@ def _extract_relocation_targets(relocations: list[dict]) -> dict[int, int]:
     return relocation_targets
 
 
-def _extract_call_target(instruction: dict, relocation_targets: dict[int, int] = None) -> int | None:
+def extract_call_target(instruction: dict, relocation_targets: dict[int, int] = None) -> int | None:
     """Return a numeric direct-call target from radare2 JSON, if present."""
     if not str(instruction.get("type", "")).startswith("call"):
         return None
@@ -258,21 +249,78 @@ def _extract_call_target(instruction: dict, relocation_targets: dict[int, int] =
     return None
 
 
+def extract_ascii_strings(data: bytes, min_length: int = 4) -> list[str]:
+    pattern = rb"[\x20-\x7e]{" + str(min_length).encode("ascii") + rb",}"
+    return [
+        match.group(0).decode("utf-8", errors="replace")
+        for match in re.finditer(pattern, data)
+    ]
+
+
+def extract_rodata(r2) -> tuple[bytes, list[str], int]:
+    """Extract .rodata* bytes and printable strings through radare2."""
+    rodata_sections: list[bytes] = []
+    rodata_strings: list[str] = []
+
+    for section in r2.cmdj("iSj") or []:
+        name = str(section.get("name", ""))
+        if name != ".rodata" and not name.startswith(".rodata."):
+            continue
+
+        size = int(section.get("size") or section.get("vsize") or 0)
+        address = section.get("vaddr")
+        if size <= 0 or not isinstance(address, int):
+            continue
+
+        try:
+            section_hex = r2.cmd(f"p8 {size} @ {address}") or ""
+            section_bytes = bytes.fromhex(section_hex.strip())
+        except (TypeError, ValueError):
+            continue
+        if len(section_bytes) != size:
+            continue
+
+        rodata_sections.append(section_bytes)
+        rodata_strings.extend(extract_ascii_strings(section_bytes))
+
+    return b"\x00".join(rodata_sections), rodata_strings, len(rodata_sections)
+
+
+def extract_function_symbols(r2) -> list[dict]:
+    """Return function-shaped records from radare2's symbol table."""
+    functions = []
+    for symbol in r2.cmdj("isj") or []:
+        if str(symbol.get("type", "")).upper() not in ("FUNC", "FUNCTION"):
+            continue
+
+        size = symbol.get("size", 0)
+        address = symbol.get("vaddr")
+        if not isinstance(size, int) or size <= 0 or not isinstance(address, int):
+            continue
+
+        functions.append({
+            "name": symbol.get("realname") or symbol.get("name", ""),
+            "offset": address,
+            "size": size,
+        })
+    return functions
+
+
 def parse_r2_file(
     file_path: str,
     asm_model=None,
-    graph_model=None,
     unit_type: str = CodeUnit.TYPE_ELF,
 ) -> "CodeUnit":
     """Parse a binary or object file using r2pipe and return a CodeUnit object."""
     r2 = r2pipe.open(file_path, flags=["-2"])
     
     try:
+        rodata_bytes, rodata_strings, rodata_section_count = extract_rodata(r2)
         r2.cmd("aa")
-        relocation_targets = _extract_relocation_targets(r2.cmdj("irj") or [])
+        relocation_targets = extract_relocation_targets(r2.cmdj("irj") or [])
 
         functions: list[Function] = []
-        readelf_fallback_count = 0
+        symbol_fallback_count = 0
         pseudo_block_fallback_count = 0
 
         # ------------------------------------------------------------
@@ -280,47 +328,10 @@ def parse_r2_file(
         # ------------------------------------------------------------
         raw_functions = r2.cmdj("aflj") or []
 
-        # Fallback: use symbol table when aflj is poor or empty
+        # Fallback: use radare2's symbol table when analysis finds no functions.
         if not raw_functions:
-            readelf_fallback_count += 1
-            readelf = run(
-                ["readelf", "--syms", "--wide", file_path],
-                stdout=PIPE,
-                universal_newlines=True,
-            )
-
-            raw_functions = []
-            for line in readelf.stdout.splitlines():
-                if "FUNC" not in line:
-                    continue
-
-                parts = line.split()
-                # Typical shape:
-                # Num: Value Size Type Bind Vis Ndx Name
-                # e.g. 12: 0000000000000000 42 FUNC GLOBAL DEFAULT 1 myfunc
-                try:
-                    value_hex = parts[1]
-                    function_size = int(parts[2])
-                    symbol_type = parts[3]
-                    function_name = parts[-1]
-                except Exception:
-                    continue
-
-                if symbol_type != "FUNC":
-                    continue
-                if function_size == 0:
-                    continue
-
-                try:
-                    function_address = int(value_hex, 16)
-                except ValueError:
-                    continue
-
-                raw_functions.append({
-                    "name": function_name,
-                    "offset": function_address,
-                    "size": function_size,
-                })
+            symbol_fallback_count += 1
+            raw_functions = extract_function_symbols(r2)
 
         #print(f"[DEBUG] parse_r2_file({os.path.basename(file_path)}): candidate funcs = {len(raw_functions)}")
 
@@ -365,7 +376,7 @@ def parse_r2_file(
                     hex_bytes = instruction_json.get("bytes", "")
                     raw_bytes_list.append(bytes.fromhex(hex_bytes) if hex_bytes else b"")
 
-                    call_target = _extract_call_target(instruction_json, relocation_targets)
+                    call_target = extract_call_target(instruction_json, relocation_targets)
                     if call_target is not None:
                         call_targets.add(call_target)
 
@@ -407,7 +418,7 @@ def parse_r2_file(
                     hex_bytes = instruction_json.get("bytes", "")
                     raw_bytes_list.append(bytes.fromhex(hex_bytes) if hex_bytes else b"")
 
-                    call_target = _extract_call_target(instruction_json, relocation_targets)
+                    call_target = extract_call_target(instruction_json, relocation_targets)
                     if call_target is not None:
                         call_targets.add(call_target)
 
@@ -450,10 +461,13 @@ def parse_r2_file(
         name=os.path.basename(file_path),
         file_path=file_path,
         unit_type=unit_type,
-        readelf_fallback_count=readelf_fallback_count,
+        symbol_fallback_count=symbol_fallback_count,
         pseudo_block_fallback_count=pseudo_block_fallback_count,
         functions=functions,
+        rodata_bytes=rodata_bytes,
+        rodata_strings=rodata_strings,
+        rodata_section_count=rodata_section_count,
     )
     if asm_model is not None:
-        parsed_code_unit.compute_embeddings(asm_model=asm_model, graph_model=graph_model)
+        parsed_code_unit.compute_embeddings(asm_model=asm_model)
     return parsed_code_unit

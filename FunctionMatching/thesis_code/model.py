@@ -1,29 +1,9 @@
-from  palmtree.config import *
 from palmtree.eval_utils import UsableTransformer
 from pathlib import Path
-from sklearn.metrics.pairwise import cosine_similarity
 
-import enum
 import os
 
-# PalmTree import modules
 import numpy as np
-
-
-# Word embedding model parameters
-EMBEDDING_SIZE = 128
-
-
-class DistanceMetric(enum.Enum):
-    """Distance metrics for embeddings"""
-
-    BRAYCURTIS: str = "braycurtis"
-    CHEBYSHEV: str = "chebyshev"
-    CORRELATION: str = "correlation"
-    COSINE: str = "cosine"
-    EUCLIDEAN: str = "euclidean"
-    SQEUCLIDEAN: str = "sqeuclidean"
-
 
 class ModelNotInitializedError(Exception):
     """Exception raised when trying to use a `Model` object that is not initialized"""
@@ -86,26 +66,3 @@ class PalmTree:
             i_embed = np.concatenate((i_embed, self._model.encode(instructions[i:i+window+context])[:window]), axis=0)
 
         return i_embed
-
-
-def get_embeddings_similarity(source_embedding: np.ndarray, target_embedding: np.ndarray, distance_metric: DistanceMetric) -> float:
-    """Get the similarity score between two embeddings using a distance metric"""
-
-    if source_embedding is None or target_embedding is None:
-        similarity = -1
-    elif np.array_equal(source_embedding, target_embedding):
-        similarity = 1
-    else:
-        similarity = cosine_similarity(source_embedding, target_embedding).item(0)
-
-    return float(similarity)
-
-
-def compute_similarity_matrix(source_functions, target_functions):
-    source_embeddings = np.stack([np.squeeze(f.embedding) for f in source_functions])  # shape (m, d)
-    target_embeddings = np.stack([np.squeeze(f.embedding) for f in target_functions])  # shape (n, d)
-
-    # Use sklearn for optimized cosine similarity
-    similarity_matrix = cosine_similarity(source_embeddings, target_embeddings)  # shape (m, n)
-
-    return similarity_matrix

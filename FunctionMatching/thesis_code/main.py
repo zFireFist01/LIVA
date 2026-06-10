@@ -9,10 +9,8 @@ import glob
 import ctypes
 import warnings
 import sys
-import numpy as np
 import tempfile
 import subprocess
-
 
 
 def _prepare_tf_gpu_runtime() -> None:
@@ -37,6 +35,8 @@ def _prepare_tf_gpu_runtime() -> None:
     # even when the process started without a complete linker path.
     for lib_dir in nvidia_lib_dirs:
         for so_file in sorted(glob.glob(os.path.join(lib_dir, "lib*.so*"))):
+            if os.path.basename(so_file).startswith("libnvblas.so"):
+                continue
             try:
                 ctypes.CDLL(so_file, mode=ctypes.RTLD_GLOBAL)
             except OSError:
@@ -61,16 +61,18 @@ def _configure_runtime_from_cli() -> None:
         category=UserWarning,
     )
 
-
-
 _prepare_tf_gpu_runtime()
 _configure_runtime_from_cli()
 
 import tensorflow as tf
 from model import PalmTree
-from struct2vec import GraphNetwork
 from asm import CodeUnit, parse_r2_file
-from match import Match, evaluate_block_match, evaluate_block_presence, match_functions, select_block_candidates
+from match import (
+    build_rodata_index,
+    classify_rodata_evidence,
+    evaluate_block_presence,
+    evaluate_rodata_match,
+)
 
 gpus = tf.config.list_physical_devices("GPU")
 for gpu in gpus:
@@ -104,9 +106,6 @@ OUTPUT = os.path.abspath(
     )
 )
 
-SPACES = "     "
-
-
 class TimeoutException(Exception):
     """Exception raised when a timeout occurs"""
     pass
@@ -120,7 +119,7 @@ signal.signal(signal.SIGALRM, handler)
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description="Function Matching")
+    parser = argparse.ArgumentParser(description="Compilation-unit block matching")
 
     parser.add_argument(
         "--path_to_binary",
@@ -146,37 +145,6 @@ def get_args():
         type=str,
         default="palmtree/model/transformer.ep19",
         help="Path to the PalmTree model"
-    )
-    parser.add_argument(
-        "--graph_model",
-        type=str,
-        default="struct2vec/struct2vec.weights.h5",
-        help="Path to the graph model weights"
-    )
-
-    parser.add_argument(
-        "--function_threshold",
-        type=float,
-        default=0.8,
-        help="Function-matching CU score threshold"
-    )
-    parser.add_argument(
-        "--candidate_low_threshold",
-        type=float,
-        default=0.45,
-        help="Lower first-stage CU score threshold for recovery candidates that still receive block matching"
-    )
-    parser.add_argument(
-        "--candidate_top_k",
-        type=int,
-        default=0,
-        help="Maximum CU candidates per library to pass to block matching; 0 means no cap"
-    )
-    parser.add_argument(
-        "--block_scope",
-        choices=("all_cu", "function_candidates"),
-        default="all_cu",
-        help="Use all eligible CUs for block matching, or only CUs selected by function matching"
     )
     parser.add_argument(
         "--block_threshold",
@@ -239,6 +207,41 @@ def get_args():
         help="Minimum ratio of distinct dominant source functions to mapped target functions"
     )
     parser.add_argument(
+        "--disable_rodata_filter",
+        action="store_true",
+        help="Disable .rodata-based penalty on block-level CU matches"
+    )
+    parser.add_argument(
+        "--rodata_min_bytes",
+        type=int,
+        default=128,
+        help="Minimum target .rodata bytes for .rodata evidence to be informative"
+    )
+    parser.add_argument(
+        "--rodata_min_strings",
+        type=int,
+        default=2,
+        help="Minimum target .rodata strings for .rodata evidence to be informative"
+    )
+    parser.add_argument(
+        "--rodata_min_ngrams",
+        type=int,
+        default=32,
+        help="Minimum target .rodata byte n-grams for .rodata evidence to be informative"
+    )
+    parser.add_argument(
+        "--rodata_penalty_threshold",
+        type=float,
+        default=0.10,
+        help="Drop a block-passed CU when informative .rodata score is at or below this value"
+    )
+    parser.add_argument(
+        "--rodata_confirm_threshold",
+        type=float,
+        default=0.70,
+        help="Mark a CU as .rodata-confirmed when informative .rodata score is at or above this value"
+    )
+    parser.add_argument(
         "--min_cu",
         type=int,
         default=1,
@@ -255,28 +258,7 @@ def get_args():
         action="store_true",
         help="Hide non-critical TensorFlow/Keras startup warnings"
     )
-    parser.add_argument(
-        "--disable_block_matching",
-        action="store_true",
-        help="Disable second-stage block matching and use the original function-matching decision"
-    )
-
     return parser.parse_args()
-
-
-def instantiate_gnn(weights_path: str) -> GraphNetwork:
-    """Instantiate the GNN model."""
-    gnn_model = GraphNetwork(512)
-    gnn_model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001)
-    )
-
-    dummy_adj_matrix = tf.constant(np.zeros((1, 1), dtype=np.float32))
-    dummy_node_features = tf.constant(np.zeros((1, 128), dtype=np.float32))
-    gnn_model(dummy_adj_matrix, dummy_node_features)
-
-    gnn_model.load_weights(weights_path)
-    return gnn_model
 
 
 def log_line(line: str, output_file: str | None = None) -> None:
@@ -304,8 +286,11 @@ def log_parse_debug(code_unit: CodeUnit) -> None:
         f"[DEBUG] parsed {code_unit.name}: "
         f"type={code_unit.unit_type}, "
         f"functions={code_unit.get_num_functions()}, "
-        f"readelf_fallback_count={code_unit.readelf_fallback_count}, "
-        f"pseudo_block_fallback_count={code_unit.pseudo_block_fallback_count}"
+        f"symbol_fallback_count={code_unit.symbol_fallback_count}, "
+        f"pseudo_block_fallback_count={code_unit.pseudo_block_fallback_count}, "
+        f"rodata_sections={code_unit.rodata_section_count}, "
+        f"rodata_bytes={code_unit.get_rodata_size()}, "
+        f"rodata_strings={len(code_unit.rodata_strings)}"
     )
 
 
@@ -319,13 +304,13 @@ def filter_compilation_units(comp_units: list[CodeUnit]) -> tuple[list[CodeUnit]
 def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
     """Process a parsed binary against all libraries."""
     output_file = args.output if args.output else None
+    binary_rodata_index = build_rodata_index(binary)
 
     if output_file:
         output_path = Path(output_file)
         if output_path.parent and not output_path.parent.exists():
             raise ValueError(f"Output directory '{output_path.parent}' does not exist")
 
-    # Perform function matching
     for library_name, comp_units in lib.items():
         start_library = time.time()
         eligible_comp_units, excluded_single_function_cu = filter_compilation_units(comp_units)
@@ -346,126 +331,82 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
             log_line(line, output_file)
             continue
 
-        matches = match_functions(binary, eligible_comp_units)
-        function_scores_by_cu = {
-            id(match.target_unit): match.get_score()
-            for match in matches
-        }
-        function_best_score = max((m.get_score() for m in matches), default=0.0)
-        block_best_score = 0.0
         block_results = []
+        rodata_results_by_cu = {}
+        rodata_evidence_by_cu = {}
 
-        if args.disable_block_matching:
-            candidate_matches = [
-                m for m in matches if m.get_score() >= args.function_threshold
-            ]
-            successful_matches = candidate_matches
-            if successful_matches:
-                score_tot = sum(m.get_score() for m in successful_matches) / len(successful_matches)
-            else:
-                score_tot = 0.0
-        else:
-            if args.block_scope == "all_cu":
-                candidate_matches = [
-                    Match(source_unit=binary, target_unit=target_unit)
-                    for target_unit in eligible_comp_units
-                ]
-                primary_candidate_count = sum(
-                    1 for match in candidate_matches
-                    if function_scores_by_cu.get(id(match.target_unit), 0.0) >= args.function_threshold
-                )
-                recovery_candidate_count = sum(
-                    1 for match in candidate_matches
-                    if (
-                        args.candidate_low_threshold
-                        <= function_scores_by_cu.get(id(match.target_unit), 0.0)
-                        < args.function_threshold
-                    )
-                )
-                for candidate_match in candidate_matches:
-                    block_result = evaluate_block_presence(
-                        binary,
-                        candidate_match.target_unit,
-                        args.block_threshold,
-                        args.block_assignment_threshold,
-                        args.block_min_coverage_ratio,
-                        args.block_coverage_mean_threshold,
-                        args.block_locality_window_multiplier,
-                        args.block_locality_window_padding,
-                        args.block_min_edge_locality_ratio,
-                        args.block_min_instructions,
-                        args.block_min_function_concentration,
-                        args.block_min_function_spread,
-                    )
-                    block_results.append((candidate_match, block_result))
-            else:
-                candidate_matches = select_block_candidates(
-                    matches,
-                    args.function_threshold,
-                    args.candidate_top_k,
-                    args.candidate_low_threshold,
-                )
-                primary_candidate_count = sum(
-                    1 for m in candidate_matches
-                    if m.get_score() >= args.function_threshold
-                )
-                recovery_candidate_count = len(candidate_matches) - primary_candidate_count
-                for candidate_match in candidate_matches:
-                    block_result = evaluate_block_match(
-                        candidate_match,
-                        args.block_threshold,
-                        args.block_assignment_threshold,
-                        args.block_min_coverage_ratio,
-                        args.block_coverage_mean_threshold,
-                        args.block_min_instructions,
-                        args.block_min_function_concentration,
-                        args.block_min_function_spread,
-                    )
-                    block_results.append((candidate_match, block_result))
-
-            successful_block_results = [
-                (candidate_match, block_result)
-                for candidate_match, block_result in block_results
-                if block_result.passed
-            ]
-            successful_matches = [
-                candidate_match
-                for candidate_match, _ in successful_block_results
-            ]
-            block_best_score = max(
-                (block_result.score for _, block_result in block_results),
-                default=0.0,
+        for target_unit in eligible_comp_units:
+            rodata_result = evaluate_rodata_match(binary_rodata_index, target_unit)
+            rodata_evidence = classify_rodata_evidence(
+                rodata_result,
+                args.rodata_min_bytes,
+                args.rodata_min_strings,
+                args.rodata_min_ngrams,
+                args.rodata_penalty_threshold,
+                args.rodata_confirm_threshold,
             )
-            if successful_block_results:
-                score_tot = (
-                    sum(block_result.score for _, block_result in successful_block_results)
-                    / len(successful_block_results)
+            rodata_results_by_cu[id(target_unit)] = rodata_result
+            rodata_evidence_by_cu[id(target_unit)] = rodata_evidence
+
+            block_result = evaluate_block_presence(
+                binary,
+                target_unit,
+                args.block_threshold,
+                args.block_assignment_threshold,
+                args.block_min_coverage_ratio,
+                args.block_coverage_mean_threshold,
+                args.block_locality_window_multiplier,
+                args.block_locality_window_padding,
+                args.block_min_edge_locality_ratio,
+                args.block_min_instructions,
+                args.block_min_function_concentration,
+                args.block_min_function_spread,
+            )
+            block_results.append((target_unit, block_result))
+
+        successful_block_results = [
+            (target_unit, block_result)
+            for target_unit, block_result in block_results
+            if (
+                block_result.passed
+                and (
+                    args.disable_rodata_filter
+                    or rodata_evidence_by_cu[id(target_unit)].status != "penalty"
                 )
-            else:
-                score_tot = 0.0
+            )
+        ]
+        successful_units = [
+            target_unit
+            for target_unit, _ in successful_block_results
+        ]
+        block_best_score = max(
+            (block_result.score for _, block_result in block_results),
+            default=0.0,
+        )
+        score_tot = (
+            sum(block_result.score for _, block_result in successful_block_results)
+            / len(successful_block_results)
+            if successful_block_results
+            else 0.0
+        )
 
         stop_library = time.time()
         elapsed_time = time.strftime("%H:%M:%S", time.gmtime(stop_library - start_library))
 
-        matched_cu = len(successful_matches)
+        matched_cu = len(successful_units)
         total_cu = len(eligible_comp_units)
-        if args.disable_block_matching or args.block_scope == "function_candidates":
-            matched_functions = sum(m.get_num_matched_functions() for m in successful_matches)
-        else:
-            matched_functions = sum(m.target_unit.get_num_functions() for m in successful_matches)
+        matched_functions = sum(unit.get_num_functions() for unit in successful_units)
         percentage = score_tot * 100.0
 
         enough_cu = matched_cu >= min(args.min_cu, total_cu)
-        if args.disable_block_matching or args.block_scope == "function_candidates":
-            enough_functions = (
-                len([m for m in successful_matches if m.get_num_matched_functions() >= args.min_functions_cu])
-                >= min(args.min_cu, total_cu)
-            )
-        else:
-            enough_functions = (
-                len([m for m in successful_matches if m.target_unit.get_num_functions() >= args.min_functions_cu])
-                >= min(args.min_cu, total_cu)
-            )
+        enough_functions = (
+            len([
+                unit
+                for unit in successful_units
+                if unit.get_num_functions() >= args.min_functions_cu
+            ])
+            >= min(args.min_cu, total_cu)
+        )
 
         if enough_cu and enough_functions:
             status = "YES"
@@ -474,81 +415,76 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
         else:
             status = "NO"
 
-        if args.disable_block_matching:
-            line = (
-                f"{status:7} | "
-                f"library={Path(library_name).name} | "
-                f"score={percentage:6.2f}% | "
-                f"function_best={function_best_score * 100.0:6.2f}% | "
-                f"matched_cu={matched_cu}/{total_cu} | "
-                f"matched_functions={matched_functions} | "
-                f"time={elapsed_time}"
+        rodata_best_score = max(
+            (rodata_result.score for rodata_result in rodata_results_by_cu.values()),
+            default=0.0,
+        )
+        rodata_confirmed_count = sum(
+            1
+            for target_unit, block_result in block_results
+            if (
+                block_result.passed
+                and rodata_evidence_by_cu[id(target_unit)].status == "confirm"
             )
-
-            for i, m in enumerate(successful_matches):
-                avg_call_graph = (
-                    float(np.mean([fp.features.call_graph_similarity for fp in m.matched_functions]))
-                    if m.matched_functions else 0.0
-                )
-                avg_locality = (
-                    float(np.mean([fp.features.function_locality_similarity for fp in m.matched_functions]))
-                    if m.matched_functions else 0.0
-                )
-                log_line(
-                    f"    CU[{i:03}] score={m.get_score():.4f} "
-                    f"call_graph={avg_call_graph:.4f} "
-                    f"locality={avg_locality:.4f} "
-                    f"matched_functions={m.get_num_matched_functions()}",
-                    output_file
-                )
-        else:
-            line = (
-                f"{status:7} | "
-                f"library={Path(library_name).name} | "
-                f"score={percentage:6.2f}% | "
-                f"function_best={function_best_score * 100.0:6.2f}% | "
-                f"block_best={block_best_score * 100.0:6.2f}% | "
-                f"block_scope={args.block_scope} | "
-                f"candidate_cu={len(candidate_matches)}/{total_cu} | "
-                f"primary_candidate_cu={primary_candidate_count} | "
-                f"recovery_candidate_cu={recovery_candidate_count} | "
-                f"matched_cu={matched_cu}/{total_cu} | "
-                f"matched_functions={matched_functions} | "
-                f"time={elapsed_time}"
+        )
+        rodata_penalty_count = sum(
+            1
+            for target_unit, block_result in block_results
+            if (
+                block_result.passed
+                and rodata_evidence_by_cu[id(target_unit)].status == "penalty"
             )
+        )
+        line = (
+            f"{status:7} | "
+            f"library={Path(library_name).name} | "
+            f"score={percentage:6.2f}% | "
+            f"block_best={block_best_score * 100.0:6.2f}% | "
+            f"rodata_best={rodata_best_score * 100.0:6.2f}% | "
+            f"rodata_confirmed_cu={rodata_confirmed_count} | "
+            f"rodata_penalty_cu={rodata_penalty_count} | "
+            f"candidate_cu={len(eligible_comp_units)}/{total_cu} | "
+            f"matched_cu={matched_cu}/{total_cu} | "
+            f"matched_functions={matched_functions} | "
+            f"time={elapsed_time}"
+        )
 
-            for i, (m, block_result) in enumerate(block_results):
+        for i, (target_unit, block_result) in enumerate(block_results):
+            rodata_evidence = rodata_evidence_by_cu[id(target_unit)]
+            if (
+                block_result.passed
+                and not args.disable_rodata_filter
+                and rodata_evidence.status == "penalty"
+            ):
+                block_status = "DROP_RODATA"
+            else:
                 block_status = "PASS" if block_result.passed else "DROP"
-                function_score = function_scores_by_cu.get(id(m.target_unit), m.get_score())
-                if function_score >= args.function_threshold:
-                    candidate_band = "primary"
-                elif function_score >= args.candidate_low_threshold:
-                    candidate_band = "recovery"
-                else:
-                    candidate_band = "all_cu"
-                reported_functions = (
-                    m.get_num_matched_functions()
-                    if args.block_scope == "function_candidates"
-                    else m.target_unit.get_num_functions()
-                )
-                log_line(
-                    f"    BLOCK_CU[{i:03}] {block_status} "
-                    f"band={candidate_band} "
-                    f"function={function_score:.4f} "
-                    f"block={block_result.score:.4f} "
-                    f"coverage_mean={block_result.coverage_mean:.4f} "
-                    f"coverage_min={block_result.coverage_min:.4f} "
-                    f"coverage_ratio={block_result.coverage_ratio:.4f} "
-                    f"assignment_mean={block_result.assignment_mean:.4f} "
-                    f"assignment_min={block_result.assignment_min:.4f} "
-                    f"blocks={block_result.num_source_blocks}/{block_result.num_target_blocks} "
-                    f"locality_span={block_result.locality_span} "
-                    f"edge_locality_ratio={block_result.edge_locality_ratio:.4f} "
-                    f"function_concentration={block_result.function_concentration:.4f} "
-                    f"function_spread={block_result.function_spread:.4f} "
-                    f"matched_functions={reported_functions}",
-                    output_file
-                )
+
+            rodata_result = rodata_results_by_cu[id(target_unit)]
+            log_line(
+                f"    BLOCK_CU[{i:03}] {block_status} "
+                f"name={target_unit.name} "
+                f"block={block_result.score:.4f} "
+                f"coverage_mean={block_result.coverage_mean:.4f} "
+                f"coverage_min={block_result.coverage_min:.4f} "
+                f"coverage_ratio={block_result.coverage_ratio:.4f} "
+                f"assignment_mean={block_result.assignment_mean:.4f} "
+                f"assignment_min={block_result.assignment_min:.4f} "
+                f"rodata={rodata_result.score:.4f} "
+                f"rodata_strings={rodata_result.matched_strings}/"
+                f"{rodata_result.target_strings} "
+                f"rodata_ngrams={rodata_result.matched_ngrams}/"
+                f"{rodata_result.target_ngrams} "
+                f"rodata_bytes={rodata_result.target_bytes} "
+                f"rodata_status={rodata_evidence.status} "
+                f"blocks={block_result.num_source_blocks}/{block_result.num_target_blocks} "
+                f"locality_span={block_result.locality_span} "
+                f"edge_locality_ratio={block_result.edge_locality_ratio:.4f} "
+                f"function_concentration={block_result.function_concentration:.4f} "
+                f"function_spread={block_result.function_spread:.4f} "
+                f"matched_functions={target_unit.get_num_functions()}",
+                output_file
+            )
 
         log_line(line, output_file)
 
@@ -588,8 +524,6 @@ if __name__ == "__main__":
     asm_model = PalmTree("Palm Tree")
     asm_model.load(args.asm_model)
 
-    graph_model = instantiate_gnn(args.graph_model)
-
     lib: dict[str, list[CodeUnit]] = {}
     for library_file in library_files:
         comp_units = []
@@ -625,7 +559,6 @@ if __name__ == "__main__":
                     b = parse_r2_file(
                         obj_file.as_posix(),
                         asm_model=asm_model,
-                        graph_model=graph_model,
                         unit_type=CodeUnit.TYPE_CU,
                     )
                     log_parse_debug(b)
@@ -644,7 +577,6 @@ if __name__ == "__main__":
     binary = parse_r2_file(
         binary_path.as_posix(),
         asm_model=asm_model,
-        graph_model=graph_model,
         unit_type=CodeUnit.TYPE_ELF,
     )
     log_parse_debug(binary)

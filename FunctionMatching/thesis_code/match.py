@@ -1,4 +1,5 @@
-import typing 
+import typing
+from collections import Counter
 
 
 import numpy as np
@@ -6,98 +7,10 @@ from scipy.optimize import linear_sum_assignment
 from sklearn.metrics.pairwise import cosine_similarity
 
 import asm
-import model
-
-# Similarity score modifiers
-MODIFIER_GLOBAL_STRINGS = 0.05
-MODIFIER_CALLED_FUNCTIONS = 0.05
-MODIFIER_NUM_BLOCKS = 0.05
-MODIFIER_NUM_ARGUMENTS = 0.3
-MODIFIER_RETURN_TYPE = 0.3
-
-# Matched functions ratio threshold
-FUNCTIONS_RATIO_THRESHOLD = 0.2
-
-# Similarity score threshold
-SIMILARITY_THRESHOLD = 0.4
-
-# Call-graph score modifier. The value is intentionally small: embeddings still
-# drive the match, while call edges help choose between plausible windows.
-MODIFIER_CALL_GRAPH = 0.15
-
-# Locality modifier for the standard function matcher. This is weaker than the
-# exact call-graph bonus: it rewards target internal call edges whose matched
-# source functions remain close in the executable layout.
-MODIFIER_FUNCTION_LOCALITY = 0.08
-FUNCTION_LOCALITY_WINDOW_MULTIPLIER = 3.0
-FUNCTION_LOCALITY_WINDOW_PADDING = 2
 DEFAULT_MIN_BLOCK_INSTRUCTIONS = 3
-
-
-class FeatureVector(typing.NamedTuple):
-    """Vector of features between two `asm.Function` objects"""
-
-    similarity: float
-    call_graph_similarity: float = 0.0
-    function_locality_similarity: float = 0.0
-
-
-class FunctionPair(typing.NamedTuple):
-    """Pair of `asm.Function` objects with the corresponding `FeatureVector` object"""
-
-    source_function: asm.Function
-    target_function: asm.Function
-    features: FeatureVector
-
-    def __str__(self) -> str:
-        return f"{self.source_function.name:<50} ---> {self.target_function.name:>50}"
-
-
-class Match:
-    """Match between two `asm.CodeUnit` objects"""
-
-    def __init__(self, source_unit: asm.CodeUnit = None, target_unit: asm.CodeUnit = None, matched_functions: list[FunctionPair] = None):
-        self.source_unit = source_unit  # Source ELF code unit (the executable to analyze)
-        self.target_unit = target_unit  # Target CU code unit (the library compilation unit)
-        self.matched_functions = matched_functions or []
-
-    def __repr__(self) -> str:
-        return "<{}.{}; source_unit={!r}, target_unit={!r}>".format(
-            __name__, type(self).__name__, self.source_unit, self.target_unit
-        )
-
-    def __str__(self) -> str:
-        return "{}\n\n{}\n\n{}\n\n{}".format(
-            "Source file:\n\t{}".format(self.source_unit.file_path),
-            "Target file:\n\t{}".format(self.target_unit.file_path),
-            "Matched functions:\n\t{}".format(
-                "\n\t".join(str(function_pair) for function_pair in self.matched_functions)
-            ),
-            "Match score:\n\t{:.2f}".format(self.get_score()),
-        )
-
-    def get_num_matched_functions(self) -> int:
-        return len(self.matched_functions)
-
-    def get_similarity_tot(self) -> float:
-        return round(
-            float(sum(fp.features.similarity for fp in self.matched_functions)), 2
-        )
-
-    def get_score(self) -> float:
-        successful_functions = [
-            fp for fp in self.matched_functions
-            if fp.features.similarity >= SIMILARITY_THRESHOLD
-        ]
-
-        if len(successful_functions) == 0:
-            score = 0
-        elif len(successful_functions) / self.get_num_matched_functions() >= FUNCTIONS_RATIO_THRESHOLD:
-            score = sum(fp.features.similarity for fp in successful_functions) / len(successful_functions)
-        else:
-            score = 0
-
-        return round(float(score), 2)
+DEFAULT_RODATA_NGRAM_SIZE = 16
+MIN_RODATA_BYTES_FOR_BYTE_SCORE = 64
+MIN_RODATA_NGRAMS_FOR_BYTE_SCORE = 4
 
 
 class BlockMatchResult(typing.NamedTuple):
@@ -118,12 +31,174 @@ class BlockMatchResult(typing.NamedTuple):
     function_spread: float = 1.0
 
 
+class RodataIndex(typing.NamedTuple):
+    """Precomputed .rodata features for one source ELF."""
+
+    data: bytes
+    strings: Counter[str]
+    ngrams: set[bytes]
+    byte_size: int
+    string_count: int
+    ngram_count: int
+
+
+class RodataMatchResult(typing.NamedTuple):
+    """Containment-style .rodata match between a target CU and a source ELF."""
+
+    score: float
+    string_score: float
+    byte_score: float
+    target_bytes: int
+    source_bytes: int
+    matched_strings: int
+    target_strings: int
+    matched_ngrams: int
+    target_ngrams: int
+    has_rodata: bool
+
+
+class RodataEvidence(typing.NamedTuple):
+    """Decision-oriented interpretation of a .rodata match."""
+
+    status: str
+    informative: bool
+
+
 def safe_mean(values: list[float] | np.ndarray) -> float:
     return float(np.mean(values)) if len(values) else 0.0
 
 
 def safe_min(values: list[float] | np.ndarray) -> float:
     return float(np.min(values)) if len(values) else 0.0
+
+
+def rodata_ngrams(data: bytes, ngram_size: int = DEFAULT_RODATA_NGRAM_SIZE) -> set[bytes]:
+    """Return byte n-grams for containment matching, skipping all-zero grams."""
+    if not data:
+        return set()
+    if len(data) < ngram_size:
+        return {data} if any(data) else set()
+
+    return {
+        data[index:index + ngram_size]
+        for index in range(0, len(data) - ngram_size + 1)
+        if any(data[index:index + ngram_size])
+    }
+
+
+def build_rodata_index(
+    code_unit: asm.CodeUnit,
+    ngram_size: int = DEFAULT_RODATA_NGRAM_SIZE,
+) -> RodataIndex:
+    """Build reusable .rodata features for one source code unit."""
+    strings = Counter(code_unit.rodata_strings)
+    ngrams = rodata_ngrams(code_unit.rodata_bytes, ngram_size)
+    return RodataIndex(
+        data=code_unit.rodata_bytes,
+        strings=strings,
+        ngrams=ngrams,
+        byte_size=len(code_unit.rodata_bytes),
+        string_count=sum(strings.values()),
+        ngram_count=len(ngrams),
+    )
+
+
+def rodata_string_weight(value: str) -> float:
+    """Weight longer strings more than short/common-looking fragments."""
+    if len(value) < 4:
+        return 0.0
+    if len(value) < 6:
+        return 0.5
+    return float(min(len(value), 80))
+
+
+def evaluate_rodata_match(
+    source_index: RodataIndex,
+    target_unit: asm.CodeUnit,
+    ngram_size: int = DEFAULT_RODATA_NGRAM_SIZE,
+) -> RodataMatchResult:
+    """Score how much target CU .rodata is contained in the source ELF .rodata."""
+    target_strings = Counter(target_unit.rodata_strings)
+    target_ngrams = rodata_ngrams(target_unit.rodata_bytes, ngram_size)
+    target_byte_size = len(target_unit.rodata_bytes)
+    has_rodata = bool(target_byte_size or target_strings)
+
+    string_total = 0.0
+    string_matched = 0.0
+    matched_strings = 0
+    for value, target_count in target_strings.items():
+        weight = rodata_string_weight(value)
+        if weight <= 0:
+            continue
+
+        source_count = source_index.strings.get(value, 0)
+        matched_count = min(target_count, source_count)
+        string_total += target_count * weight
+        string_matched += matched_count * weight
+        matched_strings += matched_count
+
+    string_score = string_matched / string_total if string_total else 0.0
+
+    byte_score_is_informative = (
+        target_byte_size >= MIN_RODATA_BYTES_FOR_BYTE_SCORE
+        and len(target_ngrams) >= MIN_RODATA_NGRAMS_FOR_BYTE_SCORE
+    )
+    if byte_score_is_informative:
+        matched_ngrams = len(target_ngrams & source_index.ngrams)
+        byte_score = matched_ngrams / len(target_ngrams)
+    else:
+        matched_ngrams = 0
+        byte_score = 0.0
+
+    if string_total and byte_score_is_informative:
+        score = (0.70 * string_score) + (0.30 * byte_score)
+    elif string_total:
+        score = string_score
+    elif byte_score_is_informative:
+        score = 0.50 * byte_score
+    else:
+        score = 0.0
+
+    return RodataMatchResult(
+        score=float(score),
+        string_score=float(string_score),
+        byte_score=float(byte_score),
+        target_bytes=target_byte_size,
+        source_bytes=source_index.byte_size,
+        matched_strings=matched_strings,
+        target_strings=sum(target_strings.values()),
+        matched_ngrams=matched_ngrams,
+        target_ngrams=len(target_ngrams),
+        has_rodata=has_rodata,
+    )
+
+
+def classify_rodata_evidence(
+    rodata_result: RodataMatchResult | None,
+    min_bytes: int = 128,
+    min_strings: int = 2,
+    min_ngrams: int = 32,
+    penalty_threshold: float = 0.10,
+    confirm_threshold: float = 0.70,
+) -> RodataEvidence:
+    """Classify .rodata as confirm/penalty/neutral for a block-level CU match."""
+    if rodata_result is None or not rodata_result.has_rodata:
+        return RodataEvidence(status="neutral", informative=False)
+
+    informative = (
+        rodata_result.target_bytes >= min_bytes
+        or rodata_result.target_strings >= min_strings
+        or rodata_result.target_ngrams >= min_ngrams
+    )
+    if not informative:
+        return RodataEvidence(status="neutral", informative=False)
+
+    if rodata_result.score >= confirm_threshold:
+        return RodataEvidence(status="confirm", informative=True)
+    if rodata_result.score <= penalty_threshold:
+        return RodataEvidence(status="penalty", informative=True)
+
+    return RodataEvidence(status="neutral", informative=True)
 
 
 def block_records(
@@ -296,101 +371,6 @@ def function_concentration_scores(
     return float(concentration), float(spread), source_function_by_target
 
 
-def unique_functions(functions: list[asm.Function]) -> list[asm.Function]:
-    """Return functions once, preserving the matching order."""
-    seen = set()
-    unique = []
-
-    for function in functions:
-        key = (function.address, function.name)
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(function)
-
-    return unique
-
-
-def evaluate_block_match(
-    match: Match,
-    block_threshold: float,
-    block_assignment_threshold: float,
-    block_min_coverage_ratio: float,
-    block_coverage_mean_threshold: float | None = None,
-    min_block_instructions: int = DEFAULT_MIN_BLOCK_INSTRUCTIONS,
-    min_function_concentration: float = 0.45,
-    min_function_spread: float = 0.50,
-) -> BlockMatchResult:
-    """Evaluate one function-selected CU match with block-level matching."""
-    source_functions = unique_functions(
-        [function_pair.source_function for function_pair in match.matched_functions]
-    )
-    target_functions = unique_functions(
-        [function_pair.target_function for function_pair in match.matched_functions]
-    )
-
-    source_block_records = block_records(source_functions, min_block_instructions)
-    target_block_records = block_records(target_functions, min_block_instructions)
-
-    if not source_block_records or not target_block_records:
-        return BlockMatchResult(
-            score=0.0,
-            coverage_mean=0.0,
-            coverage_min=0.0,
-            coverage_ratio=0.0,
-            assignment_mean=0.0,
-            assignment_min=0.0,
-            num_source_blocks=len(source_block_records),
-            num_target_blocks=len(target_block_records),
-            passed=False,
-        )
-
-    sim_matrix = compute_blocks_similarity_matrix(
-        [record["block"] for record in source_block_records],
-        [record["block"] for record in target_block_records],
-    )
-    coverage_values = best_coverage_by_source_block(sim_matrix)
-    assigned_values = assignment_values(sim_matrix)
-    best_source_rows_by_target_block = np.argmax(sim_matrix, axis=0)
-    function_concentration, function_spread, _ = function_concentration_scores(
-        target_block_records,
-        source_block_records,
-        best_source_rows_by_target_block,
-    )
-
-    coverage_mean = safe_mean(coverage_values)
-    coverage_min = safe_min(coverage_values)
-    assignment_mean = safe_mean(assigned_values)
-    assignment_min = safe_min(assigned_values)
-    coverage_mean_threshold = (
-        block_threshold
-        if block_coverage_mean_threshold is None
-        else block_coverage_mean_threshold
-    )
-    coverage_ratio = float(np.mean(coverage_values >= block_threshold))
-    passed = (
-        coverage_mean >= coverage_mean_threshold
-        and coverage_ratio >= block_min_coverage_ratio
-        and assignment_mean >= block_assignment_threshold
-        and function_concentration >= min_function_concentration
-        and function_spread >= min_function_spread
-    )
-
-    return BlockMatchResult(
-        score=coverage_mean,
-        coverage_mean=coverage_mean,
-        coverage_min=coverage_min,
-        coverage_ratio=coverage_ratio,
-        assignment_mean=assignment_mean,
-        assignment_min=assignment_min,
-        num_source_blocks=len(source_block_records),
-        num_target_blocks=len(target_block_records),
-        passed=passed,
-        function_concentration=function_concentration,
-        function_spread=function_spread,
-    )
-
-
 def evaluate_block_presence(
     source_unit: asm.CodeUnit,
     target_unit: asm.CodeUnit,
@@ -407,7 +387,6 @@ def evaluate_block_presence(
 ) -> BlockMatchResult:
     """Evaluate whether a target CU's blocks are present anywhere in an ELF.
 
-    Unlike `evaluate_block_match`, this does not require function-level pairs.
     Coverage is measured from target-library blocks to source-ELF blocks inside
     a compact source-function window, so a small library CU can match inside a
     much larger executable without allowing arbitrary far-away block matches.
@@ -539,282 +518,3 @@ def evaluate_block_presence(
             best_result = result
 
     return best_result
-
-
-def select_block_candidates(
-    matches: list[Match],
-    candidate_threshold: float,
-    candidate_top_k: int,
-    candidate_low_threshold: float | None = None,
-) -> list[Match]:
-    """Select function-level CU matches to refine with block-level matching.
-
-    `candidate_threshold` marks strong function-level candidates.  The optional
-    `candidate_low_threshold` opens a recovery band: function-level matches below the
-    strong threshold but still above the lower threshold are also evaluated by
-    the block matcher instead of being discarded immediately.
-    """
-    effective_threshold = candidate_threshold
-    if candidate_low_threshold is not None:
-        effective_threshold = min(candidate_threshold, candidate_low_threshold)
-
-    candidate_matches = [
-        match
-        for match in matches
-        if match.get_score() >= effective_threshold
-    ]
-    candidate_matches.sort(key=lambda match: match.get_score(), reverse=True)
-
-    if candidate_top_k > 0:
-        return candidate_matches[:candidate_top_k]
-
-    return candidate_matches
-
-
-def internal_call_edges(functions: list[asm.Function]) -> set[tuple[int, int]]:
-    """Return call edges whose caller and callee are both in `functions`."""
-    addresses = {function.address for function in functions}
-    edges = set()
-
-    for caller in functions:
-        for callee_addr in caller.resolved_call_targets:
-            if callee_addr in addresses:
-                edges.add((caller.address, callee_addr))
-
-    return edges
-
-
-def call_graph_assignment_score(
-    source_functions: list[asm.Function],
-    target_functions: list[asm.Function],
-    target_to_source: dict[int, int],
-) -> float:
-    """Score whether matched functions preserve the target CU call edges.
-
-    The score uses only numeric call targets resolved to local function addresses.
-    Symbols and function names are not consulted.
-    """
-    target_edges = internal_call_edges(target_functions)
-    if not target_edges:
-        return 0.0
-
-    source_edges = internal_call_edges(source_functions)
-
-    matched_edges = 0
-    for target_caller, target_callee in target_edges:
-        source_caller = target_to_source.get(target_caller)
-        source_callee = target_to_source.get(target_callee)
-
-        if source_caller is None or source_callee is None:
-            continue
-
-        if (source_caller, source_callee) in source_edges:
-            matched_edges += 1
-
-    return matched_edges / len(target_edges)
-
-
-def function_assignment_locality_score(
-    target_functions: list[asm.Function],
-    source_global_indices: np.ndarray,
-    target_indices: np.ndarray,
-    locality_multiplier: float = FUNCTION_LOCALITY_WINDOW_MULTIPLIER,
-    locality_padding: int = FUNCTION_LOCALITY_WINDOW_PADDING,
-) -> float:
-    """Score whether target internal call edges map to nearby source functions."""
-    source_function_by_target = {
-        int(target_index): int(source_index)
-        for source_index, target_index in zip(source_global_indices, target_indices)
-    }
-    return internal_call_edge_locality_ratio(
-        target_functions,
-        source_function_by_target,
-        locality_multiplier,
-        locality_padding,
-        empty_score=0.0,
-    )
-
-
-def combined_similarity(
-    base_similarity: float,
-    call_graph_similarity: float,
-    function_locality_similarity: float = 0.0,
-) -> float:
-    return min(
-        1.0,
-        base_similarity
-        + (MODIFIER_CALL_GRAPH * call_graph_similarity)
-        + (MODIFIER_FUNCTION_LOCALITY * function_locality_similarity),
-    )
-
-
-def match_functions(source_bin: asm.CodeUnit, target_cu_list: list[asm.CodeUnit]) -> list[Match]:
-    """Match assembly functions between a source binary and target compilation units.
-
-    Args:
-        source_bin: Source binary (executable to analyze).
-        target_cu_list: List of target compilation units (library object files).
-
-    Returns:
-        List of Match objects representing successful matches.
-    """
-
-    matches = []
-    source_functions = source_bin.functions
-    num_source_functions = source_bin.get_num_functions()
-
-    for target_cu in target_cu_list:
-        num_target_cu_functions = target_cu.get_num_functions()
-        if num_target_cu_functions == 0:
-            continue
-
-        matched_cu_windows = []
-        for target_cu_functions in target_cu.blobs:
-            num_target_window_functions = len(target_cu_functions)
-
-            # Compute similarity matrix using assembly-level embeddings
-            sim_matrix = model.compute_similarity_matrix(source_functions, target_cu_functions)
-            print(
-                f"[DEBUG] {target_cu.name}: "
-                f"target_functions={num_target_window_functions}, max_sim={sim_matrix.max():.4f}"
-            )
-            source_peak_idx, target_peak_idx = np.unravel_index(np.argmax(sim_matrix), sim_matrix.shape)
-
-            if sim_matrix[source_peak_idx][target_peak_idx] < SIMILARITY_THRESHOLD:
-                # No match: max similarity is below the threshold for this target CU window.
-                continue 
-
-            # Extract all possible source-binary windows for this target CU window.
-            source_candidate_windows = [
-                slice(
-                    source_peak_idx - target_offset,
-                    source_peak_idx - target_offset + num_target_window_functions,
-                )
-                for target_offset in range(num_target_window_functions)
-            ]
-            source_candidate_windows = [
-                window for window in source_candidate_windows
-                if window.start >= 0 and window.stop <= num_source_functions
-            ]
-            if len(source_candidate_windows) == 0:
-                continue
-
-            # Extract one similarity sub-matrix for each source-binary window.
-            source_window_matrices = [sim_matrix[window, :] for window in source_candidate_windows]
-
-            # Perform linear sum assignment on each source-window matrix.
-            source_to_target_assignments = [
-                linear_sum_assignment(source_window_matrix, maximize=True)
-                for source_window_matrix in source_window_matrices
-            ]
-
-            # Sum assigned similarities, including a call-graph topology bonus.
-            window_similarity_sums = []
-            window_call_graph_scores = []
-            window_locality_scores = []
-            for (
-                source_window,
-                source_window_matrix,
-                (source_rows, target_cols),
-            ) in zip(source_candidate_windows, source_window_matrices, source_to_target_assignments):
-                source_global_rows = np.arange(source_window.start, source_window.stop)[source_rows]
-                target_to_source = {
-                    target_cu_functions[target_idx].address: source_functions[source_idx].address
-                    for source_idx, target_idx in zip(source_global_rows, target_cols)
-                }
-                call_graph_score = call_graph_assignment_score(
-                    source_functions,
-                    target_cu_functions,
-                    target_to_source,
-                )
-                locality_score = function_assignment_locality_score(
-                    target_cu_functions,
-                    source_global_rows,
-                    target_cols,
-                )
-                assigned_similarities = [
-                    combined_similarity(
-                        float(source_window_matrix[source_row][target_col]),
-                        call_graph_score,
-                        locality_score,
-                    )
-                    for source_row, target_col in zip(source_rows, target_cols)
-                ]
-                window_similarity_sums.append(sum(assigned_similarities))
-                window_call_graph_scores.append(call_graph_score)
-                window_locality_scores.append(locality_score)
-
-            # Pick the source-binary window with the best combined score.
-            best_idx = np.argmax(window_similarity_sums)
-            best_source_window = source_candidate_windows[best_idx]
-            best_source_to_target_assignment = source_to_target_assignments[best_idx]
-            best_sum_similarity = float(window_similarity_sums[best_idx])
-            best_call_graph_score = float(window_call_graph_scores[best_idx])
-            best_locality_score = float(window_locality_scores[best_idx])
-            best_source_rows, best_target_cols = best_source_to_target_assignment
-            best_num_assigned = len(best_source_rows)
-
-            if best_num_assigned == 0:
-                continue
-
-            # Normalize by number of assignments so thresholding is CU-size independent.
-            best_mean_similarity = best_sum_similarity / best_num_assigned
-
-            if best_mean_similarity < (SIMILARITY_THRESHOLD - 0.1):
-                # No match: best mean similarity is below the threshold
-                continue
-
-            # Reconstruct full indices from submatrix rows to global sim_matrix rows
-            source_global_indices = np.arange(
-                best_source_window.start,
-                best_source_window.stop,
-            )[best_source_rows]
-            target_cu_indices = best_target_cols
-
-            # Create function match pairs
-            matched_functions = [
-                FunctionPair(
-                    source_functions[source_idx],
-                    target_cu_functions[target_idx],
-                    FeatureVector(
-                        combined_similarity(
-                            float(sim_matrix[source_idx][target_idx]),
-                            best_call_graph_score,
-                            best_locality_score,
-                        ),
-                        best_call_graph_score,
-                        best_locality_score,
-                    ),
-                )
-                for source_idx, target_idx in zip(source_global_indices, target_cu_indices)
-            ]
-            good = sum(1 for fp in matched_functions if fp.features.similarity >= SIMILARITY_THRESHOLD)
-            print(
-                f"[DEBUG] {target_cu.name}: "
-                f"best_source_window=({best_source_window.start},{best_source_window.stop}), "
-                f"assigned={len(matched_functions)}, good={good}, "
-                f"ratio={good/len(matched_functions):.3f}, "
-                f"mean={best_mean_similarity:.4f}, "
-                f"sum={best_sum_similarity:.4f}, "
-                f"call_graph={best_call_graph_score:.4f}, "
-                f"locality={best_locality_score:.4f}"
-            )
-            matched_cu_windows.append((best_mean_similarity, best_num_assigned, matched_functions))
-            break  # only one target CU window can match; later windows are not evaluated
-
-        if (
-            len(matched_cu_windows) <= 0
-            or sum(s * b for s, b, _ in matched_cu_windows) / sum(b for _, b, _ in matched_cu_windows)
-            < SIMILARITY_THRESHOLD
-        ):
-            # No match: weighted average similarity is below the threshold
-            continue
-
-        matched = []
-        for _, _, window_matched_functions in matched_cu_windows:
-            matched.extend(window_matched_functions)
-        matches.append(
-            Match(source_unit=source_bin, target_unit=target_cu, matched_functions=matched)
-        )
-
-    return matches
