@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import os
 from pathlib import Path
 import re
@@ -53,6 +54,7 @@ DEFAULT_LIBRARY_NAMES = [
 SUMMARY_FIELDS = [
     "pipeline",
     "binary",
+    "binary_path",
     "library",
     "status",
     "score",
@@ -71,6 +73,7 @@ SUMMARY_FIELDS = [
 
 COMPARISON_FIELDS = [
     "binary",
+    "binary_path",
     "library",
     "outcome",
     "current_status",
@@ -93,6 +96,20 @@ COMPARISON_FIELDS = [
     "libseeker_log_path",
 ]
 
+GROUND_TRUTH_FIELDS = [
+    "pipeline", "binary", "binary_path", "library", "library_family",
+    "ground_truth_variant", "expected_present", "predicted_present",
+    "classification", "correct", "pipeline_status", "pipeline_score",
+    "block_best", "rodata_best", "matched_cu", "total_cu",
+    "ground_truth_source", "ground_truth_optimization",
+    "ground_truth_included_cu", "ground_truth_total_cu",
+]
+
+GROUND_TRUTH_METRIC_FIELDS = [
+    "pipeline", "binary", "evaluated", "missing", "tp", "tn", "fp", "fn",
+    "accuracy", "precision", "recall", "specificity", "f1",
+]
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -104,6 +121,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-dir", type=Path, default=DEFAULT_DATASET_DIR)
     parser.add_argument("--libs-dir", type=Path, default=DEFAULT_LIBS_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        "--ground-truth-dir",
+        type=Path,
+        help=(
+            "Directory containing ground_truth.json files. Generates "
+            "ground_truth_scores.csv and ground_truth_metrics.csv."
+        ),
+    )
     parser.add_argument(
         "--pipeline",
         "--mode",
@@ -238,8 +263,16 @@ def select_libs(args: argparse.Namespace) -> list[Path]:
     return libs
 
 
-def safe_name(path: Path) -> str:
-    return re.sub(r"[^A-Za-z0-9_.-]+", "_", path.name)
+def safe_name(value: str | Path) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", str(value))
+
+
+def binary_label(binary: Path, dataset_dir: Path) -> str:
+    try:
+        relative = binary.resolve().relative_to(dataset_dir.resolve())
+        return safe_name(relative.as_posix())
+    except ValueError:
+        return safe_name(binary.resolve())
 
 
 def make_libraries_dir(libraries: list[Path]) -> tempfile.TemporaryDirectory:
@@ -417,6 +450,7 @@ def parse_report(
     pipeline: str,
     report_path: Path,
     binary: Path,
+    label: str,
     log_path: Path,
 ) -> list[dict[str, str]]:
     if not report_path.exists():
@@ -441,7 +475,8 @@ def parse_report(
         matched_cu, total_cu = parse_fraction(values.get("matched_cu"))
         row = {
             "pipeline": pipeline,
-            "binary": binary.name,
+            "binary": label,
+            "binary_path": str(binary.resolve()),
             "library": values.get("library", ""),
             "status": match.group("status").strip(),
             "score": parse_percent(values.get("score")),
@@ -493,30 +528,31 @@ def detection_outcome(
 
 def build_comparison_rows(summary_rows: list[dict[str, str]]) -> list[dict[str, str]]:
     indexed_rows = {
-        (row["pipeline"], row["binary"], row["library"]): row
+        (row["pipeline"], row["binary_path"], row["library"]): row
         for row in summary_rows
     }
     cases = sorted(
-        (row["binary"], row["library"])
+        (row["binary"], row["binary_path"], row["library"])
         for row in summary_rows
         if row["pipeline"] == "current"
     )
     cases = sorted(
         set(cases)
         | {
-            (row["binary"], row["library"])
+            (row["binary"], row["binary_path"], row["library"])
             for row in summary_rows
             if row["pipeline"] == "libseeker"
         }
     )
 
     comparison_rows = []
-    for binary, library in cases:
-        current_row = indexed_rows.get(("current", binary, library))
-        libseeker_row = indexed_rows.get(("libseeker", binary, library))
+    for binary, binary_path, library in cases:
+        current_row = indexed_rows.get(("current", binary_path, library))
+        libseeker_row = indexed_rows.get(("libseeker", binary_path, library))
         comparison_rows.append(
             {
                 "binary": binary,
+                "binary_path": binary_path,
                 "library": library,
                 "outcome": detection_outcome(current_row, libseeker_row),
                 "current_status": current_row["status"] if current_row else "",
@@ -547,6 +583,191 @@ def build_comparison_rows(summary_rows: list[dict[str, str]]) -> list[dict[str, 
     return comparison_rows
 
 
+def library_family(name: str) -> str:
+    lowered = Path(name).name.lower()
+    patterns = (
+        (r"^libc\.a(?:\.|$)", "glibc"),
+        (r"^libpcre2-8\.a(?:\.|$)", "pcre2"),
+        (r"^libpcre2-posix\.a(?:\.|$)", "pcre2-posix"),
+        (r"^libiconv\.a(?:\.|$)", "iconv"),
+        (r"^libcharset\.a(?:\.|$)", "charset"),
+        (r"^libgcc_eh\.a(?:\.|$)", "libgcc_eh"),
+        (r"^libgcc\.a(?:\.|$)", "libgcc"),
+    )
+    for pattern, family in patterns:
+        if re.match(pattern, lowered):
+            return family
+    match = re.match(r"^(lib[^.]+)", lowered)
+    return match.group(1) if match else lowered
+
+
+def ground_truth_archive_family(archive: dict[str, object]) -> str:
+    library = str(archive.get("library", "")).lower()
+    source = str(archive.get("source", "")).lower()
+    if library == "compiler-runtime":
+        return library_family(source)
+    if library == "glibc":
+        return "glibc"
+    if library == "pcre2":
+        return "pcre2"
+    if library in {"iconv", "libiconv"}:
+        return "iconv"
+    return library_family(str(archive.get("archive", library)))
+
+
+def load_ground_truths(directory: Path | None) -> dict[str, dict[str, object]]:
+    if directory is None:
+        return {}
+    if not directory.is_dir():
+        raise FileNotFoundError(f"Ground truth directory not found: {directory}")
+
+    ground_truths = {}
+    for path in sorted(directory.rglob("ground_truth.json")):
+        with path.open(encoding="utf-8") as handle:
+            data = json.load(handle)
+        if data.get("binary"):
+            ground_truths[str(Path(data["binary"]).resolve())] = data
+        else:
+            print(f"[WARN] Ground truth without binary path: {path}")
+    return ground_truths
+
+
+def expected_families(ground_truth: dict[str, object]) -> dict[str, dict[str, object]]:
+    expected = {}
+    for archive in ground_truth.get("archives", []):
+        if int(archive.get("included_compilation_units", 0) or 0) > 0:
+            expected[ground_truth_archive_family(archive)] = archive
+    return expected
+
+
+def build_ground_truth_rows(
+    summary_rows: list[dict[str, str]],
+    ground_truths: dict[str, dict[str, object]],
+    cases: list[tuple[str, Path, str]],
+    libraries: list[Path],
+) -> list[dict[str, str]]:
+    indexed = {
+        (row["pipeline"], row["binary_path"], row["library"]): row
+        for row in summary_rows
+    }
+    rows = []
+    for pipeline, binary, label in cases:
+        binary_path = str(binary.resolve())
+        ground_truth = ground_truths.get(binary_path)
+        if ground_truth is None:
+            continue
+        expected = expected_families(ground_truth)
+
+        for library in libraries:
+            family = library_family(library.name)
+            truth_archive = expected.get(family)
+            expected_present = truth_archive is not None
+            result = indexed.get((pipeline, binary_path, library.name))
+            if result is None:
+                predicted_present = ""
+                classification = "MISSING"
+            else:
+                predicted = result["status"].startswith("YES")
+                predicted_present = str(predicted)
+                classification = (
+                    "TP" if expected_present and predicted
+                    else "FN" if expected_present
+                    else "FP" if predicted
+                    else "TN"
+                )
+
+            result = result or {}
+            rows.append({
+                "pipeline": pipeline,
+                "binary": label,
+                "binary_path": binary_path,
+                "library": library.name,
+                "library_family": family,
+                "ground_truth_variant": str(ground_truth.get("variant", "")),
+                "expected_present": str(expected_present),
+                "predicted_present": predicted_present,
+                "classification": classification,
+                "correct": str(classification in {"TP", "TN"}),
+                "pipeline_status": result.get("status", ""),
+                "pipeline_score": result.get("score", ""),
+                "block_best": result.get("block_best", ""),
+                "rodata_best": result.get("rodata_best", ""),
+                "matched_cu": result.get("matched_cu", ""),
+                "total_cu": result.get("total_cu", ""),
+                "ground_truth_source": str(truth_archive.get("source", "")) if truth_archive else "",
+                "ground_truth_optimization": str(truth_archive.get("optimization", "")) if truth_archive else "",
+                "ground_truth_included_cu": str(truth_archive.get("included_compilation_units", 0)) if truth_archive else "0",
+                "ground_truth_total_cu": str(truth_archive.get("total_compilation_units", 0)) if truth_archive else "0",
+            })
+    return rows
+
+
+def ratio(numerator: int, denominator: int) -> str:
+    return f"{numerator / denominator:.4f}" if denominator else ""
+
+
+def build_ground_truth_metrics(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    groups = {}
+    for row in rows:
+        groups.setdefault((row["pipeline"], row["binary"]), []).append(row)
+        groups.setdefault((row["pipeline"], "ALL"), []).append(row)
+
+    metrics = []
+    for (pipeline, binary), group in sorted(groups.items()):
+        counts = {
+            key: sum(row["classification"] == key for row in group)
+            for key in ("TP", "TN", "FP", "FN", "MISSING")
+        }
+        evaluated = sum(counts[key] for key in ("TP", "TN", "FP", "FN"))
+        metrics.append({
+            "pipeline": pipeline,
+            "binary": binary,
+            "evaluated": str(evaluated),
+            "missing": str(counts["MISSING"]),
+            "tp": str(counts["TP"]),
+            "tn": str(counts["TN"]),
+            "fp": str(counts["FP"]),
+            "fn": str(counts["FN"]),
+            "accuracy": ratio(counts["TP"] + counts["TN"], evaluated),
+            "precision": ratio(counts["TP"], counts["TP"] + counts["FP"]),
+            "recall": ratio(counts["TP"], counts["TP"] + counts["FN"]),
+            "specificity": ratio(counts["TN"], counts["TN"] + counts["FP"]),
+            "f1": ratio(2 * counts["TP"], 2 * counts["TP"] + counts["FP"] + counts["FN"]),
+        })
+    return metrics
+
+
+def persist_results(
+    output_dir: Path,
+    summary_rows: list[dict[str, str]],
+    pipelines: list[tuple[str, Path]],
+    ground_truths: dict[str, dict[str, object]],
+    cases: list[tuple[str, Path, str]],
+    libraries: list[Path],
+) -> None:
+    write_csv(output_dir / "summary.csv", SUMMARY_FIELDS, summary_rows)
+    if {name for name, _ in pipelines} == {"current", "libseeker"}:
+        write_csv(
+            output_dir / "comparison.csv",
+            COMPARISON_FIELDS,
+            build_comparison_rows(summary_rows),
+        )
+    if ground_truths:
+        score_rows = build_ground_truth_rows(
+            summary_rows, ground_truths, cases, libraries
+        )
+        write_csv(
+            output_dir / "ground_truth_scores.csv",
+            GROUND_TRUTH_FIELDS,
+            score_rows,
+        )
+        write_csv(
+            output_dir / "ground_truth_metrics.csv",
+            GROUND_TRUTH_METRIC_FIELDS,
+            build_ground_truth_metrics(score_rows),
+        )
+
+
 def run_batch(args: argparse.Namespace) -> int:
     if not args.dataset_dir.is_dir():
         raise FileNotFoundError(f"Dataset directory not found: {args.dataset_dir}")
@@ -562,6 +783,7 @@ def run_batch(args: argparse.Namespace) -> int:
 
     elfs = select_elfs(args)
     libraries = select_libs(args)
+    ground_truths = load_ground_truths(args.ground_truth_dir)
     if not elfs:
         raise ValueError("No ELF files selected")
     if not libraries:
@@ -575,6 +797,11 @@ def run_batch(args: argparse.Namespace) -> int:
 
     summary_rows: list[dict[str, str]] = []
     failures: list[tuple[str, str, int]] = []
+    cases = [
+        (pipeline_name, binary, binary_label(binary, args.dataset_dir))
+        for pipeline_name, _ in pipelines
+        for binary in elfs
+    ]
 
     with make_libraries_dir(libraries) as libraries_tmp:
         libraries_dir = Path(libraries_tmp)
@@ -585,7 +812,7 @@ def run_batch(args: argparse.Namespace) -> int:
             reports_dir.mkdir(parents=True, exist_ok=True)
 
             for binary in elfs:
-                stem = safe_name(binary)
+                stem = binary_label(binary, args.dataset_dir)
                 raw_log = raw_dir / f"{stem}.raw.log"
                 report = reports_dir / f"{stem}.report.txt"
 
@@ -608,21 +835,31 @@ def run_batch(args: argparse.Namespace) -> int:
                         failures.append((pipeline_name, binary.name, returncode))
 
                 summary_rows.extend(
-                    parse_report(pipeline_name, report, binary, raw_log)
+                    parse_report(pipeline_name, report, binary, stem, raw_log)
+                )
+                persist_results(
+                    args.output_dir,
+                    summary_rows,
+                    pipelines,
+                    ground_truths,
+                    cases,
+                    libraries,
                 )
 
-    summary_csv = args.output_dir / "summary.csv"
-    write_csv(summary_csv, SUMMARY_FIELDS, summary_rows)
-
-    print(f"Wrote {summary_csv}")
+    persist_results(
+        args.output_dir,
+        summary_rows,
+        pipelines,
+        ground_truths,
+        cases,
+        libraries,
+    )
+    print(f"Wrote {args.output_dir / 'summary.csv'}")
     if args.pipeline == "both":
-        comparison_csv = args.output_dir / "comparison.csv"
-        write_csv(
-            comparison_csv,
-            COMPARISON_FIELDS,
-            build_comparison_rows(summary_rows),
-        )
-        print(f"Wrote {comparison_csv}")
+        print(f"Wrote {args.output_dir / 'comparison.csv'}")
+    if ground_truths:
+        print(f"Wrote {args.output_dir / 'ground_truth_scores.csv'}")
+        print(f"Wrote {args.output_dir / 'ground_truth_metrics.csv'}")
 
     if failures:
         print("Failures:")
