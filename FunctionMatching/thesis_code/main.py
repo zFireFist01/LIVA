@@ -155,13 +155,13 @@ def get_args():
     parser.add_argument(
         "--block_coverage_mean_threshold",
         type=float,
-        default=0.78,
+        default=0.80,
         help="Minimum mean best-block similarity"
     )
     parser.add_argument(
         "--block_assignment_threshold",
         type=float,
-        default=0.75,
+        default=0.875,
         help="Minimum Hungarian-assignment mean similarity for the second-stage block match"
     )
     parser.add_argument(
@@ -173,7 +173,7 @@ def get_args():
     parser.add_argument(
         "--block_locality_window_multiplier",
         type=float,
-        default=3.0,
+        default=5.0,
         help="Source-function window multiplier for all-CU block matching"
     )
     parser.add_argument(
@@ -185,7 +185,7 @@ def get_args():
     parser.add_argument(
         "--block_min_edge_locality_ratio",
         type=float,
-        default=0.5,
+        default=0.7,
         help="Minimum ratio of internal target call edges whose matched source functions stay local"
     )
     parser.add_argument(
@@ -203,8 +203,13 @@ def get_args():
     parser.add_argument(
         "--block_min_function_spread",
         type=float,
-        default=0.50,
+        default=0.30,
         help="Minimum ratio of distinct dominant source functions to mapped target functions"
+    )
+    parser.add_argument(
+        "--disable_block_window_prefilter",
+        action="store_true",
+        help="Evaluate assignment/locality for every source-function window"
     )
     parser.add_argument(
         "--disable_rodata_filter",
@@ -214,13 +219,13 @@ def get_args():
     parser.add_argument(
         "--rodata_min_bytes",
         type=int,
-        default=128,
+        default=512,
         help="Minimum target .rodata bytes for .rodata evidence to be informative"
     )
     parser.add_argument(
         "--rodata_min_strings",
         type=int,
-        default=2,
+        default=0,
         help="Minimum target .rodata strings for .rodata evidence to be informative"
     )
     parser.add_argument(
@@ -232,7 +237,7 @@ def get_args():
     parser.add_argument(
         "--rodata_penalty_threshold",
         type=float,
-        default=0.10,
+        default=0.20,
         help="Drop a block-passed CU when informative .rodata score is at or below this value"
     )
     parser.add_argument(
@@ -361,6 +366,7 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
                 args.block_min_instructions,
                 args.block_min_function_concentration,
                 args.block_min_function_spread,
+                not args.disable_block_window_prefilter,
             )
             block_results.append((target_unit, block_result))
 
@@ -479,6 +485,9 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
                 f"rodata_status={rodata_evidence.status} "
                 f"blocks={block_result.num_source_blocks}/{block_result.num_target_blocks} "
                 f"locality_span={block_result.locality_span} "
+                f"windows={block_result.windows_evaluated}/"
+                f"{block_result.windows_total} "
+                f"windows_skipped={block_result.windows_skipped} "
                 f"edge_locality_ratio={block_result.edge_locality_ratio:.4f} "
                 f"function_concentration={block_result.function_concentration:.4f} "
                 f"function_spread={block_result.function_spread:.4f} "

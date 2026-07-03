@@ -194,20 +194,21 @@ def parse_args() -> argparse.Namespace:
         help="CU similarity threshold used by the libseeker function-matching baseline.",
     )
     parser.add_argument("--block-threshold", type=float, default=0.70)
-    parser.add_argument("--block-coverage-mean-threshold", type=float, default=0.78)
-    parser.add_argument("--block-assignment-threshold", type=float, default=0.75)
+    parser.add_argument("--block-coverage-mean-threshold", type=float, default=0.80)
+    parser.add_argument("--block-assignment-threshold", type=float, default=0.875)
     parser.add_argument("--block-min-coverage-ratio", type=float, default=0.50)
-    parser.add_argument("--block-locality-window-multiplier", type=float, default=3.0)
+    parser.add_argument("--block-locality-window-multiplier", type=float, default=5.0)
     parser.add_argument("--block-locality-window-padding", type=int, default=2)
-    parser.add_argument("--block-min-edge-locality-ratio", type=float, default=0.5)
+    parser.add_argument("--block-min-edge-locality-ratio", type=float, default=0.7)
     parser.add_argument("--block-min-instructions", type=int, default=3)
     parser.add_argument("--block-min-function-concentration", type=float, default=0.45)
-    parser.add_argument("--block-min-function-spread", type=float, default=0.50)
+    parser.add_argument("--block-min-function-spread", type=float, default=0.30)
+    parser.add_argument("--disable-block-window-prefilter", action="store_true")
     parser.add_argument("--disable-rodata-filter", action="store_true")
-    parser.add_argument("--rodata-min-bytes", type=int, default=128)
-    parser.add_argument("--rodata-min-strings", type=int, default=2)
+    parser.add_argument("--rodata-min-bytes", type=int, default=512)
+    parser.add_argument("--rodata-min-strings", type=int, default=0)
     parser.add_argument("--rodata-min-ngrams", type=int, default=32)
-    parser.add_argument("--rodata-penalty-threshold", type=float, default=0.10)
+    parser.add_argument("--rodata-penalty-threshold", type=float, default=0.20)
     parser.add_argument("--rodata-confirm-threshold", type=float, default=0.70)
     parser.add_argument(
         "--dry-run",
@@ -370,6 +371,8 @@ def current_command(
     )
     if args.disable_rodata_filter:
         command.append("--disable_rodata_filter")
+    if args.disable_block_window_prefilter:
+        command.append("--disable_block_window_prefilter")
     if args.block_coverage_mean_threshold is not None:
         command.extend(
             [
@@ -769,6 +772,13 @@ def persist_results(
 
 
 def run_batch(args: argparse.Namespace) -> int:
+    args.dataset_dir = args.dataset_dir.resolve()
+    args.libs_dir = args.libs_dir.resolve()
+    args.output_dir = args.output_dir.resolve()
+    if args.ground_truth_dir is not None:
+        args.ground_truth_dir = args.ground_truth_dir.resolve()
+    args.libseeker_pipeline_dir = args.libseeker_pipeline_dir.resolve()
+
     if not args.dataset_dir.is_dir():
         raise FileNotFoundError(f"Dataset directory not found: {args.dataset_dir}")
     if not args.libs_dir.is_dir():

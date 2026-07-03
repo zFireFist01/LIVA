@@ -1,4 +1,0 @@
-pipeline,binary,evaluated,missing,tp,tn,fp,fn,accuracy,precision,recall,specificity,f1
-libseeker,ALL,18,0,8,4,6,0,0.6667,0.5714,1.0000,0.4000,0.7273
-libseeker,grep_O0_grep,9,0,4,2,3,0,0.6667,0.5714,1.0000,0.4000,0.7273
-libseeker,grep_O2_grep,9,0,4,2,3,0,0.6667,0.5714,1.0000,0.4000,0.7273

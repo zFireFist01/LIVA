@@ -29,6 +29,9 @@ class BlockMatchResult(typing.NamedTuple):
     edge_locality_ratio: float = 1.0
     function_concentration: float = 1.0
     function_spread: float = 1.0
+    windows_total: int = 0
+    windows_evaluated: int = 0
+    windows_skipped: int = 0
 
 
 class RodataIndex(typing.NamedTuple):
@@ -278,6 +281,28 @@ def assignment_values(sim_matrix: np.ndarray) -> np.ndarray:
     return sim_matrix[source_indices, target_indices]
 
 
+def function_max_similarity_matrix(
+    block_similarity_matrix: np.ndarray,
+    function_spans: list[tuple[int, int]],
+) -> np.ndarray:
+    """Return each target block's best similarity inside each source function."""
+    function_matrix = np.full(
+        (block_similarity_matrix.shape[0], len(function_spans)),
+        -np.inf,
+        dtype=block_similarity_matrix.dtype,
+    )
+
+    for function_index, (block_start, block_stop) in enumerate(function_spans):
+        if block_stop <= block_start:
+            continue
+        function_matrix[:, function_index] = np.max(
+            block_similarity_matrix[:, block_start:block_stop],
+            axis=1,
+        )
+
+    return function_matrix
+
+
 def internal_call_edge_locality_ratio(
     target_functions: list[asm.Function],
     source_function_by_target: dict[int, int],
@@ -384,12 +409,15 @@ def evaluate_block_presence(
     min_block_instructions: int = DEFAULT_MIN_BLOCK_INSTRUCTIONS,
     min_function_concentration: float = 0.45,
     min_function_spread: float = 0.50,
+    enable_window_prefilter: bool = True,
 ) -> BlockMatchResult:
     """Evaluate whether a target CU's blocks are present anywhere in an ELF.
 
     Coverage is measured from target-library blocks to source-ELF blocks inside
     a compact source-function window, so a small library CU can match inside a
     much larger executable without allowing arbitrary far-away block matches.
+    A cheap function-level prefilter keeps the expensive assignment/locality
+    checks for windows that can still satisfy the coverage gates.
     """
     target_block_records, target_spans = indexed_block_records(
         target_unit.functions,
@@ -433,6 +461,11 @@ def evaluate_block_presence(
             + locality_window_padding,
         ),
     )
+    window_total = max(1, source_function_count - window_size + 1)
+    function_sim_matrix = function_max_similarity_matrix(
+        full_sim_matrix,
+        source_spans,
+    )
 
     best_result = BlockMatchResult(
         score=0.0,
@@ -448,25 +481,70 @@ def evaluate_block_presence(
         edge_locality_ratio=1.0,
         function_concentration=0.0,
         function_spread=0.0,
+        windows_total=window_total,
     )
     best_sort_key = (-1.0, -1.0, -1.0, -1.0, -1.0)
+    windows_evaluated = 0
+    windows_skipped = 0
 
-    for window_start in range(0, max(1, source_function_count - window_size + 1)):
+    for window_start in range(window_total):
         window_stop = window_start + window_size
         block_start = source_spans[window_start][0]
         block_stop = source_spans[window_stop - 1][1]
         if block_stop <= block_start:
+            windows_skipped += 1
             continue
 
-        sim_matrix = full_sim_matrix[:, block_start:block_stop]
-        coverage_values = best_coverage_by_source_block(sim_matrix)
-        assigned_values = assignment_values(sim_matrix)
-
+        coverage_values = np.max(
+            function_sim_matrix[:, window_start:window_stop],
+            axis=1,
+        )
         coverage_mean = safe_mean(coverage_values)
         coverage_min = safe_min(coverage_values)
+        coverage_ratio = float(np.mean(coverage_values >= block_threshold))
+
+        should_skip_window = (
+            enable_window_prefilter
+            and (
+                coverage_mean < coverage_mean_threshold
+                or coverage_ratio < block_min_coverage_ratio
+            )
+        )
+        if should_skip_window:
+            windows_skipped += 1
+            result = BlockMatchResult(
+                score=coverage_mean,
+                coverage_mean=coverage_mean,
+                coverage_min=coverage_min,
+                coverage_ratio=coverage_ratio,
+                assignment_mean=0.0,
+                assignment_min=0.0,
+                num_source_blocks=len(target_block_records),
+                num_target_blocks=block_stop - block_start,
+                passed=False,
+                locality_span=window_size,
+                edge_locality_ratio=0.0,
+                function_concentration=0.0,
+                function_spread=0.0,
+                windows_total=window_total,
+            )
+            sort_key = (
+                coverage_mean,
+                0.0,
+                coverage_ratio,
+                0.0,
+                0.0,
+            )
+            if sort_key > best_sort_key:
+                best_sort_key = sort_key
+                best_result = result
+            continue
+
+        windows_evaluated += 1
+        sim_matrix = full_sim_matrix[:, block_start:block_stop]
+        assigned_values = assignment_values(sim_matrix)
         assignment_mean = safe_mean(assigned_values)
         assignment_min = safe_min(assigned_values)
-        coverage_ratio = float(np.mean(coverage_values >= block_threshold))
 
         best_source_columns = np.argmax(sim_matrix, axis=1) + block_start
         function_concentration, function_spread, source_function_by_target = (
@@ -517,4 +595,8 @@ def evaluate_block_presence(
             best_sort_key = sort_key
             best_result = result
 
-    return best_result
+    return best_result._replace(
+        windows_total=window_total,
+        windows_evaluated=windows_evaluated,
+        windows_skipped=windows_skipped,
+    )
