@@ -35,6 +35,24 @@ DEFAULT_OUTPUT = SCRIPT_DIR / "greedy_threshold_results"
 OPTIMIZATIONS = ("O0", "O1", "O2", "O3", "Os")
 DEFAULT_MAX_POSITIVE_ARCHIVE_BYTES = 600_000
 FEATURE_SCHEMA_VERSION = 2
+DEFAULT_PROGRAMS = ("grep", "less", "sed", "gawk", "nano")
+DATASET_PROGRAMS = (
+    "bash",
+    "gawk",
+    "gnuchess",
+    "grep",
+    "gzip",
+    "inetutils",
+    "less",
+    "make",
+    "nano",
+    "openssh",
+    "rsync",
+    "sed",
+    "socat",
+    "tar",
+    "wget2",
+)
 
 PREFERRED_NEGATIVE_ARCHIVES = (
     "libpcre2-posix.a",
@@ -87,7 +105,6 @@ DECISION_GRIDS = {
     "block_min_function_spread": tuple(
         round(0.25 + (index * 0.05), 3) for index in range(11)
     ),
-    "rodata_filter_enabled": (0, 1),
     "rodata_min_bytes": (0, 32, 64, 128, 256, 512),
     "rodata_min_strings": (0, 1, 2, 3, 5),
     "rodata_min_ngrams": (0, 16, 32, 64, 128),
@@ -96,7 +113,9 @@ DECISION_GRIDS = {
 
 STRUCTURAL_DEFAULTS = {
     "block_threshold": 0.70,
-    "block_locality_window_multiplier": 5.0,
+    # Keep the search baseline generic. The production pipeline may use a
+    # tuned wider window, but the greedy search should not be centered on it.
+    "block_locality_window_multiplier": 3.0,
     "block_locality_window_padding": 2,
 }
 
@@ -146,8 +165,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--program",
         action="append",
-        choices=("grep", "less", "sed", "gawk", "nano"),
+        choices=DATASET_PROGRAMS,
         help="Restrict the search to selected programs. Repeatable.",
+    )
+    parser.add_argument(
+        "--elf",
+        "--variant",
+        dest="elf_variants",
+        action="append",
+        default=[],
+        help=(
+            "Use this exact ELF variant, for example grep_clang-22.1.6_O0. "
+            "Repeatable. When supplied, these variants replace the balanced "
+            "random training sample."
+        ),
     )
     parser.add_argument(
         "--compiler",
@@ -341,7 +372,12 @@ def resolve_lib_roots(args: argparse.Namespace) -> list[Path]:
 
 
 def load_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
-    programs = set(args.program or ("grep", "less", "sed", "gawk", "nano"))
+    if args.elf_variants:
+        programs = set(args.program or DATASET_PROGRAMS)
+        requested_variants = set(args.elf_variants)
+    else:
+        programs = set(args.program or DEFAULT_PROGRAMS)
+        requested_variants = set()
     compilers = set(args.compiler or ("gcc", "clang"))
     cases = []
 
@@ -349,6 +385,8 @@ def load_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
         for path in sorted((args.ground_truth_dir / program).glob("*/ground_truth.json")):
             data = json.loads(path.read_text(encoding="utf-8"))
             if not data.get("elf_optimization"):
+                continue
+            if requested_variants and data.get("variant") not in requested_variants:
                 continue
             compiler = str(data.get("compiler", "")).split("-", maxsplit=1)[0]
             if compiler not in compilers:
@@ -391,6 +429,14 @@ def load_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
 
     if not cases:
         raise ValueError("No randomized ELF ground truths selected")
+    if requested_variants:
+        found = {case["variant"] for case in cases}
+        missing = requested_variants - found
+        if missing:
+            raise ValueError(
+                "Requested ELF variants not found after filters: "
+                + ", ".join(sorted(missing))
+            )
     return cases
 
 
@@ -925,7 +971,12 @@ def select_train_cases(
     cases: list[dict[str, Any]],
     train_count: int,
     seed: int,
+    requested_variants: list[str] | None = None,
 ) -> list[dict[str, Any]]:
+    if requested_variants:
+        by_variant = {case["variant"]: case for case in cases}
+        return [by_variant[variant] for variant in requested_variants]
+
     groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for case in cases:
         groups.setdefault((case["program"], case["compiler"]), []).append(case)
@@ -1019,7 +1070,6 @@ def collection_command(
         "0",
         "--block-min-function-spread",
         "0",
-        "--disable-rodata-filter",
     ]
     if args.timeout:
         command.extend(["--timeout", str(args.timeout)])
@@ -1039,6 +1089,18 @@ def parse_report(path: Path) -> tuple[str, dict[str, list[dict[str, Any]]]]:
     binary_path = ""
     pending: list[dict[str, Any]] = []
     libraries: dict[str, list[dict[str, Any]]] = {}
+    required_fields = {
+        "coverage_mean",
+        "coverage_ratio",
+        "assignment_mean",
+        "edge_locality_ratio",
+        "function_concentration",
+        "function_spread",
+        "rodata",
+        "rodata_strings",
+        "rodata_ngrams",
+        "rodata_bytes",
+    }
 
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if line.startswith("Target binary: "):
@@ -1046,6 +1108,8 @@ def parse_report(path: Path) -> tuple[str, dict[str, list[dict[str, Any]]]]:
             continue
         if line.lstrip().startswith("BLOCK_CU["):
             fields = dict(FIELD_RE.findall(line))
+            if not required_fields.issubset(fields):
+                continue
             pending.append(
                 {
                     "name": fields.get("name", ""),
@@ -1059,7 +1123,9 @@ def parse_report(path: Path) -> tuple[str, dict[str, list[dict[str, Any]]]]:
                     "rodata_strings": fraction_right(fields["rodata_strings"]),
                     "rodata_ngrams": fraction_right(fields["rodata_ngrams"]),
                     "rodata_bytes": int(fields["rodata_bytes"]),
-                    "matched_functions": int(fields["matched_functions"]),
+                    "target_functions": int(
+                        fields.get("target_functions", fields.get("matched_functions", 0))
+                    ),
                 }
             )
             continue
@@ -1070,6 +1136,38 @@ def parse_report(path: Path) -> tuple[str, dict[str, list[dict[str, Any]]]]:
 
     if not binary_path:
         raise ValueError(f"Target binary missing from report: {path}")
+    return binary_path, libraries
+
+
+def parse_feature_jsonl(path: Path) -> tuple[str, dict[str, list[dict[str, Any]]]]:
+    binary_path = ""
+    libraries: dict[str, list[dict[str, Any]]] = {}
+
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.strip():
+            continue
+        payload = json.loads(line)
+        if payload.get("type") != "block_cu":
+            continue
+        binary_path = str(Path(str(payload["binary_path"])).resolve())
+        library = str(payload["library"])
+        libraries.setdefault(library, []).append(
+            {
+                "name": str(payload.get("name", "")),
+                "coverage_mean": float(payload["coverage_mean"]),
+                "coverage_ratio": float(payload["coverage_ratio"]),
+                "assignment_mean": float(payload["assignment_mean"]),
+                "edge_locality_ratio": float(payload["edge_locality_ratio"]),
+                "function_concentration": float(payload["function_concentration"]),
+                "function_spread": float(payload["function_spread"]),
+                "rodata": float(payload["rodata"]),
+                "rodata_strings": int(payload["rodata_strings"]),
+                "rodata_ngrams": int(payload["rodata_ngrams"]),
+                "rodata_bytes": int(payload["rodata_bytes"]),
+                "target_functions": int(payload["target_functions"]),
+            }
+        )
+
     return binary_path, libraries
 
 
@@ -1089,6 +1187,17 @@ def parse_feature_collection(
     cases = {}
     for report in reports:
         binary_path, libraries = parse_report(report)
+        feature_file = report.with_name(
+            report.name.replace(".report.txt", ".features.jsonl")
+        )
+        if feature_file.is_file():
+            feature_binary_path, feature_libraries = parse_feature_jsonl(feature_file)
+            if feature_binary_path and binary_path and feature_binary_path != binary_path:
+                raise ValueError(
+                    f"Feature/report binary mismatch: {feature_file} vs {report}"
+                )
+            binary_path = feature_binary_path or binary_path
+            libraries.update(feature_libraries)
         normalized_libraries: dict[str, list[dict[str, Any]]] = {}
         for library_key, records in libraries.items():
             canonical_key = canonical_library_key(library_key, archive_names)
@@ -1328,11 +1437,11 @@ def collect_features(
     lib_dir: Path,
     input_signature: str,
     selected_archives: list[dict[str, str]],
+    profiles: list[dict[str, float | int | str]],
 ) -> dict[str, dict[str, Any]]:
     collections = {}
     archive_names = [archive["name"] for archive in selected_archives]
     selected_archives_by_name = {archive["name"]: archive for archive in selected_archives}
-    profiles = structural_profiles(args.structural_trials, args.seed)
     for profile in profiles:
         profile_id = str(profile["profile_id"])
         profile_signature = selection_signature(
@@ -1434,6 +1543,21 @@ def collect_features(
         write_gzip_json(destination, collection)
         collections[profile_id] = collection
     return collections
+
+
+def feature_input_signature(
+    args: argparse.Namespace,
+    cases: list[dict[str, Any]],
+    selected_archives: list[dict[str, Any]],
+) -> str:
+    return selection_signature(
+        {
+            "feature_schema_version": FEATURE_SCHEMA_VERSION,
+            "objective_order": args.objective_order,
+            "elf_variants": [case["variant"] for case in cases],
+            "archives": selected_archives,
+        }
+    )
 
 
 def rodata_is_penalty(record: dict[str, Any], params: dict[str, Any]) -> bool:
@@ -1648,10 +1772,10 @@ def objective(
 
 
 def random_decision_params(rng: random.Random) -> dict[str, Any]:
-    return {
-        parameter: rng.choice(candidates)
-        for parameter, candidates in DECISION_GRIDS.items()
-    }
+    params = dict(DECISION_DEFAULTS)
+    for parameter, candidates in DECISION_GRIDS.items():
+        params[parameter] = rng.choice(candidates)
+    return params
 
 
 def greedy_profile_search(
@@ -1833,6 +1957,7 @@ def main() -> int:
         cases,
         args.train_elf_count,
         args.seed,
+        args.elf_variants,
     )
     if not train_cases:
         raise ValueError("At least one training ELF is required")
@@ -1845,12 +1970,14 @@ def main() -> int:
         key=lambda item: item["name"],
     )
     archive_names = [item["name"] for item in selected_archives]
-    input_signature = selection_signature(
-        {
-            "feature_schema_version": FEATURE_SCHEMA_VERSION,
-            "objective_order": args.objective_order,
-            "archives": selected_archives,
-        }
+    structural_profile_selection = structural_profiles(
+        args.structural_trials,
+        args.seed,
+    )
+    input_signature = feature_input_signature(
+        args,
+        search_cases,
+        selected_archives,
     )
     selection_report = {
         "seed": args.seed,
@@ -1860,6 +1987,8 @@ def main() -> int:
         "objective_order": args.objective_order,
         "max_positive_archive_bytes": args.max_positive_archive_bytes,
         "lib_roots": [str(root) for root in args.lib_roots],
+        "elf_variants": [case["variant"] for case in search_cases],
+        "structural_profiles": structural_profile_selection,
         "archives": selected_archives,
     }
     (args.output_dir / "input_selection.json").write_text(
@@ -1874,6 +2003,10 @@ def main() -> int:
         f"{len(negative_archives)} negative archives"
     )
     print(f"Search set: {len(train_cases)} ELF files")
+    print(
+        "Structural profiles: "
+        + ", ".join(str(profile["profile_id"]) for profile in structural_profile_selection)
+    )
     for archive in selected_archives:
         print(
             f"  [{archive['kind']}] {archive['name']} "
@@ -1888,6 +2021,7 @@ def main() -> int:
         lib_dir,
         input_signature,
         selected_archives,
+        structural_profile_selection,
     )
     if args.dry_run or args.collect_only:
         return 0

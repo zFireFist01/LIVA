@@ -185,8 +185,18 @@ def parse_args() -> argparse.Namespace:
         default=sys.executable,
         help="Python executable used for both pipelines. Defaults to the current interpreter.",
     )
-    parser.add_argument("--min-cu", type=int, default=1)
-    parser.add_argument("--min-functions-cu", type=int, default=1)
+    parser.add_argument(
+        "--min-cu",
+        type=int,
+        default=1,
+        help="Legacy libseeker baseline only: minimum matched compilation units.",
+    )
+    parser.add_argument(
+        "--min-functions-cu",
+        type=int,
+        default=1,
+        help="Legacy libseeker baseline only: minimum matched functions per CU.",
+    )
     parser.add_argument(
         "--libseeker-threshold",
         type=float,
@@ -320,6 +330,7 @@ def current_command(
     binary: Path,
     libraries_dir: Path,
     output_path: Path,
+    features_output_path: Path | None = None,
 ) -> list[str]:
     command = [
         args.python,
@@ -331,11 +342,9 @@ def current_command(
         libraries_dir.as_posix(),
         "--output",
         output_path.as_posix(),
-        "--min_cu",
-        str(args.min_cu),
-        "--min_functions_cu",
-        str(args.min_functions_cu),
     ]
+    if features_output_path is not None:
+        command.extend(["--features_output", features_output_path.as_posix()])
 
     command.extend(
         [
@@ -483,7 +492,12 @@ def parse_report(
             "library": values.get("library", ""),
             "status": match.group("status").strip(),
             "score": parse_percent(values.get("score")),
-            "block_best": parse_percent(values.get("block_best")),
+            "block_best": parse_percent(
+                values.get(
+                    "block_best",
+                    values.get("block_best_any", values.get("block_best_matched")),
+                )
+            ),
             "rodata_best": parse_percent(values.get("rodata_best")),
             "rodata_confirmed_cu": values.get("rodata_confirmed_cu", ""),
             "rodata_penalty_cu": values.get("rodata_penalty_cu", ""),
@@ -825,12 +839,28 @@ def run_batch(args: argparse.Namespace) -> int:
                 stem = binary_label(binary, args.dataset_dir)
                 raw_log = raw_dir / f"{stem}.raw.log"
                 report = reports_dir / f"{stem}.report.txt"
+                features = (
+                    reports_dir / f"{stem}.features.jsonl"
+                    if pipeline_name == "current"
+                    else None
+                )
+                complete_outputs = (
+                    raw_log.exists()
+                    and report.exists()
+                    and (features is None or features.exists())
+                )
 
-                if args.resume and raw_log.exists() and report.exists():
+                if args.resume and complete_outputs:
                     print(f"[resume:{pipeline_name}] {binary.name}")
                 else:
                     if pipeline_name == "current":
-                        command = current_command(args, binary, libraries_dir, report)
+                        command = current_command(
+                            args,
+                            binary,
+                            libraries_dir,
+                            report,
+                            features,
+                        )
                     else:
                         command = libseeker_command(args, binary, libraries_dir, report)
 

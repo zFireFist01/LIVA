@@ -7,6 +7,7 @@ from scipy.optimize import linear_sum_assignment
 from sklearn.metrics.pairwise import cosine_similarity
 
 import asm
+
 DEFAULT_MIN_BLOCK_INSTRUCTIONS = 3
 DEFAULT_RODATA_NGRAM_SIZE = 16
 MIN_RODATA_BYTES_FOR_BYTE_SCORE = 64
@@ -60,25 +61,24 @@ class RodataMatchResult(typing.NamedTuple):
     has_rodata: bool
 
 
+RodataEvidenceStatus = typing.Literal[
+    "confirm",
+    "penalty",
+    "neutral",
+    "disabled",
+    "skipped",
+]
+
+
 class RodataEvidence(typing.NamedTuple):
     """Decision-oriented interpretation of a .rodata match."""
 
-    status: str
+    status: RodataEvidenceStatus
     informative: bool
-
-
-def safe_mean(values: list[float] | np.ndarray) -> float:
-    return float(np.mean(values)) if len(values) else 0.0
-
-
-def safe_min(values: list[float] | np.ndarray) -> float:
-    return float(np.min(values)) if len(values) else 0.0
 
 
 def rodata_ngrams(data: bytes, ngram_size: int = DEFAULT_RODATA_NGRAM_SIZE) -> set[bytes]:
     """Return byte n-grams for containment matching, skipping all-zero grams."""
-    if not data:
-        return set()
     if len(data) < ngram_size:
         return {data} if any(data) else set()
 
@@ -121,10 +121,24 @@ def evaluate_rodata_match(
     ngram_size: int = DEFAULT_RODATA_NGRAM_SIZE,
 ) -> RodataMatchResult:
     """Score how much target CU .rodata is contained in the source ELF .rodata."""
+    target_byte_size = len(target_unit.rodata_bytes)
+    has_rodata = bool(target_byte_size or target_unit.rodata_strings)
+    if not has_rodata:
+        return RodataMatchResult(
+            score=0.0,
+            string_score=0.0,
+            byte_score=0.0,
+            target_bytes=0,
+            source_bytes=source_index.byte_size,
+            matched_strings=0,
+            target_strings=0,
+            matched_ngrams=0,
+            target_ngrams=0,
+            has_rodata=False,
+        )
+
     target_strings = Counter(target_unit.rodata_strings)
     target_ngrams = rodata_ngrams(target_unit.rodata_bytes, ngram_size)
-    target_byte_size = len(target_unit.rodata_bytes)
-    has_rodata = bool(target_byte_size or target_strings)
 
     string_total = 0.0
     string_matched = 0.0
@@ -197,37 +211,13 @@ def classify_rodata_evidence(
         return RodataEvidence(status="neutral", informative=False)
 
     if rodata_result.score >= confirm_threshold:
-        return RodataEvidence(status="confirm", informative=True)
-    if rodata_result.score <= penalty_threshold:
-        return RodataEvidence(status="penalty", informative=True)
+        status = "confirm"
+    elif rodata_result.score <= penalty_threshold:
+        status = "penalty"
+    else:
+        status = "neutral"
 
-    return RodataEvidence(status="neutral", informative=True)
-
-
-def block_records(
-    functions: list[asm.Function],
-    min_block_instructions: int = DEFAULT_MIN_BLOCK_INSTRUCTIONS,
-) -> list[dict]:
-    records: list[dict] = []
-
-    for function_index, function in enumerate(functions):
-        for block in function.blocks:
-            if block.embedding is None:
-                continue
-            if block.get_num_instructions() < min_block_instructions:
-                continue
-
-            records.append(
-                {
-                    "function": function.name,
-                    "function_address": function.address,
-                    "function_index": function_index,
-                    "block_address": block.address,
-                    "block": block,
-                }
-            )
-
-    return records
+    return RodataEvidence(status=status, informative=True)
 
 
 def indexed_block_records(
@@ -247,10 +237,7 @@ def indexed_block_records(
 
             records.append(
                 {
-                    "function": function.name,
-                    "function_address": function.address,
                     "function_index": function_index,
-                    "block_address": block.address,
                     "block": block,
                 }
             )
@@ -260,25 +247,19 @@ def indexed_block_records(
 
 
 def compute_blocks_similarity_matrix(
-    source_blocks: list[asm.Block],
     target_blocks: list[asm.Block],
+    source_blocks: list[asm.Block],
 ) -> np.ndarray:
     """Compute cosine similarity between two lists of embedded basic blocks."""
-    source_embeddings = np.stack([np.squeeze(block.embedding) for block in source_blocks])
     target_embeddings = np.stack([np.squeeze(block.embedding) for block in target_blocks])
-    return cosine_similarity(source_embeddings, target_embeddings)
-
-
-def best_coverage_by_source_block(sim_matrix: np.ndarray) -> np.ndarray:
-    """For each source block, return the best target-block similarity."""
-    target_indices = np.argmax(sim_matrix, axis=1)
-    return sim_matrix[np.arange(sim_matrix.shape[0]), target_indices]
+    source_embeddings = np.stack([np.squeeze(block.embedding) for block in source_blocks])
+    return cosine_similarity(target_embeddings, source_embeddings)
 
 
 def assignment_values(sim_matrix: np.ndarray) -> np.ndarray:
     """Return maximum-similarity linear-assignment values."""
-    source_indices, target_indices = linear_sum_assignment(sim_matrix, maximize=True)
-    return sim_matrix[source_indices, target_indices]
+    row_indices, column_indices = linear_sum_assignment(sim_matrix, maximize=True)
+    return sim_matrix[row_indices, column_indices]
 
 
 def function_max_similarity_matrix(
@@ -401,8 +382,8 @@ def evaluate_block_presence(
     target_unit: asm.CodeUnit,
     block_threshold: float,
     block_assignment_threshold: float,
-    block_min_coverage_ratio: float,
-    block_coverage_mean_threshold: float | None = None,
+    min_coverage_ratio: float,
+    min_coverage_mean: float,
     locality_window_multiplier: float = 3.0,
     locality_window_padding: int = 2,
     min_edge_locality_ratio: float = 0.5,
@@ -419,7 +400,7 @@ def evaluate_block_presence(
     A cheap function-level prefilter keeps the expensive assignment/locality
     checks for windows that can still satisfy the coverage gates.
     """
-    target_block_records, target_spans = indexed_block_records(
+    target_block_records, _ = indexed_block_records(
         target_unit.functions,
         min_block_instructions,
     )
@@ -436,8 +417,8 @@ def evaluate_block_presence(
             coverage_ratio=0.0,
             assignment_mean=0.0,
             assignment_min=0.0,
-            num_source_blocks=len(target_block_records),
-            num_target_blocks=len(source_block_records),
+            num_source_blocks=len(source_block_records),
+            num_target_blocks=len(target_block_records),
             passed=False,
         )
 
@@ -445,14 +426,8 @@ def evaluate_block_presence(
         [record["block"] for record in target_block_records],
         [record["block"] for record in source_block_records],
     )
-    coverage_mean_threshold = (
-        block_threshold
-        if block_coverage_mean_threshold is None
-        else block_coverage_mean_threshold
-    )
-
     source_function_count = len(source_unit.functions)
-    target_function_count = max(1, len(target_unit.functions))
+    target_function_count = len(target_unit.functions)
     window_size = min(
         source_function_count,
         max(
@@ -474,8 +449,8 @@ def evaluate_block_presence(
         coverage_ratio=0.0,
         assignment_mean=0.0,
         assignment_min=0.0,
-        num_source_blocks=len(target_block_records),
-        num_target_blocks=len(source_block_records),
+        num_source_blocks=len(source_block_records),
+        num_target_blocks=len(target_block_records),
         passed=False,
         locality_span=window_size,
         edge_locality_ratio=1.0,
@@ -483,7 +458,7 @@ def evaluate_block_presence(
         function_spread=0.0,
         windows_total=window_total,
     )
-    best_sort_key = (-1.0, -1.0, -1.0, -1.0, -1.0)
+    best_sort_key = (False, -1.0, -1.0, -1.0, -1.0, -1.0)
     windows_evaluated = 0
     windows_skipped = 0
 
@@ -499,15 +474,15 @@ def evaluate_block_presence(
             function_sim_matrix[:, window_start:window_stop],
             axis=1,
         )
-        coverage_mean = safe_mean(coverage_values)
-        coverage_min = safe_min(coverage_values)
+        coverage_mean = float(np.mean(coverage_values))
+        coverage_min = float(np.min(coverage_values))
         coverage_ratio = float(np.mean(coverage_values >= block_threshold))
 
         should_skip_window = (
             enable_window_prefilter
             and (
-                coverage_mean < coverage_mean_threshold
-                or coverage_ratio < block_min_coverage_ratio
+                coverage_mean < min_coverage_mean
+                or coverage_ratio < min_coverage_ratio
             )
         )
         if should_skip_window:
@@ -519,8 +494,8 @@ def evaluate_block_presence(
                 coverage_ratio=coverage_ratio,
                 assignment_mean=0.0,
                 assignment_min=0.0,
-                num_source_blocks=len(target_block_records),
-                num_target_blocks=block_stop - block_start,
+                num_source_blocks=block_stop - block_start,
+                num_target_blocks=len(target_block_records),
                 passed=False,
                 locality_span=window_size,
                 edge_locality_ratio=0.0,
@@ -529,6 +504,7 @@ def evaluate_block_presence(
                 windows_total=window_total,
             )
             sort_key = (
+                False,
                 coverage_mean,
                 0.0,
                 coverage_ratio,
@@ -543,8 +519,8 @@ def evaluate_block_presence(
         windows_evaluated += 1
         sim_matrix = full_sim_matrix[:, block_start:block_stop]
         assigned_values = assignment_values(sim_matrix)
-        assignment_mean = safe_mean(assigned_values)
-        assignment_min = safe_min(assigned_values)
+        assignment_mean = float(np.mean(assigned_values))
+        assignment_min = float(np.min(assigned_values))
 
         best_source_columns = np.argmax(sim_matrix, axis=1) + block_start
         function_concentration, function_spread, source_function_by_target = (
@@ -561,8 +537,8 @@ def evaluate_block_presence(
             locality_window_padding,
         )
         passed = (
-            coverage_mean >= coverage_mean_threshold
-            and coverage_ratio >= block_min_coverage_ratio
+            coverage_mean >= min_coverage_mean
+            and coverage_ratio >= min_coverage_ratio
             and assignment_mean >= block_assignment_threshold
             and edge_locality_ratio >= min_edge_locality_ratio
             and function_concentration >= min_function_concentration
@@ -575,8 +551,8 @@ def evaluate_block_presence(
             coverage_ratio=coverage_ratio,
             assignment_mean=assignment_mean,
             assignment_min=assignment_min,
-            num_source_blocks=len(target_block_records),
-            num_target_blocks=block_stop - block_start,
+            num_source_blocks=block_stop - block_start,
+            num_target_blocks=len(target_block_records),
             passed=passed,
             locality_span=window_size,
             edge_locality_ratio=edge_locality_ratio,
@@ -585,6 +561,7 @@ def evaluate_block_presence(
         )
 
         sort_key = (
+            passed,
             coverage_mean,
             assignment_mean,
             coverage_ratio,
