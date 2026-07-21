@@ -5,109 +5,35 @@ import json
 from contextlib import nullcontext
 from pathlib import Path
 import re
-import site
-import glob
-import ctypes
-import warnings
-import sys
 import tempfile
 import subprocess
 
-
-def _prepare_tf_gpu_runtime() -> None:
-    """Expose and preload pip-installed NVIDIA libs before importing TensorFlow."""
-    nvidia_lib_dirs: list[str] = []
-    for base in site.getsitepackages():
-        for lib_dir in glob.glob(os.path.join(base, "nvidia", "*", "lib")):
-            if os.path.isdir(lib_dir):
-                nvidia_lib_dirs.append(lib_dir)
-
-    if not nvidia_lib_dirs:
-        return
-
-    current = os.environ.get("LD_LIBRARY_PATH", "")
-    current_parts = [p for p in current.split(":") if p]
-    missing = [p for p in nvidia_lib_dirs if p not in current_parts]
-    if missing:
-        prefix = ":".join(nvidia_lib_dirs)
-        os.environ["LD_LIBRARY_PATH"] = f"{prefix}:{current}" if current else prefix
-
-    # Preload all NVIDIA shared libs so TensorFlow can resolve CUDA symbols
-    # even when the process started without a complete linker path.
-    for lib_dir in nvidia_lib_dirs:
-        for so_file in sorted(glob.glob(os.path.join(lib_dir, "lib*.so*"))):
-            if os.path.basename(so_file).startswith("libnvblas.so"):
-                continue
-            try:
-                ctypes.CDLL(so_file, mode=ctypes.RTLD_GLOBAL)
-            except OSError:
-                continue
-
-
-def _configure_runtime_from_cli() -> None:
-    """Apply runtime options that must be set before importing TensorFlow."""
-    hide_warnings = ("--hide-warnings" in sys.argv)
-    if not hide_warnings:
-        return
-
-    # Hide informational TensorFlow logs that are noisy in CLI runs.
-    os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
-    # Optional: disable oneDNN custom ops to avoid related startup notice.
-    os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
-
-    # Suppress a known Keras warning caused by optimizer state mismatch.
-    warnings.filterwarnings(
-        "ignore",
-        message=r"Skipping variable loading for optimizer 'adam'.*",
-        category=UserWarning,
-    )
-
-_prepare_tf_gpu_runtime()
-_configure_runtime_from_cli()
-
-import tensorflow as tf
-from model import PalmTree
-from asm import CodeUnit, parse_r2_file
+from model import PALMTREE_POOLING_MODES, PalmTree
+from asm import ASM_NORMALIZATION_MODES, CodeUnit, parse_r2_file
 from match import (
+    BlockMatchResult,
+    LIBRARY_SCORE_AGGREGATORS,
     RodataEvidence,
     RodataMatchResult,
+    aggregate_library_score,
     build_rodata_index,
+    apply_rodata_bonus,
     classify_rodata_evidence,
     evaluate_block_presence,
     evaluate_rodata_match,
 )
 
-gpus = tf.config.list_physical_devices("GPU")
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
+SCRIPT_DIR = Path(__file__).resolve().parent
+TEST_DIR = SCRIPT_DIR / "Test"
+REPO_ROOT = SCRIPT_DIR.parents[1]
 
-print("TensorFlow GPUs:", gpus)
-
-
-PATH_TO_CALCULATOR = os.path.abspath(
-    os.path.join(
-        os.getcwd(),
-        "..", "..", "..",
-        "Thesis_Binary_Analysis",
-        "Exploration", "easy", "gcc11", "calculator_static_opt"
-    )
+PATH_TO_CALCULATOR = str(
+    REPO_ROOT / "Exploration" / "easy" / "gcc11" / "calculator_static_opt"
 )
 
-PATH_TO_LIBRARIES = os.path.abspath(
-    os.path.join(
-        os.getcwd(),
-        "..", "..", "..",
-        "Thesis_Binary_Analysis",
-        "Exploration", "easy", "libraries"
-    )
-)
+PATH_TO_LIBRARIES = str(REPO_ROOT / "Exploration" / "easy" / "libraries")
 
-OUTPUT = os.path.abspath(
-    os.path.join(
-        os.getcwd(),
-        "output.txt"
-    )
-)
+OUTPUT = str(TEST_DIR / "output.txt")
 
 def get_args():
     parser = argparse.ArgumentParser(description="Compilation-unit block matching")
@@ -143,10 +69,59 @@ def get_args():
         help="Path to the PalmTree model"
     )
     parser.add_argument(
+        "--device",
+        type=str,
+        default="auto",
+        help="PyTorch device for PalmTree: auto, cpu, cuda, or cuda:N"
+    )
+    parser.add_argument(
+        "--asm_normalization",
+        choices=ASM_NORMALIZATION_MODES,
+        default="v2",
+        help=(
+            "Assembly preprocessing: v2 is stripped-safe and tokenizes Intel "
+            "syntax for PalmTree; legacy only removes commas"
+        ),
+    )
+    parser.add_argument(
+        "--palmtree_pooling",
+        "--palmtree-pooling",
+        dest="palmtree_pooling",
+        choices=PALMTREE_POOLING_MODES,
+        default="masked_mean",
+        help=(
+            "PalmTree instruction pooling: masked_mean excludes padding and "
+            "preserves <eos>; mean reproduces the original unmasked adapter"
+        ),
+    )
+    parser.add_argument(
+        "--library_score_aggregator",
+        "--library-score-aggregator",
+        dest="library_score_aggregator",
+        choices=LIBRARY_SCORE_AGGREGATORS,
+        default="mean",
+        help=(
+            "How accepted CU block scores are reduced to one library score. "
+            "mean preserves the previous pipeline behavior"
+        ),
+    )
+    parser.add_argument(
+        "--library_min_score",
+        type=float,
+        default=0.0,
+        help=(
+            "Minimum aggregated block score across accepted CUs required to declare "
+            "a library present; 0 preserves the legacy any-CU rule"
+        )
+    )
+    parser.add_argument(
         "--block_threshold",
         type=float,
         default=0.70,
-        help="Per-block similarity threshold used when computing coverage_ratio"
+        help=(
+            "Per-block similarity threshold used by coverage_ratio and the "
+            "one-to-one assignment_ratio"
+        )
     )
     parser.add_argument(
         "--block_coverage_mean_threshold",
@@ -155,10 +130,21 @@ def get_args():
         help="Minimum mean best-block similarity"
     )
     parser.add_argument(
+        "--block_assignment_quality_threshold",
         "--block_assignment_threshold",
+        dest="block_assignment_quality_threshold",
         type=float,
         default=0.875,
-        help="Minimum Hungarian-assignment mean similarity for the second-stage block match"
+        help="Minimum mean similarity of the one-to-one Hungarian block pairs"
+    )
+    parser.add_argument(
+        "--block_min_assignment_ratio",
+        type=float,
+        default=0.50,
+        help=(
+            "Minimum ratio of target blocks covered by distinct Hungarian pairs "
+            "whose similarity reaches block_threshold"
+        )
     )
     parser.add_argument(
         "--block_min_coverage_ratio",
@@ -179,10 +165,15 @@ def get_args():
         help="Extra source functions added to the all-CU block-locality window"
     )
     parser.add_argument(
+        "--block_min_call_edge_ratio",
         "--block_min_edge_locality_ratio",
+        dest="block_min_call_edge_ratio",
         type=float,
-        default=0.7,
-        help="Minimum ratio of internal target call edges whose matched source functions stay local"
+        default=0.50,
+        help=(
+            "Minimum ratio of observable internal direct-call edges preserved "
+            "between block-mapped functions; uses numeric addresses, not symbols"
+        )
     )
     parser.add_argument(
         "--block_min_instructions",
@@ -205,7 +196,7 @@ def get_args():
     parser.add_argument(
         "--disable_block_window_prefilter",
         action="store_true",
-        help="Evaluate assignment/locality for every source-function window"
+        help="Evaluate assignment and call-graph metrics for every source-function window"
     )
     parser.add_argument(
         "--disable_rodata_filter",
@@ -233,8 +224,12 @@ def get_args():
     parser.add_argument(
         "--rodata_penalty_threshold",
         type=float,
-        default=0.20,
-        help="Drop a block-passed CU when informative .rodata score is at or below this value"
+        default=0.0,
+        help=(
+            "Drop a block-passed CU when informative .rodata score is at or "
+            "below this value; the offline-selected default 0.0 keeps the "
+            "low-evidence branch without rejecting nonzero scores"
+        )
     )
     parser.add_argument(
         "--rodata_confirm_threshold",
@@ -243,9 +238,13 @@ def get_args():
         help="Mark a CU as .rodata-confirmed when informative .rodata score is at or above this value"
     )
     parser.add_argument(
-        "--hide-warnings",
-        action="store_true",
-        help="Hide non-critical TensorFlow/Keras startup warnings"
+        "--rodata_bonus_weight",
+        type=float,
+        default=0.30,
+        help=(
+            "Maximum bounded bonus applied to block scores for confirmed "
+            ".rodata; 0 disables the bonus"
+        ),
     )
     return parser.parse_args()
 
@@ -264,7 +263,7 @@ def initialize_output_file(output_file: str | None) -> None:
 
     output_path = Path(output_file)
     if output_path.parent and not output_path.parent.exists():
-        raise ValueError(f"Output directory '{output_path.parent}' does not exist")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_file, "w", encoding="utf-8"):
         pass
@@ -327,25 +326,43 @@ def block_cu_feature_record(
     binary_path: str,
     library_name: str,
     target_unit: CodeUnit,
-    block_result,
+    block_result: BlockMatchResult,
     rodata_result: RodataMatchResult,
     rodata_evidence: RodataEvidence,
     block_status: str,
+    asm_normalization: str,
+    palmtree_pooling: str,
 ) -> dict:
     """Build the full CU-level feature row used by threshold tuning."""
+    windows = [
+        window._asdict() if hasattr(window, "_asdict") else window
+        for window in (getattr(block_result, "windows", ()) or ())
+    ]
     return {
         "type": "block_cu",
         "binary_path": binary_path,
         "library": Path(library_name).name,
+        "asm_normalization": asm_normalization,
+        "palmtree_pooling": palmtree_pooling,
         "name": target_unit.name,
         "status": block_status,
         "block": float(block_result.score),
         "coverage_mean": float(block_result.coverage_mean),
         "coverage_min": float(block_result.coverage_min),
         "coverage_ratio": float(block_result.coverage_ratio),
-        "assignment_mean": float(block_result.assignment_mean),
-        "assignment_min": float(block_result.assignment_min),
+        "assignment_quality": float(block_result.assignment_quality),
+        "assignment_ratio": float(block_result.assignment_ratio),
         "rodata": float(rodata_result.score),
+        "rodata_has_rodata": bool(rodata_result.has_rodata),
+        "rodata_string_score": float(rodata_result.string_score),
+        "rodata_byte_score": float(rodata_result.byte_score),
+        "rodata_informative": bool(rodata_evidence.informative),
+        "rodata_string_informative": bool(
+            getattr(rodata_result, "string_informative", False)
+        ),
+        "rodata_byte_informative": bool(
+            getattr(rodata_result, "byte_informative", False)
+        ),
         "rodata_strings": int(rodata_result.target_strings),
         "rodata_matched_strings": int(rodata_result.matched_strings),
         "rodata_ngrams": int(rodata_result.target_ngrams),
@@ -358,9 +375,12 @@ def block_cu_feature_record(
         "windows_evaluated": int(block_result.windows_evaluated),
         "windows_total": int(block_result.windows_total),
         "windows_skipped": int(block_result.windows_skipped),
-        "edge_locality_ratio": float(block_result.edge_locality_ratio),
+        "call_edge_ratio": float(block_result.call_edge_ratio),
+        "call_edges_evaluated": int(block_result.call_edges_evaluated),
+        "call_edges_total": int(block_result.call_edges_total),
         "function_concentration": float(block_result.function_concentration),
         "function_spread": float(block_result.function_spread),
+        "windows": windows,
         "target_functions": int(target_unit.get_num_functions()),
     }
 
@@ -382,6 +402,7 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
             raise ValueError(f"Output directory '{output_path.parent}' does not exist")
 
     with features_context as features_file:
+        features_requested = features_file is not None
         for library_name, comp_units in lib.items():
             start_library = time.time()
             target_comp_units = [
@@ -411,18 +432,22 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
 
             block_results = []
             rodata_evidence_by_cu = {}
+            rodata_result_by_cu = {}
 
             for target_unit in target_comp_units:
                 block_result = evaluate_block_presence(
                     source_unit=binary,
                     target_unit=target_unit,
                     block_threshold=args.block_threshold,
-                    block_assignment_threshold=args.block_assignment_threshold,
+                    min_assignment_quality=(
+                        args.block_assignment_quality_threshold
+                    ),
+                    min_assignment_ratio=args.block_min_assignment_ratio,
                     min_coverage_ratio=args.block_min_coverage_ratio,
                     min_coverage_mean=args.block_coverage_mean_threshold,
                     locality_window_multiplier=args.block_locality_window_multiplier,
                     locality_window_padding=args.block_locality_window_padding,
-                    min_edge_locality_ratio=args.block_min_edge_locality_ratio,
+                    min_call_edge_ratio=args.block_min_call_edge_ratio,
                     min_block_instructions=args.block_min_instructions,
                     min_function_concentration=args.block_min_function_concentration,
                     min_function_spread=args.block_min_function_spread,
@@ -430,20 +455,31 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
                 )
                 block_results.append((target_unit, block_result))
 
-                if block_result.passed and not args.disable_rodata_filter:
+                should_evaluate_rodata = features_requested or (
+                    block_result.passed and not args.disable_rodata_filter
+                )
+                if should_evaluate_rodata:
                     if binary_rodata_index is None:
                         binary_rodata_index = build_rodata_index(binary)
                     rodata_result = evaluate_rodata_match(
                         binary_rodata_index,
                         target_unit,
                     )
-                    rodata_evidence = classify_rodata_evidence(
+                    classified_rodata_evidence = classify_rodata_evidence(
                         rodata_result,
                         args.rodata_min_bytes,
                         args.rodata_min_strings,
                         args.rodata_min_ngrams,
                         args.rodata_penalty_threshold,
                         args.rodata_confirm_threshold,
+                    )
+                    rodata_evidence = (
+                        RodataEvidence(
+                            status="disabled",
+                            informative=classified_rodata_evidence.informative,
+                        )
+                        if args.disable_rodata_filter
+                        else classified_rodata_evidence
                     )
                 else:
                     rodata_result = empty_rodata_result(target_unit)
@@ -453,6 +489,7 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
                     )
 
                 rodata_evidence_by_cu[id(target_unit)] = rodata_evidence
+                rodata_result_by_cu[id(target_unit)] = rodata_result
                 block_status = cu_status(
                     block_result,
                     rodata_evidence,
@@ -469,6 +506,8 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
                                 rodata_result,
                                 rodata_evidence,
                                 block_status,
+                                args.asm_normalization,
+                                args.palmtree_pooling,
                             ),
                             sort_keys=True,
                         ),
@@ -494,11 +533,41 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
                 (block_result.score for _, block_result in successful_block_results),
                 default=0.0,
             )
-            score_tot = (
-                sum(block_result.score for _, block_result in successful_block_results)
-                / len(successful_block_results)
-                if successful_block_results
-                else 0.0
+            adjusted_successful_scores = [
+                apply_rodata_bonus(
+                    block_result.score,
+                    rodata_result_by_cu[id(target_unit)],
+                    rodata_evidence_by_cu[id(target_unit)],
+                    args.rodata_bonus_weight,
+                    args.rodata_confirm_threshold,
+                )
+                for target_unit, block_result in successful_block_results
+            ]
+            aggregation_scores = adjusted_successful_scores
+            if args.library_score_aggregator == "top3_mean":
+                # Fix the denominator before applying .rodata. A rejected CU
+                # contributes zero, so negative evidence cannot increase the
+                # library score by removing a low-scoring value from the mean.
+                aggregation_scores = [
+                    (
+                        0.0
+                        if rodata_evidence_by_cu[id(target_unit)].status
+                        == "penalty"
+                        else apply_rodata_bonus(
+                            block_result.score,
+                            rodata_result_by_cu[id(target_unit)],
+                            rodata_evidence_by_cu[id(target_unit)],
+                            args.rodata_bonus_weight,
+                            args.rodata_confirm_threshold,
+                        )
+                    )
+                    for target_unit, block_result in block_results
+                    if block_result.passed
+                ]
+            score_tot = aggregate_library_score(
+                aggregation_scores,
+                args.library_score_aggregator,
+                score_floor=args.block_coverage_mean_threshold,
             )
 
             stop_library = time.time()
@@ -511,7 +580,11 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
             total_cu = len(target_comp_units)
             percentage = score_tot * 100.0
 
-            status = "YES" if matched_cu >= 1 else "NO"
+            status = (
+                "YES"
+                if matched_cu >= 1 and score_tot >= args.library_min_score
+                else "NO"
+            )
 
             rodata_confirmed_count = sum(
                 1
@@ -532,6 +605,7 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
             line = (
                 f"{status:7} | "
                 f"library={Path(library_name).name} | "
+                f"aggregator={args.library_score_aggregator} | "
                 f"score={percentage:6.2f}% | "
                 f"block_best_any={block_best_score * 100.0:6.2f}% | "
                 f"block_best_matched={successful_block_best_score * 100.0:6.2f}% | "
@@ -593,7 +667,13 @@ if __name__ == "__main__":
         print(f"Found {len(library_files)} library files in '{libraries_dir}'")
         
     asm_model = PalmTree("Palm Tree")
-    asm_model.load(args.asm_model)
+    asm_model.load(
+        args.asm_model,
+        device=args.device,
+        pooling=args.palmtree_pooling,
+    )
+    print(f"PalmTree device: {asm_model.device}")
+    print(f"PalmTree pooling: {asm_model.pooling}")
 
     lib: dict[str, list[CodeUnit]] = {}
     for library_file in library_files:
@@ -627,6 +707,7 @@ if __name__ == "__main__":
                         obj_file.as_posix(),
                         asm_model=asm_model,
                         unit_type=CodeUnit.TYPE_CU,
+                        asm_normalization=args.asm_normalization,
                     )
                     log_parse_debug(b)
                     if b.get_num_functions() > 0:
@@ -639,12 +720,20 @@ if __name__ == "__main__":
 
     log_line(f"Found {len(library_files)} libraries to process", args.output)
     log_line(f"Target binary: {binary_path}", args.output)
+    log_line(f"Assembly normalization: {args.asm_normalization}", args.output)
+    log_line(f"PalmTree pooling: {args.palmtree_pooling}", args.output)
+    log_line(f"Library score aggregator: {args.library_score_aggregator}", args.output)
+    log_line(f"Library minimum score: {args.library_min_score}", args.output)
+    log_line(f"Rodata penalty threshold: {args.rodata_penalty_threshold}", args.output)
+    log_line(f"Rodata confirm threshold: {args.rodata_confirm_threshold}", args.output)
+    log_line(f"Rodata bonus weight: {args.rodata_bonus_weight}", args.output)
     log_line(f"Start processing: {time.strftime('%H:%M:%S', time.gmtime())}\n", args.output)
 
     binary = parse_r2_file(
         binary_path.as_posix(),
         asm_model=asm_model,
         unit_type=CodeUnit.TYPE_ELF,
+        asm_normalization=args.asm_normalization,
     )
     log_parse_debug(binary)
 

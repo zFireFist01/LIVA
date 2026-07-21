@@ -3,9 +3,6 @@ Configuration file.
 """
 
 VOCAB_SIZE = 10000
-USE_CUDA = False
-DEVICES = [0]
-CUDA_DEVICE = DEVICES[0]
 VERSION = 1
 MAXLEN = 10
 

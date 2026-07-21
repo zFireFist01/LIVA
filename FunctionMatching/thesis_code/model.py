@@ -1,4 +1,8 @@
-from palmtree.eval_utils import UsableTransformer
+from palmtree.eval_utils import (
+    PALMTREE_POOLING_MASKED_MEAN,
+    PALMTREE_POOLING_MODES,
+    UsableTransformer,
+)
 from pathlib import Path
 
 import os
@@ -28,7 +32,24 @@ class PalmTree:
         if not self._model:
             raise ModelNotInitializedError("The word embedding model is not initialized")
 
-    def load(self, file_path: str):
+    @property
+    def device(self) -> str:
+        """Return the device used by the loaded PalmTree model."""
+        self._check()
+        return str(self._model.device)
+
+    @property
+    def pooling(self) -> str:
+        """Return the instruction-level pooling used by PalmTree."""
+        self._check()
+        return self._model.pooling
+
+    def load(
+        self,
+        file_path: str,
+        device: str = "auto",
+        pooling: str = PALMTREE_POOLING_MASKED_MEAN,
+    ):
         """Load a trained word embedding model from disk"""
 
         # Check file existence
@@ -40,7 +61,12 @@ class PalmTree:
             raise FileNotFoundError(f"Can't find '{vocab_path}'")
 
         print(vocab_path)
-        self._model = UsableTransformer(model_path=file_path, vocab_path=vocab_path)
+        self._model = UsableTransformer(
+            model_path=file_path,
+            vocab_path=vocab_path,
+            device=device,
+            pooling=pooling,
+        )
 
     def save(self, file_path: str):
         """Save the trained word embedding model to disk"""

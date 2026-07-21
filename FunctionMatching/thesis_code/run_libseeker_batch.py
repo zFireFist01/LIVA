@@ -15,14 +15,17 @@ import sys
 import tempfile
 import time
 
+from match import LIBRARY_SCORE_AGGREGATORS
+
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+TEST_DIR = SCRIPT_DIR / "Test"
 REPO_ROOT = SCRIPT_DIR.parents[1]
 CURRENT_PIPELINE_DIR = SCRIPT_DIR
 LIBSEEKER_PIPELINE_DIR = REPO_ROOT / "FunctionMatching" / "libseeker" / "thesis_code"
 DEFAULT_DATASET_DIR = REPO_ROOT / "Exploration" / "libseeker_repo" / "exp_dataset3"
 DEFAULT_LIBS_DIR = REPO_ROOT / "Exploration" / "libseeker_repo" / "build_lib" / "libs"
-DEFAULT_OUTPUT_DIR = SCRIPT_DIR / "libseeker_batch_results"
+DEFAULT_OUTPUT_DIR = TEST_DIR / "libseeker_batch_results"
 
 DEFAULT_ELF_PATTERNS = [
     "grep.gcc.O0",
@@ -56,6 +59,10 @@ SUMMARY_FIELDS = [
     "binary",
     "binary_path",
     "library",
+    "asm_normalization",
+    "palmtree_pooling",
+    "library_score_aggregator",
+    "library_min_score",
     "status",
     "score",
     "block_best",
@@ -76,6 +83,9 @@ COMPARISON_FIELDS = [
     "binary_path",
     "library",
     "outcome",
+    "current_asm_normalization",
+    "current_palmtree_pooling",
+    "current_library_score_aggregator",
     "current_status",
     "libseeker_status",
     "current_score",
@@ -97,7 +107,9 @@ COMPARISON_FIELDS = [
 ]
 
 GROUND_TRUTH_FIELDS = [
-    "pipeline", "binary", "binary_path", "library", "library_family",
+    "pipeline", "asm_normalization", "palmtree_pooling",
+    "library_score_aggregator", "binary",
+    "binary_path", "library", "library_family",
     "ground_truth_variant", "expected_present", "predicted_present",
     "classification", "correct", "pipeline_status", "pipeline_score",
     "block_best", "rodata_best", "matched_cu", "total_cu",
@@ -106,7 +118,9 @@ GROUND_TRUTH_FIELDS = [
 ]
 
 GROUND_TRUTH_METRIC_FIELDS = [
-    "pipeline", "binary", "evaluated", "missing", "tp", "tn", "fp", "fn",
+    "pipeline", "asm_normalization", "palmtree_pooling",
+    "library_score_aggregator", "binary",
+    "evaluated", "missing", "tp", "tn", "fp", "fn",
     "accuracy", "precision", "recall", "specificity", "f1",
 ]
 
@@ -172,7 +186,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--resume",
         action="store_true",
-        help="Skip a run if the expected raw log already exists.",
+        help=(
+            "Skip a run only when its complete outputs exist and the current "
+            "pipeline report uses the requested library score threshold and "
+            "PalmTree preprocessing configuration."
+        ),
     )
     parser.add_argument(
         "--timeout",
@@ -184,6 +202,29 @@ def parse_args() -> argparse.Namespace:
         "--python",
         default=sys.executable,
         help="Python executable used for both pipelines. Defaults to the current interpreter.",
+    )
+    parser.add_argument(
+        "--device",
+        default="auto",
+        help="PyTorch device for the current PalmTree pipeline: auto, cpu, cuda, or cuda:N.",
+    )
+    parser.add_argument(
+        "--asm-normalization",
+        choices=("legacy", "v2"),
+        default="v2",
+        help=(
+            "Current pipeline only: assembly preprocessing version. "
+            "Defaults to stripped-safe v2."
+        ),
+    )
+    parser.add_argument(
+        "--palmtree-pooling",
+        choices=("mean", "masked_mean"),
+        default="masked_mean",
+        help=(
+            "Current pipeline only: masked_mean excludes padding; mean "
+            "reproduces the original PalmTree adapter."
+        ),
     )
     parser.add_argument(
         "--min-cu",
@@ -203,13 +244,41 @@ def parse_args() -> argparse.Namespace:
         default=0.80,
         help="CU similarity threshold used by the libseeker function-matching baseline.",
     )
+    parser.add_argument(
+        "--library-score-aggregator",
+        choices=LIBRARY_SCORE_AGGREGATORS,
+        default="mean",
+        help="Current pipeline only: CU-to-library score aggregation.",
+    )
+    parser.add_argument(
+        "--library-min-score",
+        type=float,
+        default=0.0,
+        help=(
+            "Current pipeline only: minimum aggregated score of accepted CUs "
+            "required for a positive library decision."
+        ),
+    )
     parser.add_argument("--block-threshold", type=float, default=0.70)
     parser.add_argument("--block-coverage-mean-threshold", type=float, default=0.80)
-    parser.add_argument("--block-assignment-threshold", type=float, default=0.875)
+    parser.add_argument(
+        "--block-assignment-quality-threshold",
+        "--block-assignment-threshold",
+        dest="block_assignment_quality_threshold",
+        type=float,
+        default=0.875,
+    )
+    parser.add_argument("--block-min-assignment-ratio", type=float, default=0.50)
     parser.add_argument("--block-min-coverage-ratio", type=float, default=0.50)
     parser.add_argument("--block-locality-window-multiplier", type=float, default=5.0)
     parser.add_argument("--block-locality-window-padding", type=int, default=2)
-    parser.add_argument("--block-min-edge-locality-ratio", type=float, default=0.7)
+    parser.add_argument(
+        "--block-min-call-edge-ratio",
+        "--block-min-edge-locality-ratio",
+        dest="block_min_call_edge_ratio",
+        type=float,
+        default=0.50,
+    )
     parser.add_argument("--block-min-instructions", type=int, default=3)
     parser.add_argument("--block-min-function-concentration", type=float, default=0.45)
     parser.add_argument("--block-min-function-spread", type=float, default=0.30)
@@ -218,8 +287,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rodata-min-bytes", type=int, default=512)
     parser.add_argument("--rodata-min-strings", type=int, default=0)
     parser.add_argument("--rodata-min-ngrams", type=int, default=32)
-    parser.add_argument("--rodata-penalty-threshold", type=float, default=0.20)
+    parser.add_argument("--rodata-penalty-threshold", type=float, default=0.0)
     parser.add_argument("--rodata-confirm-threshold", type=float, default=0.70)
+    parser.add_argument("--rodata-bonus-weight", type=float, default=0.30)
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -335,13 +405,18 @@ def current_command(
     command = [
         args.python,
         "main.py",
-        "--hide-warnings",
         "--path_to_binary",
         binary.as_posix(),
         "--libraries_dir",
         libraries_dir.as_posix(),
         "--output",
         output_path.as_posix(),
+        "--device",
+        args.device,
+        "--asm_normalization",
+        args.asm_normalization,
+        "--palmtree_pooling",
+        args.palmtree_pooling,
     ]
     if features_output_path is not None:
         command.extend(["--features_output", features_output_path.as_posix()])
@@ -350,16 +425,22 @@ def current_command(
         [
             "--block_threshold",
             str(args.block_threshold),
-            "--block_assignment_threshold",
-            str(args.block_assignment_threshold),
+            "--library_min_score",
+            str(args.library_min_score),
+            "--library_score_aggregator",
+            args.library_score_aggregator,
+            "--block_assignment_quality_threshold",
+            str(args.block_assignment_quality_threshold),
+            "--block_min_assignment_ratio",
+            str(args.block_min_assignment_ratio),
             "--block_min_coverage_ratio",
             str(args.block_min_coverage_ratio),
             "--block_locality_window_multiplier",
             str(args.block_locality_window_multiplier),
             "--block_locality_window_padding",
             str(args.block_locality_window_padding),
-            "--block_min_edge_locality_ratio",
-            str(args.block_min_edge_locality_ratio),
+            "--block_min_call_edge_ratio",
+            str(args.block_min_call_edge_ratio),
             "--block_min_instructions",
             str(args.block_min_instructions),
             "--block_min_function_concentration",
@@ -376,6 +457,8 @@ def current_command(
             str(args.rodata_penalty_threshold),
             "--rodata_confirm_threshold",
             str(args.rodata_confirm_threshold),
+            "--rodata_bonus_weight",
+            str(args.rodata_bonus_weight),
         ]
     )
     if args.disable_rodata_filter:
@@ -458,6 +541,80 @@ def parse_total_time(log_path: Path) -> str:
     return timed_out[-1] if timed_out else ""
 
 
+def parse_library_min_score(report_path: Path) -> float:
+    """Read the current-pipeline library threshold; old reports imply 0.0."""
+    if not report_path.exists():
+        return 0.0
+
+    text = report_path.read_text(encoding="utf-8", errors="replace")
+    matches = re.findall(
+        r"^Library minimum score:\s*"
+        r"([+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)"
+        r"\s*$",
+        text,
+        flags=re.MULTILINE,
+    )
+    return float(matches[-1]) if matches else 0.0
+
+
+def parse_float_setting(report_path: Path, label: str) -> float | None:
+    """Read a numeric provenance setting, returning None for old reports."""
+    if not report_path.exists():
+        return None
+
+    text = report_path.read_text(encoding="utf-8", errors="replace")
+    matches = re.findall(
+        rf"^{re.escape(label)}:\s*"
+        r"([+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)"
+        r"\s*$",
+        text,
+        flags=re.MULTILINE,
+    )
+    return float(matches[-1]) if matches else None
+
+
+def parse_asm_normalization(report_path: Path) -> str:
+    """Read preprocessing version; reports created before v2 are legacy."""
+    if not report_path.exists():
+        return "legacy"
+
+    text = report_path.read_text(encoding="utf-8", errors="replace")
+    matches = re.findall(
+        r"^Assembly normalization:\s*(legacy|v2)\s*$",
+        text,
+        flags=re.MULTILINE,
+    )
+    return matches[-1] if matches else "legacy"
+
+
+def parse_palmtree_pooling(report_path: Path) -> str:
+    """Read pooling provenance; reports created before this option used mean."""
+    if not report_path.exists():
+        return "mean"
+
+    text = report_path.read_text(encoding="utf-8", errors="replace")
+    matches = re.findall(
+        r"^PalmTree pooling:\s*(mean|masked_mean)\s*$",
+        text,
+        flags=re.MULTILINE,
+    )
+    return matches[-1] if matches else "mean"
+
+
+def parse_library_score_aggregator(report_path: Path) -> str:
+    """Read CU aggregation provenance; reports created before it used mean."""
+    if not report_path.exists():
+        return "mean"
+
+    text = report_path.read_text(encoding="utf-8", errors="replace")
+    matches = re.findall(
+        r"^Library score aggregator:\s*([a-z0-9_]+)\s*$",
+        text,
+        flags=re.MULTILINE,
+    )
+    return matches[-1] if matches else "mean"
+
+
 def parse_report(
     pipeline: str,
     report_path: Path,
@@ -470,6 +627,20 @@ def parse_report(
 
     rows = []
     total_time = parse_total_time(log_path)
+    asm_normalization = (
+        parse_asm_normalization(report_path) if pipeline == "current" else ""
+    )
+    palmtree_pooling = (
+        parse_palmtree_pooling(report_path) if pipeline == "current" else ""
+    )
+    library_score_aggregator = (
+        parse_library_score_aggregator(report_path)
+        if pipeline == "current"
+        else ""
+    )
+    library_min_score = (
+        str(parse_library_min_score(report_path)) if pipeline == "current" else ""
+    )
     line_re = re.compile(r"^(?P<status>YES \[W\]|YES|NO)\s+\|\s+(?P<fields>.+)$")
 
     for line in report_path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -490,6 +661,10 @@ def parse_report(
             "binary": label,
             "binary_path": str(binary.resolve()),
             "library": values.get("library", ""),
+            "asm_normalization": asm_normalization,
+            "palmtree_pooling": palmtree_pooling,
+            "library_score_aggregator": library_score_aggregator,
+            "library_min_score": library_min_score,
             "status": match.group("status").strip(),
             "score": parse_percent(values.get("score")),
             "block_best": parse_percent(
@@ -572,6 +747,15 @@ def build_comparison_rows(summary_rows: list[dict[str, str]]) -> list[dict[str, 
                 "binary_path": binary_path,
                 "library": library,
                 "outcome": detection_outcome(current_row, libseeker_row),
+                "current_asm_normalization": (
+                    current_row["asm_normalization"] if current_row else ""
+                ),
+                "current_palmtree_pooling": (
+                    current_row["palmtree_pooling"] if current_row else ""
+                ),
+                "current_library_score_aggregator": (
+                    current_row["library_score_aggregator"] if current_row else ""
+                ),
                 "current_status": current_row["status"] if current_row else "",
                 "libseeker_status": libseeker_row["status"] if libseeker_row else "",
                 "current_score": current_row["score"] if current_row else "",
@@ -696,6 +880,11 @@ def build_ground_truth_rows(
             result = result or {}
             rows.append({
                 "pipeline": pipeline,
+                "asm_normalization": result.get("asm_normalization", ""),
+                "palmtree_pooling": result.get("palmtree_pooling", ""),
+                "library_score_aggregator": result.get(
+                    "library_score_aggregator", ""
+                ),
                 "binary": label,
                 "binary_path": binary_path,
                 "library": library.name,
@@ -731,6 +920,15 @@ def build_ground_truth_metrics(rows: list[dict[str, str]]) -> list[dict[str, str
 
     metrics = []
     for (pipeline, binary), group in sorted(groups.items()):
+        provenance = next(
+            (
+                row
+                for row in group
+                if row.get("asm_normalization") or row.get("palmtree_pooling")
+                or row.get("library_score_aggregator")
+            ),
+            {},
+        )
         counts = {
             key: sum(row["classification"] == key for row in group)
             for key in ("TP", "TN", "FP", "FN", "MISSING")
@@ -738,6 +936,11 @@ def build_ground_truth_metrics(rows: list[dict[str, str]]) -> list[dict[str, str
         evaluated = sum(counts[key] for key in ("TP", "TN", "FP", "FN"))
         metrics.append({
             "pipeline": pipeline,
+            "asm_normalization": provenance.get("asm_normalization", ""),
+            "palmtree_pooling": provenance.get("palmtree_pooling", ""),
+            "library_score_aggregator": provenance.get(
+                "library_score_aggregator", ""
+            ),
             "binary": binary,
             "evaluated": str(evaluated),
             "missing": str(counts["MISSING"]),
@@ -844,10 +1047,56 @@ def run_batch(args: argparse.Namespace) -> int:
                     if pipeline_name == "current"
                     else None
                 )
+                existing_rows = parse_report(
+                    pipeline_name, report, binary, stem, raw_log
+                )
                 complete_outputs = (
                     raw_log.exists()
                     and report.exists()
                     and (features is None or features.exists())
+                    and bool(parse_total_time(raw_log))
+                    and len(existing_rows) == len(libraries)
+                    and (
+                        pipeline_name != "current"
+                        or abs(
+                            parse_library_min_score(report)
+                            - args.library_min_score
+                        )
+                        < 1e-12
+                    )
+                    and (
+                        pipeline_name != "current"
+                        or parse_asm_normalization(report)
+                        == args.asm_normalization
+                    )
+                    and (
+                        pipeline_name != "current"
+                        or parse_palmtree_pooling(report)
+                        == args.palmtree_pooling
+                    )
+                    and (
+                        pipeline_name != "current"
+                        or parse_library_score_aggregator(report)
+                        == args.library_score_aggregator
+                    )
+                    and (
+                        pipeline_name != "current"
+                        or parse_float_setting(
+                            report, "Rodata penalty threshold"
+                        ) == args.rodata_penalty_threshold
+                    )
+                    and (
+                        pipeline_name != "current"
+                        or parse_float_setting(
+                            report, "Rodata confirm threshold"
+                        ) == args.rodata_confirm_threshold
+                    )
+                    and (
+                        pipeline_name != "current"
+                        or parse_float_setting(
+                            report, "Rodata bonus weight"
+                        ) == args.rodata_bonus_weight
+                    )
                 )
 
                 if args.resume and complete_outputs:

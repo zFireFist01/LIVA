@@ -7,10 +7,243 @@ import numpy as np
 import networkx as nx
 
 
-def normalize_instruction_text(instruction: str) -> str:
-    """Normalize instruction text in the same way used by parse_r2_file."""
+ASM_NORMALIZATION_LEGACY = "legacy"
+ASM_NORMALIZATION_V2 = "v2"
+ASM_NORMALIZATION_MODES = (
+    ASM_NORMALIZATION_LEGACY,
+    ASM_NORMALIZATION_V2,
+)
+
+_INSTRUCTION_PREFIXES = {
+    "bnd",
+    "lock",
+    "rep",
+    "repe",
+    "repne",
+    "repnz",
+    "repz",
+}
+_MNEMONIC_ALIASES = {
+    # radare2 uses movabs for the imm64 encoding; PalmTree's vocabulary and
+    # most Intel disassemblers represent the same operation as mov.
+    "movabs": "mov",
+}
+_CONTROL_FLOW_TYPES = {
+    "call",
+    "ccall",
+    "cjmp",
+    "jmp",
+    "rcall",
+    "rjmp",
+    "ucall",
+    "ujmp",
+}
+_CONTROL_FLOW_MNEMONICS = {
+    "call",
+    "callf",
+    "jmp",
+    "jmpf",
+    "loop",
+    "loope",
+    "loopne",
+    "loopnz",
+    "loopz",
+    "xbegin",
+}
+_REGISTER_RE = re.compile(
+    r"^(?:"
+    r"(?:r(?:1[0-5]|[8-9])(?:b|d|w)?)|"
+    r"(?:[re]?(?:ax|bx|cx|dx|si|di|bp|sp|ip))|"
+    r"(?:[abcd][hl])|"
+    r"(?:[sd]il|[bs]pl)|"
+    r"(?:[cdefgs]s)|"
+    r"(?:[xyz]mm(?:[12]?[0-9]|3[01]))|"
+    r"(?:mm[0-7])|(?:st(?:\([0-7]\)|[0-7]))|"
+    r"(?:k[0-7])|(?:bnd[0-3])|"
+    r"(?:cr(?:[0-9]|1[0-5]))|(?:dr(?:[0-9]|1[0-5]))|"
+    r"(?:rflags|eflags|flags|mxcsr|eiz|riz)"
+    r")$"
+)
+_SYMBOL_REFERENCE_RE = re.compile(
+    r"(?<![0-9a-z_])"
+    r"(?:sym(?:\.imp)?|fcn|loc|obj|str|reloc|section|segment)"
+    r"\.[^\s,\[\]+*():]+",
+    flags=re.IGNORECASE,
+)
+_RIP_MEMORY_RE = re.compile(
+    r"\[[^\]]*\b(?:rip|eip)\b[^\]]*\]",
+    flags=re.IGNORECASE,
+)
+_HEX_RE = re.compile(r"^0x[0-9a-f]+$")
+_DECIMAL_RE = re.compile(r"^[0-9]+$")
+_IDENTIFIER_RE = re.compile(r"^[a-z_$?][0-9a-z_$?]*$")
+_PUNCTUATION_RE = re.compile(r"([\[\]+\-*:\]])")
+_OPERAND_KEYWORDS = {
+    "byte",
+    "dword",
+    "far",
+    "fs",
+    "gs",
+    "near",
+    "oword",
+    "qword",
+    "tword",
+    "word",
+    "xmmword",
+    "ymmword",
+    "zmmword",
+}
+
+
+def _legacy_normalize_instruction_text(instruction: str) -> str:
     asm_text = re.sub(r",", " ", instruction)
     return re.sub(r"  +", " ", asm_text).strip()
+
+
+def _is_control_flow(mnemonic: str, instruction_type: str) -> bool:
+    return (
+        instruction_type.lower() in _CONTROL_FLOW_TYPES
+        or mnemonic in _CONTROL_FLOW_MNEMONICS
+        or (mnemonic.startswith("j") and len(mnemonic) > 1)
+    )
+
+
+def _is_indirect_control_operand(operand: str) -> bool:
+    stripped = operand.strip().lower()
+    if "[" in stripped or "(" in stripped:
+        return True
+
+    first = stripped.split(maxsplit=1)[0] if stripped else ""
+    first = first.lstrip("%")
+    return bool(_REGISTER_RE.fullmatch(first))
+
+
+def _reference_values(*values: object) -> set[int]:
+    return {
+        value
+        for value in values
+        if isinstance(value, int) and not isinstance(value, bool) and value >= 0
+    }
+
+
+def _normalize_operand_token(token: str, references: set[int]) -> str | None:
+    if token == "ptr":
+        # radare2 normally omits Intel's redundant "ptr" qualifier and the
+        # PalmTree vocabulary does not contain it.
+        return None
+    if token in {"[", "]", "+", "-", "*", ":", "address"}:
+        return token
+
+    if _HEX_RE.fullmatch(token):
+        value = int(token, 16)
+        return "address" if value in references else hex(value)
+    if _DECIMAL_RE.fullmatch(token):
+        value = int(token, 10)
+        return "address" if value in references else hex(value)
+
+    register_or_keyword = token.lstrip("%")
+    if (
+        _REGISTER_RE.fullmatch(register_or_keyword)
+        or register_or_keyword in _OPERAND_KEYWORDS
+    ):
+        return register_or_keyword
+
+    # Remaining dotted/@ operands are textual relocation or symbol identities.
+    # They must not become embedding features in the stripped-ELF setting.
+    if "." in token or "@" in token or _IDENTIFIER_RE.fullmatch(token):
+        return "address"
+    return token
+
+
+def _normalize_instruction_v2(
+    instruction: str,
+    *,
+    instruction_type: str = "",
+    jump: int | None = None,
+    ptr: int | None = None,
+) -> str:
+    """Normalize Intel/radare2 text without using symbol identities."""
+    text = instruction.split(";", maxsplit=1)[0].strip().lower()
+    text = re.sub(r"\s+", " ", text)
+    if not text:
+        return ""
+
+    words = text.split(maxsplit=2)
+    mnemonic_tokens = [words[0]]
+    if words[0] in _INSTRUCTION_PREFIXES and len(words) >= 2:
+        mnemonic_tokens.append(words[1])
+        operand = words[2] if len(words) == 3 else ""
+    else:
+        operand = text.split(maxsplit=1)[1] if len(words) >= 2 else ""
+
+    mnemonic_tokens[-1] = _MNEMONIC_ALIASES.get(
+        mnemonic_tokens[-1],
+        mnemonic_tokens[-1],
+    )
+    mnemonic = mnemonic_tokens[-1]
+    if (
+        operand
+        and _is_control_flow(mnemonic, instruction_type)
+        and not _is_indirect_control_operand(operand)
+    ):
+        operand = "address"
+    else:
+        # RIP/EIP-relative expressions encode a location, but their concrete
+        # displacement and any recovered label are build-specific.
+        operand = _RIP_MEMORY_RE.sub("[ address ]", operand)
+        operand = _SYMBOL_REFERENCE_RE.sub("address", operand)
+        # Default x86 segments add no useful distinction and are absent from
+        # the pretrained vocabulary. FS/GS are deliberately retained.
+        operand = re.sub(r"\b(?:cs|ds|es|ss)\s*:", "", operand)
+
+    operand = operand.replace(",", " ")
+    operand = _PUNCTUATION_RE.sub(r" \1 ", operand)
+    references = _reference_values(jump, ptr)
+    normalized_operands = []
+    for token in operand.split():
+        normalized = _normalize_operand_token(token, references)
+        if normalized is not None:
+            normalized_operands.append(normalized)
+
+    return " ".join((*mnemonic_tokens, *normalized_operands))
+
+
+def normalize_instruction_text(
+    instruction: str,
+    mode: str = ASM_NORMALIZATION_V2,
+    *,
+    instruction_type: str = "",
+    jump: int | None = None,
+    ptr: int | None = None,
+) -> str:
+    """Normalize one instruction using the requested versioned strategy."""
+    if mode == ASM_NORMALIZATION_LEGACY:
+        return _legacy_normalize_instruction_text(instruction)
+    if mode == ASM_NORMALIZATION_V2:
+        return _normalize_instruction_v2(
+            instruction,
+            instruction_type=instruction_type,
+            jump=jump,
+            ptr=ptr,
+        )
+    raise ValueError(
+        f"Unknown assembly normalization '{mode}'; "
+        f"expected one of {', '.join(ASM_NORMALIZATION_MODES)}"
+    )
+
+
+def normalize_instruction_record(
+    instruction: dict,
+    mode: str = ASM_NORMALIZATION_V2,
+) -> str:
+    """Normalize a radare2 pDj record without consulting symbol tables."""
+    return normalize_instruction_text(
+        str(instruction.get("disasm") or instruction.get("opcode") or ""),
+        mode=mode,
+        instruction_type=str(instruction.get("type", "")),
+        jump=instruction.get("jump"),
+        ptr=instruction.get("ptr"),
+    )
 
 
 class Block:
@@ -310,8 +543,14 @@ def parse_r2_file(
     file_path: str,
     asm_model=None,
     unit_type: str = CodeUnit.TYPE_ELF,
+    asm_normalization: str = ASM_NORMALIZATION_V2,
 ) -> "CodeUnit":
     """Parse a binary or object file using r2pipe and return a CodeUnit object."""
+    if asm_normalization not in ASM_NORMALIZATION_MODES:
+        raise ValueError(
+            f"Unknown assembly normalization '{asm_normalization}'; "
+            f"expected one of {', '.join(ASM_NORMALIZATION_MODES)}"
+        )
     r2 = r2pipe.open(file_path, flags=["-2"])
     
     try:
@@ -370,7 +609,12 @@ def parse_r2_file(
                     if not asm or instruction_json.get("type", "") == "invalid":
                         continue
 
-                    asm = normalize_instruction_text(asm)
+                    asm = normalize_instruction_record(
+                        instruction_json,
+                        mode=asm_normalization,
+                    )
+                    if not asm:
+                        continue
                     instructions.append(asm)
 
                     hex_bytes = instruction_json.get("bytes", "")
@@ -412,7 +656,12 @@ def parse_r2_file(
                     if not asm or instruction_json.get("type", "") == "invalid":
                         continue
 
-                    asm = normalize_instruction_text(asm)
+                    asm = normalize_instruction_record(
+                        instruction_json,
+                        mode=asm_normalization,
+                    )
+                    if not asm:
+                        continue
                     instructions.append(asm)
 
                     hex_bytes = instruction_json.get("bytes", "")

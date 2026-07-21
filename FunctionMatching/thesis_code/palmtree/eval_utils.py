@@ -1,13 +1,16 @@
-from torch.autograd import Variable
 import torch
 import re
-import numpy
 
-from torch import nn
-import torch.nn.functional as F
-
-from palmtree.config import *
 import palmtree.vocab as vocab
+
+
+PALMTREE_POOLING_MEAN = "mean"
+PALMTREE_POOLING_MASKED_MEAN = "masked_mean"
+PALMTREE_POOLING_MODES = (
+    PALMTREE_POOLING_MEAN,
+    PALMTREE_POOLING_MASKED_MEAN,
+)
+PALMTREE_SEQUENCE_LENGTH = 20
 
 
 # this function is how I parse and pre-pocess instructions for palmtree. It is very simple and based on regular expressions. 
@@ -54,52 +57,110 @@ def parse_instruction(ins, symbol_map, string_map):
 
 
 class UsableTransformer:
-    def __init__(self, model_path, vocab_path):
+    def __init__(
+        self,
+        model_path,
+        vocab_path,
+        device="auto",
+        pooling=PALMTREE_POOLING_MASKED_MEAN,
+    ):
         print("Loading Vocab", vocab_path)
         self.vocab = vocab.WordVocab.load_vocab(vocab_path)
         print("Vocab Size: ", len(self.vocab))
-        self.model = torch.load(model_path, weights_only=False)
+        self.device = self._resolve_device(device)
+        if pooling not in PALMTREE_POOLING_MODES:
+            raise ValueError(
+                f"Unknown PalmTree pooling '{pooling}'; "
+                f"expected one of {PALMTREE_POOLING_MODES}"
+            )
+        self.pooling = pooling
+        self.model = torch.load(
+            model_path,
+            map_location=self.device,
+            weights_only=False,
+        )
+        self.model.to(self.device)
         self.model.eval()
-        if USE_CUDA:
-            self.model.cuda(CUDA_DEVICE)
+
+    @staticmethod
+    def _resolve_device(device):
+        requested = str(device or "auto").strip().lower()
+        if requested == "auto":
+            return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        resolved = torch.device(requested)
+        if resolved.type == "cuda":
+            if not torch.cuda.is_available():
+                raise RuntimeError(
+                    f"PyTorch device '{requested}' requested, but CUDA is unavailable"
+                )
+            if resolved.index is not None and resolved.index >= torch.cuda.device_count():
+                raise ValueError(
+                    f"PyTorch device '{requested}' does not exist; "
+                    f"found {torch.cuda.device_count()} CUDA device(s)"
+                )
+        return resolved
+
+    def _instruction_tensors(self, text):
+        """Build PalmTree inputs while preserving the selected adapter semantics."""
+        segment_labels = []
+        sequences = []
+        for instruction in text:
+            token_ids = self.vocab.to_seq(instruction)
+            if self.pooling == PALMTREE_POOLING_MEAN:
+                # Reproduce the original adapter exactly for old experiments.
+                sequence = [self.vocab.sos_index] + token_ids + [self.vocab.eos_index]
+                valid_length = len(instruction.split(" ")) + 2
+                sequence = sequence[:PALMTREE_SEQUENCE_LENGTH]
+                segment_label = [1] * min(
+                    valid_length,
+                    PALMTREE_SEQUENCE_LENGTH,
+                )
+            else:
+                # Reserve one position for both boundary tokens.  Truncating the
+                # content first prevents long instructions from losing <eos>.
+                content_length = PALMTREE_SEQUENCE_LENGTH - 2
+                sequence = (
+                    [self.vocab.sos_index]
+                    + token_ids[:content_length]
+                    + [self.vocab.eos_index]
+                )
+                segment_label = [1] * len(sequence)
+
+            sequence_padding = PALMTREE_SEQUENCE_LENGTH - len(sequence)
+            segment_padding = PALMTREE_SEQUENCE_LENGTH - len(segment_label)
+            sequences.append(
+                sequence + [self.vocab.pad_index] * sequence_padding
+            )
+            segment_labels.append(segment_label + [0] * segment_padding)
+
+        segment_label = torch.tensor(
+            segment_labels,
+            dtype=torch.long,
+            device=self.device,
+        )
+        sequence = torch.tensor(
+            sequences,
+            dtype=torch.long,
+            device=self.device,
+        )
+        return sequence, segment_label
+
+    def _pool_encoded(self, encoded, sequence):
+        if self.pooling == PALMTREE_POOLING_MEAN:
+            return torch.mean(encoded, dim=1)
+
+        valid = sequence.ne(self.vocab.pad_index).unsqueeze(-1)
+        weights = valid.to(dtype=encoded.dtype)
+        denominator = weights.sum(dim=1).clamp_min(1.0)
+        return (encoded * weights).sum(dim=1) / denominator
 
 
     def encode(self, text, output_option='lst'):
+        sequence, segment_label = self._instruction_tensors(text)
 
-        segment_label = []
-        sequence = []
-        for t in text:
-            l = (len(t.split(' '))+2) * [1]
-            s = self.vocab.to_seq(t)
-            # print(t, s)
-            s = [3] + s + [2]
-            if len(l) > 20:
-                segment_label.append(l[:20])
-            else:
-                segment_label.append(l + [0]*(20-len(l)))
-            if len(s) > 20:
-                 sequence.append(s[:20])
-            else:
-                sequence.append(s + [0]*(20-len(s)))
-         
-        segment_label = torch.LongTensor(segment_label)
-        sequence = torch.LongTensor(sequence)
+        with torch.inference_mode():
+            encoded = self.model.forward(sequence, segment_label)
+            result = self._pool_encoded(encoded, sequence)
 
-        if USE_CUDA:
-            sequence = sequence.cuda(CUDA_DEVICE)
-            segment_label = segment_label.cuda(CUDA_DEVICE)
-
-        encoded = self.model.forward(sequence, segment_label)
-        result = torch.mean(encoded.detach(), dim=1)
-
-        del encoded
-        if USE_CUDA:
-            if numpy:
-                return result.data.cpu().numpy()
-            else:
-                return result.to('cpu')
-        else:
-            if numpy:
-                return result.data.numpy()
-            else:
-                return result
+        return result.detach().cpu().numpy()

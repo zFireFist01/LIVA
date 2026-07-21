@@ -1,5 +1,8 @@
 import typing
+import math
+import statistics
 from collections import Counter
+from collections.abc import Iterable
 
 
 import numpy as np
@@ -13,6 +16,69 @@ DEFAULT_RODATA_NGRAM_SIZE = 16
 MIN_RODATA_BYTES_FOR_BYTE_SCORE = 64
 MIN_RODATA_NGRAMS_FOR_BYTE_SCORE = 4
 
+LIBRARY_SCORE_AGGREGATORS = (
+    "mean",
+    "max",
+    "top3_mean",
+    "top3_noisy_or",
+)
+
+
+def aggregate_library_score(
+    scores: Iterable[float],
+    mode: str,
+    *,
+    score_floor: float = 0.0,
+) -> float:
+    """Reduce accepted CU scores to one score for a library decision.
+
+    ``score_floor`` is used only by ``top3_noisy_or`` to map the accepted
+    score interval ``[score_floor, 1]`` to probability-like evidence. The
+    other modes operate directly on the CU block scores.
+    """
+    ranked = sorted((float(score) for score in scores), reverse=True)
+    if not ranked:
+        return 0.0
+    if mode == "mean":
+        return statistics.fmean(ranked)
+    if mode == "max":
+        return ranked[0]
+
+    top = ranked[:3]
+    if mode == "top3_mean":
+        return statistics.fmean(top)
+    if mode == "top3_noisy_or":
+        scale = max(1e-12, 1.0 - float(score_floor))
+        probabilities = [
+            min(1.0, max(0.0, (score - float(score_floor)) / scale))
+            for score in top
+        ]
+        return 1.0 - math.prod(1.0 - probability for probability in probabilities)
+    raise ValueError(
+        f"Unknown library score aggregator {mode!r}; expected one of "
+        + ", ".join(LIBRARY_SCORE_AGGREGATORS)
+    )
+
+
+class BlockWindowResult(typing.NamedTuple):
+    """Threshold-independent metrics for one fully evaluated source window."""
+
+    window_start: int
+    window_stop: int
+    block_start: int
+    block_stop: int
+    num_source_blocks: int
+    coverage_mean: float
+    coverage_min: float
+    coverage_ratio: float
+    assignment_quality: float
+    assignment_ratio: float
+    call_edge_ratio: float
+    call_edges_evaluated: int
+    call_edges_total: int
+    function_concentration: float
+    function_spread: float
+
 
 class BlockMatchResult(typing.NamedTuple):
     """Result of a block-level refinement for one CU match."""
@@ -21,18 +87,21 @@ class BlockMatchResult(typing.NamedTuple):
     coverage_mean: float
     coverage_min: float
     coverage_ratio: float
-    assignment_mean: float
-    assignment_min: float
+    assignment_quality: float
+    assignment_ratio: float
     num_source_blocks: int
     num_target_blocks: int
     passed: bool
     locality_span: int = 0
-    edge_locality_ratio: float = 1.0
+    call_edge_ratio: float = 1.0
+    call_edges_evaluated: int = 0
+    call_edges_total: int = 0
     function_concentration: float = 1.0
     function_spread: float = 1.0
     windows_total: int = 0
     windows_evaluated: int = 0
     windows_skipped: int = 0
+    windows: tuple[BlockWindowResult, ...] = ()
 
 
 class RodataIndex(typing.NamedTuple):
@@ -59,6 +128,8 @@ class RodataMatchResult(typing.NamedTuple):
     matched_ngrams: int
     target_ngrams: int
     has_rodata: bool
+    string_informative: bool = False
+    byte_informative: bool = False
 
 
 RodataEvidenceStatus = typing.Literal[
@@ -135,6 +206,8 @@ def evaluate_rodata_match(
             matched_ngrams=0,
             target_ngrams=0,
             has_rodata=False,
+            string_informative=False,
+            byte_informative=False,
         )
 
     target_strings = Counter(target_unit.rodata_strings)
@@ -154,24 +227,25 @@ def evaluate_rodata_match(
         string_matched += matched_count * weight
         matched_strings += matched_count
 
-    string_score = string_matched / string_total if string_total else 0.0
+    string_informative = bool(string_total)
+    string_score = string_matched / string_total if string_informative else 0.0
 
-    byte_score_is_informative = (
+    byte_informative = (
         target_byte_size >= MIN_RODATA_BYTES_FOR_BYTE_SCORE
         and len(target_ngrams) >= MIN_RODATA_NGRAMS_FOR_BYTE_SCORE
     )
-    if byte_score_is_informative:
+    if byte_informative:
         matched_ngrams = len(target_ngrams & source_index.ngrams)
         byte_score = matched_ngrams / len(target_ngrams)
     else:
         matched_ngrams = 0
         byte_score = 0.0
 
-    if string_total and byte_score_is_informative:
+    if string_informative and byte_informative:
         score = (0.70 * string_score) + (0.30 * byte_score)
-    elif string_total:
+    elif string_informative:
         score = string_score
-    elif byte_score_is_informative:
+    elif byte_informative:
         score = 0.50 * byte_score
     else:
         score = 0.0
@@ -187,6 +261,8 @@ def evaluate_rodata_match(
         matched_ngrams=matched_ngrams,
         target_ngrams=len(target_ngrams),
         has_rodata=has_rodata,
+        string_informative=string_informative,
+        byte_informative=byte_informative,
     )
 
 
@@ -195,13 +271,17 @@ def classify_rodata_evidence(
     min_bytes: int = 128,
     min_strings: int = 2,
     min_ngrams: int = 32,
-    penalty_threshold: float = 0.10,
+    penalty_threshold: float = 0.0,
     confirm_threshold: float = 0.70,
 ) -> RodataEvidence:
     """Classify .rodata as confirm/penalty/neutral for a block-level CU match."""
     if rodata_result is None or not rodata_result.has_rodata:
         return RodataEvidence(status="neutral", informative=False)
 
+    # Keep the original threshold semantics: any one of the three evidence
+    # quantities is sufficient to make .rodata informative.  In particular,
+    # min_strings=0 deliberately makes every non-empty .rodata section
+    # informative, even when no string was extracted.
     informative = (
         rodata_result.target_bytes >= min_bytes
         or rodata_result.target_strings >= min_strings
@@ -218,6 +298,40 @@ def classify_rodata_evidence(
         status = "neutral"
 
     return RodataEvidence(status=status, informative=True)
+
+
+def apply_rodata_bonus(
+    block_score: float,
+    rodata_result: RodataMatchResult | None,
+    rodata_evidence: RodataEvidence,
+    bonus_weight: float = 0.30,
+    confirm_threshold: float = 0.70,
+) -> float:
+    """Apply a bounded positive adjustment to a .rodata-confirmed CU score.
+
+    Neutral, unavailable and disabled evidence leaves the block score intact.
+    Penalties are handled by the caller because they reject the CU.  The
+    interpolation keeps the adjusted score in ``[block_score, 1]`` and makes
+    the bonus grow continuously from zero at ``confirm_threshold``.
+    """
+    score = min(1.0, max(0.0, float(block_score)))
+    if (
+        rodata_evidence.status != "confirm"
+        or rodata_result is None
+        or bonus_weight <= 0.0
+    ):
+        return score
+
+    threshold = min(1.0, max(0.0, float(confirm_threshold)))
+    if threshold >= 1.0:
+        confidence = 1.0
+    else:
+        confidence = (
+            float(rodata_result.score) - threshold
+        ) / (1.0 - threshold)
+    confidence = min(1.0, max(0.0, confidence))
+    adjusted = score + float(bonus_weight) * confidence * (1.0 - score)
+    return min(1.0, max(score, adjusted))
 
 
 def indexed_block_records(
@@ -256,10 +370,35 @@ def compute_blocks_similarity_matrix(
     return cosine_similarity(target_embeddings, source_embeddings)
 
 
-def assignment_values(sim_matrix: np.ndarray) -> np.ndarray:
-    """Return maximum-similarity linear-assignment values."""
-    row_indices, column_indices = linear_sum_assignment(sim_matrix, maximize=True)
-    return sim_matrix[row_indices, column_indices]
+def assignment_scores(
+    sim_matrix: np.ndarray,
+    match_threshold: float,
+) -> tuple[float, float]:
+    """Return quality and target coverage of a one-to-one block assignment.
+
+    The assignment is lexicographic: it first maximizes the number of distinct
+    pairs reaching ``match_threshold``, then their total cosine similarity.
+    This prevents a single excellent pair from replacing two merely good pairs.
+
+    ``linear_sum_assignment`` emits only ``min(targets, sources)`` pairs for a
+    rectangular matrix.  Quality is computed on those pairs, while ratio uses
+    every target block as its denominator.  Unassigned targets and pairs below
+    threshold both reduce the ratio; extra source blocks do not.
+    """
+    pair_count = min(sim_matrix.shape)
+    bounded_similarities = np.clip(sim_matrix, -1.0, 1.0)
+    good_pair_bonus = (2.0 * pair_count) + 1.0
+    assignment_objective = bounded_similarities + (
+        (bounded_similarities >= match_threshold) * good_pair_bonus
+    )
+    row_indices, column_indices = linear_sum_assignment(
+        assignment_objective,
+        maximize=True,
+    )
+    values = sim_matrix[row_indices, column_indices]
+    quality = float(np.mean(values))
+    ratio = float(np.count_nonzero(values >= match_threshold) / sim_matrix.shape[0])
+    return quality, ratio
 
 
 def function_max_similarity_matrix(
@@ -284,47 +423,57 @@ def function_max_similarity_matrix(
     return function_matrix
 
 
-def internal_call_edge_locality_ratio(
+def internal_call_edge_ratio(
+    source_functions: list[asm.Function],
     target_functions: list[asm.Function],
     source_function_by_target: dict[int, int],
-    locality_multiplier: float,
-    locality_padding: int,
     empty_score: float = 1.0,
-) -> float:
-    """Return how many internal target call edges stay local after matching."""
+) -> tuple[float, int, int]:
+    """Measure preservation of numeric direct-call edges after function mapping.
+
+    Function identities are represented only by recovered entry addresses.  No
+    symbol or function name participates in this score, so it remains usable on
+    stripped ELF files.  A target edge is evaluable only when both endpoint
+    functions have a block-derived source mapping.  With no evaluable edges the
+    result is neutral rather than an artificial failure.
+    """
     target_index_by_address = {
         function.address: index
         for index, function in enumerate(target_functions)
     }
-    edge_results = []
+    matched_edges = 0
+    evaluated_edges = 0
+    total_edges = 0
 
     for caller_index, caller in enumerate(target_functions):
         source_caller_index = source_function_by_target.get(caller_index)
-        if source_caller_index is None:
-            continue
 
         for callee_address in caller.resolved_call_targets:
             callee_index = target_index_by_address.get(callee_address)
             if callee_index is None:
                 continue
 
+            total_edges += 1
+
             source_callee_index = source_function_by_target.get(callee_index)
-            if source_callee_index is None:
+            if (
+                source_caller_index is None
+                or source_callee_index is None
+                or not 0 <= source_caller_index < len(source_functions)
+                or not 0 <= source_callee_index < len(source_functions)
+            ):
                 continue
 
-            target_distance = abs(caller_index - callee_index)
-            max_source_distance = max(
-                1,
-                int(np.ceil((target_distance + 1) * locality_multiplier)) + locality_padding,
-            )
-            edge_results.append(
-                abs(source_caller_index - source_callee_index) <= max_source_distance
-            )
+            evaluated_edges += 1
+            source_caller = source_functions[source_caller_index]
+            source_callee = source_functions[source_callee_index]
+            if source_callee.address in source_caller.resolved_call_targets:
+                matched_edges += 1
 
-    if not edge_results:
-        return empty_score
+    if not evaluated_edges:
+        return empty_score, 0, total_edges
 
-    return float(np.mean(edge_results))
+    return matched_edges / evaluated_edges, evaluated_edges, total_edges
 
 
 def function_concentration_scores(
@@ -377,16 +526,71 @@ def function_concentration_scores(
     return float(concentration), float(spread), source_function_by_target
 
 
+def block_window_gate_values(window: BlockWindowResult) -> tuple[float, ...]:
+    """Return the seven maximized metrics used by the block-presence decision."""
+    return (
+        window.coverage_mean,
+        window.coverage_ratio,
+        window.assignment_quality,
+        window.assignment_ratio,
+        window.call_edge_ratio,
+        window.function_concentration,
+        window.function_spread,
+    )
+
+
+def pareto_block_windows(
+    windows: typing.Iterable[BlockWindowResult],
+) -> tuple[BlockWindowResult, ...]:
+    """Return a compact frontier sufficient for threshold-conjunction replay.
+
+    All seven decision metrics are maximized. Equal metric vectors are represented
+    by their first window because later duplicates cannot change a replayed
+    decision. Windows with non-finite metrics are omitted: they cannot be
+    compared safely and must never be interpreted as measured zeroes.
+    """
+    frontier: list[BlockWindowResult] = []
+
+    for candidate in windows:
+        candidate_values = block_window_gate_values(candidate)
+        if not all(np.isfinite(value) for value in candidate_values):
+            continue
+
+        existing_values = [block_window_gate_values(window) for window in frontier]
+        if any(
+            values == candidate_values
+            or (
+                all(left >= right for left, right in zip(values, candidate_values))
+                and any(left > right for left, right in zip(values, candidate_values))
+            )
+            for values in existing_values
+        ):
+            continue
+
+        frontier = [
+            window
+            for window, values in zip(frontier, existing_values)
+            if not (
+                all(left >= right for left, right in zip(candidate_values, values))
+                and any(left > right for left, right in zip(candidate_values, values))
+            )
+        ]
+        frontier.append(candidate)
+
+    return tuple(frontier)
+
+
 def evaluate_block_presence(
     source_unit: asm.CodeUnit,
     target_unit: asm.CodeUnit,
     block_threshold: float,
-    block_assignment_threshold: float,
+    min_assignment_quality: float,
+    min_assignment_ratio: float,
     min_coverage_ratio: float,
     min_coverage_mean: float,
     locality_window_multiplier: float = 3.0,
     locality_window_padding: int = 2,
-    min_edge_locality_ratio: float = 0.5,
+    min_call_edge_ratio: float = 0.5,
     min_block_instructions: int = DEFAULT_MIN_BLOCK_INSTRUCTIONS,
     min_function_concentration: float = 0.45,
     min_function_spread: float = 0.50,
@@ -397,8 +601,8 @@ def evaluate_block_presence(
     Coverage is measured from target-library blocks to source-ELF blocks inside
     a compact source-function window, so a small library CU can match inside a
     much larger executable without allowing arbitrary far-away block matches.
-    A cheap function-level prefilter keeps the expensive assignment/locality
-    checks for windows that can still satisfy the coverage gates.
+    A cheap function-level prefilter keeps the expensive assignment and
+    call-graph checks for windows that can still satisfy the coverage gates.
     """
     target_block_records, _ = indexed_block_records(
         target_unit.functions,
@@ -415,8 +619,8 @@ def evaluate_block_presence(
             coverage_mean=0.0,
             coverage_min=0.0,
             coverage_ratio=0.0,
-            assignment_mean=0.0,
-            assignment_min=0.0,
+            assignment_quality=0.0,
+            assignment_ratio=0.0,
             num_source_blocks=len(source_block_records),
             num_target_blocks=len(target_block_records),
             passed=False,
@@ -447,20 +651,21 @@ def evaluate_block_presence(
         coverage_mean=0.0,
         coverage_min=0.0,
         coverage_ratio=0.0,
-        assignment_mean=0.0,
-        assignment_min=0.0,
+        assignment_quality=0.0,
+        assignment_ratio=0.0,
         num_source_blocks=len(source_block_records),
         num_target_blocks=len(target_block_records),
         passed=False,
         locality_span=window_size,
-        edge_locality_ratio=1.0,
+        call_edge_ratio=1.0,
         function_concentration=0.0,
         function_spread=0.0,
         windows_total=window_total,
     )
-    best_sort_key = (False, -1.0, -1.0, -1.0, -1.0, -1.0)
+    best_sort_key = (False, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0)
     windows_evaluated = 0
     windows_skipped = 0
+    evaluated_windows: list[BlockWindowResult] = []
 
     for window_start in range(window_total):
         window_stop = window_start + window_size
@@ -492,13 +697,13 @@ def evaluate_block_presence(
                 coverage_mean=coverage_mean,
                 coverage_min=coverage_min,
                 coverage_ratio=coverage_ratio,
-                assignment_mean=0.0,
-                assignment_min=0.0,
+                assignment_quality=0.0,
+                assignment_ratio=0.0,
                 num_source_blocks=block_stop - block_start,
                 num_target_blocks=len(target_block_records),
                 passed=False,
                 locality_span=window_size,
-                edge_locality_ratio=0.0,
+                call_edge_ratio=0.0,
                 function_concentration=0.0,
                 function_spread=0.0,
                 windows_total=window_total,
@@ -506,8 +711,10 @@ def evaluate_block_presence(
             sort_key = (
                 False,
                 coverage_mean,
-                0.0,
                 coverage_ratio,
+                0.0,
+                0.0,
+                0.0,
                 0.0,
                 0.0,
             )
@@ -518,9 +725,10 @@ def evaluate_block_presence(
 
         windows_evaluated += 1
         sim_matrix = full_sim_matrix[:, block_start:block_stop]
-        assigned_values = assignment_values(sim_matrix)
-        assignment_mean = float(np.mean(assigned_values))
-        assignment_min = float(np.min(assigned_values))
+        assignment_quality, assignment_ratio = assignment_scores(
+            sim_matrix,
+            block_threshold,
+        )
 
         best_source_columns = np.argmax(sim_matrix, axis=1) + block_start
         function_concentration, function_spread, source_function_by_target = (
@@ -530,17 +738,37 @@ def evaluate_block_presence(
                 best_source_columns,
             )
         )
-        edge_locality_ratio = internal_call_edge_locality_ratio(
-            target_unit.functions,
-            source_function_by_target,
-            locality_window_multiplier,
-            locality_window_padding,
+        call_edge_ratio, call_edges_evaluated, call_edges_total = (
+            internal_call_edge_ratio(
+                source_unit.functions,
+                target_unit.functions,
+                source_function_by_target,
+            )
         )
+        window_result = BlockWindowResult(
+            window_start=window_start,
+            window_stop=window_stop,
+            block_start=block_start,
+            block_stop=block_stop,
+            num_source_blocks=block_stop - block_start,
+            coverage_mean=coverage_mean,
+            coverage_min=coverage_min,
+            coverage_ratio=coverage_ratio,
+            assignment_quality=assignment_quality,
+            assignment_ratio=assignment_ratio,
+            call_edge_ratio=call_edge_ratio,
+            call_edges_evaluated=call_edges_evaluated,
+            call_edges_total=call_edges_total,
+            function_concentration=function_concentration,
+            function_spread=function_spread,
+        )
+        evaluated_windows.append(window_result)
         passed = (
             coverage_mean >= min_coverage_mean
             and coverage_ratio >= min_coverage_ratio
-            and assignment_mean >= block_assignment_threshold
-            and edge_locality_ratio >= min_edge_locality_ratio
+            and assignment_quality >= min_assignment_quality
+            and assignment_ratio >= min_assignment_ratio
+            and call_edge_ratio >= min_call_edge_ratio
             and function_concentration >= min_function_concentration
             and function_spread >= min_function_spread
         )
@@ -549,13 +777,15 @@ def evaluate_block_presence(
             coverage_mean=coverage_mean,
             coverage_min=coverage_min,
             coverage_ratio=coverage_ratio,
-            assignment_mean=assignment_mean,
-            assignment_min=assignment_min,
+            assignment_quality=assignment_quality,
+            assignment_ratio=assignment_ratio,
             num_source_blocks=block_stop - block_start,
             num_target_blocks=len(target_block_records),
             passed=passed,
             locality_span=window_size,
-            edge_locality_ratio=edge_locality_ratio,
+            call_edge_ratio=call_edge_ratio,
+            call_edges_evaluated=call_edges_evaluated,
+            call_edges_total=call_edges_total,
             function_concentration=function_concentration,
             function_spread=function_spread,
         )
@@ -563,8 +793,10 @@ def evaluate_block_presence(
         sort_key = (
             passed,
             coverage_mean,
-            assignment_mean,
             coverage_ratio,
+            assignment_quality,
+            assignment_ratio,
+            call_edge_ratio,
             function_concentration,
             function_spread,
         )
@@ -576,4 +808,5 @@ def evaluate_block_presence(
         windows_total=window_total,
         windows_evaluated=windows_evaluated,
         windows_skipped=windows_skipped,
+        windows=pareto_block_windows(evaluated_windows),
     )
