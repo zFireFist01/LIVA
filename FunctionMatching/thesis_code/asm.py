@@ -5,6 +5,7 @@ import re
 import r2pipe
 import numpy as np
 import networkx as nx
+import typing
 
 
 ASM_NORMALIZATION_LEGACY = "legacy"
@@ -279,6 +280,8 @@ class Function:
         blocks: list[Block] = None,
         cfg: nx.DiGraph = None,
         call_targets: set[int] = None,
+        external_call_symbols: set[str] = None,
+        is_global_symbol: bool = True,
     ):
         self.name = name                            # Function name (from symbol table)
         self.address = address                      # Entry-point address
@@ -289,6 +292,11 @@ class Function:
         # CFG: nodes are block addresses, edges are control-flow transitions.
         self.cfg: nx.DiGraph = cfg if cfg is not None else nx.DiGraph()
         self.call_targets: set[int] = call_targets or set()
+        # Symbol identities are retained only while resolving the topology
+        # inside a reference static archive. They are never embedded or
+        # compared with names from the source ELF.
+        self.external_call_symbols: set[str] = external_call_symbols or set()
+        self.is_global_symbol = bool(is_global_symbol)
         self.resolved_call_targets: set[int] = set()
 
     # ------------------------------------------------------------------
@@ -432,6 +440,71 @@ class CodeUnit:
             function.compute_embeddings(asm_model=asm_model)
 
 
+class InterCUCallEdge(typing.NamedTuple):
+    """One direct reference call between two members of the same archive."""
+
+    caller_cu_index: int
+    caller_function_index: int
+    callee_cu_index: int
+    callee_function_index: int
+
+
+def canonical_function_symbol(name: str) -> str:
+    """Normalize radare2 symbol decoration for archive-local resolution only."""
+    normalized = str(name or "")
+    for prefix in ("sym.imp.", "sym.", "reloc."):
+        if normalized.startswith(prefix):
+            normalized = normalized[len(prefix):]
+            break
+    return normalized.split("@", maxsplit=1)[0]
+
+
+def resolve_archive_inter_cu_calls(
+    compilation_units: list[CodeUnit],
+) -> tuple[InterCUCallEdge, ...]:
+    """Resolve reference-archive calls without exposing names to matching.
+
+    Undefined call relocations in one object member are connected to a unique
+    function definition in another member. Symbol names are discarded once
+    the integer CU/function edge has been formed. Ambiguous definitions and
+    intra-CU calls are deliberately ignored.
+    """
+    definitions: dict[str, list[tuple[int, int]]] = {}
+    for cu_index, unit in enumerate(compilation_units):
+        for function_index, function in enumerate(unit.functions):
+            if not function.is_global_symbol:
+                continue
+            symbol = canonical_function_symbol(function.name)
+            if symbol:
+                definitions.setdefault(symbol, []).append(
+                    (cu_index, function_index)
+                )
+
+    edges: set[InterCUCallEdge] = set()
+    for caller_cu_index, unit in enumerate(compilation_units):
+        for caller_function_index, function in enumerate(unit.functions):
+            for symbol_name in function.external_call_symbols:
+                candidates = definitions.get(
+                    canonical_function_symbol(symbol_name),
+                    [],
+                )
+                if len(candidates) != 1:
+                    continue
+                callee_cu_index, callee_function_index = candidates[0]
+                if callee_cu_index == caller_cu_index:
+                    continue
+                edges.add(
+                    InterCUCallEdge(
+                        caller_cu_index=caller_cu_index,
+                        caller_function_index=caller_function_index,
+                        callee_cu_index=callee_cu_index,
+                        callee_function_index=callee_function_index,
+                    )
+                )
+
+    return tuple(sorted(edges))
+
+
 def extract_relocation_targets(relocations: list[dict]) -> dict[int, int]:
     """Map relocation field addresses to numeric symbol values, when available."""
     relocation_targets = {}
@@ -445,6 +518,44 @@ def extract_relocation_targets(relocations: list[dict]) -> dict[int, int]:
         ):
             relocation_targets[relocation_address] = symbol_address
     return relocation_targets
+
+
+def extract_relocation_symbols(relocations: list[dict]) -> dict[int, str]:
+    """Map relocation-field addresses to their reference symbol identity."""
+    relocation_symbols = {}
+    for relocation in relocations:
+        relocation_address = relocation.get("vaddr")
+        symbol_name = relocation.get("name")
+        if (
+            isinstance(relocation_address, int)
+            and isinstance(symbol_name, str)
+            and symbol_name
+            and not symbol_name.startswith(".")
+        ):
+            relocation_symbols[relocation_address] = symbol_name
+    return relocation_symbols
+
+
+def extract_call_symbol(
+    instruction: dict,
+    relocation_symbols: dict[int, str] = None,
+) -> str | None:
+    """Return the relocation symbol of a direct reference-object call."""
+    if not str(instruction.get("type", "")).startswith("call"):
+        return None
+
+    relocation_symbols = relocation_symbols or {}
+    instruction_address = instruction.get("offset")
+    if not isinstance(instruction_address, int):
+        instruction_address = instruction.get("addr")
+    if not isinstance(instruction_address, int):
+        return None
+
+    for relocation_address in (instruction_address, instruction_address + 1):
+        symbol_name = relocation_symbols.get(relocation_address)
+        if symbol_name:
+            return symbol_name
+    return None
 
 
 def extract_call_target(instruction: dict, relocation_targets: dict[int, int] = None) -> int | None:
@@ -519,10 +630,10 @@ def extract_rodata(r2) -> tuple[bytes, list[str], int]:
     return b"\x00".join(rodata_sections), rodata_strings, len(rodata_sections)
 
 
-def extract_function_symbols(r2) -> list[dict]:
+def extract_function_symbols(r2, symbols: list[dict] | None = None) -> list[dict]:
     """Return function-shaped records from radare2's symbol table."""
     functions = []
-    for symbol in r2.cmdj("isj") or []:
+    for symbol in symbols if symbols is not None else (r2.cmdj("isj") or []):
         if str(symbol.get("type", "")).upper() not in ("FUNC", "FUNCTION"):
             continue
 
@@ -556,7 +667,19 @@ def parse_r2_file(
     try:
         rodata_bytes, rodata_strings, rodata_section_count = extract_rodata(r2)
         r2.cmd("aa")
-        relocation_targets = extract_relocation_targets(r2.cmdj("irj") or [])
+        relocations = r2.cmdj("irj") or []
+        relocation_targets = extract_relocation_targets(relocations)
+        relocation_symbols = extract_relocation_symbols(relocations)
+        symbols = r2.cmdj("isj") or []
+        global_function_addresses = {
+            symbol.get("vaddr")
+            for symbol in symbols
+            if (
+                str(symbol.get("type", "")).upper() in ("FUNC", "FUNCTION")
+                and str(symbol.get("bind", "")).upper() in ("GLOBAL", "WEAK")
+                and isinstance(symbol.get("vaddr"), int)
+            )
+        }
 
         functions: list[Function] = []
         symbol_fallback_count = 0
@@ -570,7 +693,7 @@ def parse_r2_file(
         # Fallback: use radare2's symbol table when analysis finds no functions.
         if not raw_functions:
             symbol_fallback_count += 1
-            raw_functions = extract_function_symbols(r2)
+            raw_functions = extract_function_symbols(r2, symbols)
 
         #print(f"[DEBUG] parse_r2_file({os.path.basename(file_path)}): candidate funcs = {len(raw_functions)}")
 
@@ -603,6 +726,7 @@ def parse_r2_file(
                 instructions = []
                 raw_bytes_list = []
                 call_targets = set()
+                external_call_symbols = set()
 
                 for instruction_json in instructions_json:
                     asm = instruction_json.get("disasm", "")
@@ -623,6 +747,12 @@ def parse_r2_file(
                     call_target = extract_call_target(instruction_json, relocation_targets)
                     if call_target is not None:
                         call_targets.add(call_target)
+                    call_symbol = extract_call_symbol(
+                        instruction_json,
+                        relocation_symbols,
+                    )
+                    if call_symbol is not None:
+                        external_call_symbols.add(call_symbol)
 
                 if instructions:
                     raw_bytes = b"".join(raw_bytes_list) if raw_bytes_list else None
@@ -636,12 +766,17 @@ def parse_r2_file(
                         blocks=[block],
                         cfg=function_cfg,
                         call_targets=call_targets,
+                        external_call_symbols=external_call_symbols,
+                        is_global_symbol=(
+                            function_address in global_function_addresses
+                        ),
                     ))
                 continue
 
             blocks: list[Block] = []
             function_cfg = nx.DiGraph()
             call_targets = set()
+            external_call_symbols = set()
 
             for block_json in blocks_json:
                 block_address = block_json.get("addr", block_json.get("offset", 0))
@@ -670,6 +805,12 @@ def parse_r2_file(
                     call_target = extract_call_target(instruction_json, relocation_targets)
                     if call_target is not None:
                         call_targets.add(call_target)
+                    call_symbol = extract_call_symbol(
+                        instruction_json,
+                        relocation_symbols,
+                    )
+                    if call_symbol is not None:
+                        external_call_symbols.add(call_symbol)
 
                 if not instructions:
                     continue
@@ -701,6 +842,10 @@ def parse_r2_file(
                 blocks=blocks,
                 cfg=function_cfg,
                 call_targets=call_targets,
+                external_call_symbols=external_call_symbols,
+                is_global_symbol=(
+                    function_address in global_function_addresses
+                ),
             ))
 
     finally:

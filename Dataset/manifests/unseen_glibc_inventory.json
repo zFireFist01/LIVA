@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "description": "Seventy-five normal GNU/Linux utilities, all name-disjoint from the LibSeeker inventory, rebuilt with glibc and the same randomized static-library methodology as Dataset A.",
+  "selection_policy": "Production utilities and standalone example programs emitted by pinned projects already used by the reproducible glibc build pipeline; exact names are absent from libseeker_inventory.json.",
+  "totals": {
+    "projects": 8,
+    "programs": 75,
+    "gcc_programs": 75,
+    "clang_programs": 75
+  },
+  "projects": [
+    {
+      "id": "coreutils",
+      "source_project": "GNU coreutils",
+      "source_version": "9.6",
+      "source_url": "https://ftp.gnu.org/gnu/coreutils/coreutils-9.6.tar.gz",
+      "program_count": 2,
+      "compiler_support": ["gcc", "clang"],
+      "programs": ["getlimits", "stdbuf"]
+    },
+    {
+      "id": "gawk",
+      "source_project": "GNU Awk (gawk)",
+      "source_version": "5.3.2",
+      "source_url": "https://ftp.gnu.org/gnu/gawk/gawk-5.3.2.tar.gz",
+      "program_count": 2,
+      "compiler_support": ["gcc", "clang"],
+      "programs": ["grcat", "pwcat"]
+    },
+    {
+      "id": "gzip",
+      "source_project": "GNU gzip",
+      "source_version": "1.13",
+      "source_url": "https://mirror.clientvps.com/gnu/gzip/gzip-1.13.tar.xz",
+      "program_count": 1,
+      "compiler_support": ["gcc", "clang"],
+      "programs": ["gzip"]
+    },
+    {
+      "id": "inetutils",
+      "source_project": "GNU Inetutils",
+      "source_version": "2.6",
+      "source_url": "https://ftp.gnu.org/gnu/inetutils/inetutils-2.6.tar.xz",
+      "program_count": 13,
+      "compiler_support": ["gcc", "clang"],
+      "programs": [
+        "ftpd", "inetd", "rcp", "rexecd", "rlogin", "rlogind", "rsh",
+        "rshd", "syslogd", "talkd", "telnetd", "tftpd", "uucpd"
+      ]
+    },
+    {
+      "id": "openssh",
+      "source_project": "OpenSSH Portable",
+      "source_version": "V_10_0_P2",
+      "source_url": "https://github.com/openssh/openssh-portable/archive/refs/tags/V_10_0_P2.tar.gz",
+      "program_count": 7,
+      "compiler_support": ["gcc", "clang"],
+      "programs": [
+        "sftp-server", "ssh-keysign", "ssh-pkcs11-helper", "ssh-sk-helper",
+        "sshd", "sshd-auth", "sshd-session"
+      ]
+    },
+    {
+      "id": "tar",
+      "source_project": "GNU tar",
+      "source_version": "1.35",
+      "source_url": "https://ftp.halifax.rwth-aachen.de/gnu/tar/tar-1.35.tar.xz",
+      "program_count": 1,
+      "compiler_support": ["gcc", "clang"],
+      "programs": ["rmt"]
+    },
+    {
+      "id": "util-linux",
+      "source_project": "util-linux",
+      "source_version": "v2.39.3",
+      "source_url": "https://github.com/util-linux/util-linux/archive/refs/tags/v2.39.3.tar.gz",
+      "program_count": 36,
+      "compiler_support": ["gcc", "clang"],
+      "programs": [
+        "addpart", "agetty", "blkdiscard", "blkpr", "blkzone", "blockdev",
+        "cfdisk", "chcpu", "ctrlaltdel", "delpart", "findfs", "fsck",
+        "fsck.minix", "fsfreeze", "fstrim", "hwclock", "ldattach", "mkfs",
+        "mkfs.bfs", "mkfs.minix", "mkswap", "nologin", "partx",
+        "pivot_root", "readprofile", "resizepart", "rfkill", "rtcwake",
+        "sulogin", "swaplabel", "swapoff", "swapon", "switch_root", "uuidd",
+        "wipefs", "zramctl"
+      ]
+    },
+    {
+      "id": "wget2",
+      "source_project": "GNU Wget2 examples",
+      "source_version": "2.2.0",
+      "source_url": "https://ftp.gnu.org/gnu/wget/wget2-2.2.0.tar.gz",
+      "program_count": 13,
+      "compiler_support": ["gcc", "clang"],
+      "programs": [
+        "batch_loader", "check_url_types", "getstream", "http_get", "http_get2",
+        "http_multi_get", "print_css_urls", "print_css_urls2", "print_css_urls3",
+        "print_html_urls", "relative_to_absolute_url", "websequencediagram",
+        "websequencediagram_high"
+      ]
+    }
+  ]
+}

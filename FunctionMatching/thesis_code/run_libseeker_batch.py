@@ -16,6 +16,7 @@ import tempfile
 import time
 
 from match import LIBRARY_SCORE_AGGREGATORS
+from analysis_cache import DEFAULT_CACHE_DIR
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -227,6 +228,17 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--analysis-cache-dir",
+        type=Path,
+        default=DEFAULT_CACHE_DIR,
+        help="Persistent radare2 + PalmTree cache forwarded to the current pipeline.",
+    )
+    parser.add_argument(
+        "--no-analysis-cache",
+        action="store_true",
+        help="Disable the persistent cache in the current pipeline.",
+    )
+    parser.add_argument(
         "--min-cu",
         type=int,
         default=1,
@@ -259,6 +271,9 @@ def parse_args() -> argparse.Namespace:
             "required for a positive library decision."
         ),
     )
+    parser.add_argument("--cross-cu-call-bonus-weight", type=float, default=0.0)
+    parser.add_argument("--cross-cu-call-penalty-weight", type=float, default=0.0)
+    parser.add_argument("--cross-cu-call-saturation-edges", type=int, default=3)
     parser.add_argument("--block-threshold", type=float, default=0.70)
     parser.add_argument("--block-coverage-mean-threshold", type=float, default=0.80)
     parser.add_argument(
@@ -418,6 +433,12 @@ def current_command(
         "--palmtree_pooling",
         args.palmtree_pooling,
     ]
+    if args.no_analysis_cache:
+        command.append("--no_analysis_cache")
+    else:
+        command.extend(
+            ["--analysis_cache_dir", args.analysis_cache_dir.as_posix()]
+        )
     if features_output_path is not None:
         command.extend(["--features_output", features_output_path.as_posix()])
 
@@ -429,6 +450,12 @@ def current_command(
             str(args.library_min_score),
             "--library_score_aggregator",
             args.library_score_aggregator,
+            "--cross_cu_call_bonus_weight",
+            str(args.cross_cu_call_bonus_weight),
+            "--cross_cu_call_penalty_weight",
+            str(args.cross_cu_call_penalty_weight),
+            "--cross_cu_call_saturation_edges",
+            str(args.cross_cu_call_saturation_edges),
             "--block_assignment_quality_threshold",
             str(args.block_assignment_quality_threshold),
             "--block_min_assignment_ratio",
@@ -992,6 +1019,7 @@ def run_batch(args: argparse.Namespace) -> int:
     args.dataset_dir = args.dataset_dir.resolve()
     args.libs_dir = args.libs_dir.resolve()
     args.output_dir = args.output_dir.resolve()
+    args.analysis_cache_dir = args.analysis_cache_dir.expanduser().resolve()
     if args.ground_truth_dir is not None:
         args.ground_truth_dir = args.ground_truth_dir.resolve()
     args.libseeker_pipeline_dir = args.libseeker_pipeline_dir.resolve()
@@ -1096,6 +1124,18 @@ def run_batch(args: argparse.Namespace) -> int:
                         or parse_float_setting(
                             report, "Rodata bonus weight"
                         ) == args.rodata_bonus_weight
+                    )
+                    and (
+                        pipeline_name != "current"
+                        or parse_float_setting(
+                            report, "Cross-CU call bonus weight"
+                        ) == args.cross_cu_call_bonus_weight
+                    )
+                    and (
+                        pipeline_name != "current"
+                        or parse_float_setting(
+                            report, "Cross-CU call penalty weight"
+                        ) == args.cross_cu_call_penalty_weight
                     )
                 )
 

@@ -1,0 +1,513 @@
+{
+  "schema_version": 1,
+  "description": "Traceable mapping of every LibSeeker program basename to its source project; the rebuild supports both GCC and Clang for all names.",
+  "inventory_source": "Dataset/manifests/libseeker_programs.txt",
+  "source_origin_evidence": "Exploration/libseeker_repo/bin_origins.txt",
+  "matrix": {
+    "path": "Exploration/libseeker_repo/exp_dataset",
+    "artifact_naming": "<program>.<compiler>.<optimization>",
+    "compiler_support_rule": "Historical artifact counts describe the original local matrix; compiler_support describes the new balanced rebuild.",
+    "compiler_support_scope": "Project-level compiler_support applies to every listed program in the balanced rebuild.",
+    "optimizations_observed": [
+      "O0",
+      "O2",
+      "O3",
+      "Os"
+    ],
+    "artifact_count": 1336
+  },
+  "totals": {
+    "projects": 17,
+    "programs": 219,
+    "gcc_programs": 219,
+    "clang_programs": 219
+  },
+  "alias_semantics": "alias_of denotes byte-identical matrix artifacts for every shared compiler/optimization variant; source_basename records the upstream build basename when the dataset name differs.",
+  "projects": [
+    {
+      "id": "bash",
+      "source_project": "GNU Bash",
+      "source_version": "5.3-beta",
+      "source_url": "https://mirror.kumi.systems/gnu/bash/bash-5.3-beta.tar.gz",
+      "program_count": 1,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "bash"
+      ]
+    },
+    {
+      "id": "coreutils",
+      "source_project": "GNU coreutils",
+      "source_version": "9.6",
+      "source_url": "https://mirror.dogado.de/gnu/coreutils/coreutils-9.6.tar.gz",
+      "program_count": 104,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "[",
+        "b2sum",
+        "base32",
+        "base64",
+        "basename",
+        "basenc",
+        "cat",
+        "chcon",
+        "chgrp",
+        "chmod",
+        "chown",
+        "chroot",
+        "cksum",
+        "comm",
+        "cp",
+        "csplit",
+        "cut",
+        "date",
+        "dd",
+        "df",
+        "dir",
+        "dircolors",
+        "dirname",
+        "du",
+        "echo",
+        "env",
+        "expand",
+        "expr",
+        "factor",
+        "false",
+        "fmt",
+        "fold",
+        "groups",
+        "head",
+        "hostid",
+        "id",
+        "install",
+        "join",
+        "link",
+        "ln",
+        "logname",
+        "ls",
+        "md5sum",
+        "mkdir",
+        "mkfifo",
+        "mknod",
+        "mktemp",
+        "mv",
+        "nice",
+        "nl",
+        "nohup",
+        "nproc",
+        "numfmt",
+        "od",
+        "paste",
+        "pathchk",
+        "pinky",
+        "pr",
+        "printenv",
+        "printf",
+        "ptx",
+        "pwd",
+        "readlink",
+        "realpath",
+        "rm",
+        "rmdir",
+        "runcon",
+        "seq",
+        "sha1sum",
+        "sha224sum",
+        "sha256sum",
+        "sha384sum",
+        "sha512sum",
+        "shred",
+        "shuf",
+        "sleep",
+        "sort",
+        "split",
+        "stat",
+        "stty",
+        "sum",
+        "sync",
+        "tac",
+        "tail",
+        "tee",
+        "test",
+        "timeout",
+        "touch",
+        "tr",
+        "true",
+        "truncate",
+        "tsort",
+        "tty",
+        "uname",
+        "unexpand",
+        "uniq",
+        "unlink",
+        "uptime",
+        "users",
+        "vdir",
+        "wc",
+        "who",
+        "whoami",
+        "yes"
+      ],
+      "program_metadata": {
+        "install": {
+          "source_basename": "ginstall"
+        }
+      }
+    },
+    {
+      "id": "gawk",
+      "source_project": "GNU Awk (gawk)",
+      "source_version": "5.3.2",
+      "source_url": "https://ftp.gnu.org/gnu/gawk/gawk-5.3.2.tar.gz",
+      "program_count": 2,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "gawk",
+        "gawk-5.3.2"
+      ],
+      "program_metadata": {
+        "gawk-5.3.2": {
+          "source_basename": "gawk",
+          "alias_of": "gawk"
+        }
+      }
+    },
+    {
+      "id": "gnuchess",
+      "source_project": "GNU Chess",
+      "source_version": "6.2.11",
+      "source_url": "https://ftp.gnu.org/gnu/chess/gnuchess-6.2.11.tar.gz",
+      "program_count": 1,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "gnuchess"
+      ]
+    },
+    {
+      "id": "grep",
+      "source_project": "GNU grep",
+      "source_version": "3.11",
+      "source_url": "https://www.artfiles.org/gnu.org/grep/grep-3.11.tar.xz",
+      "program_count": 1,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "grep"
+      ]
+    },
+    {
+      "id": "inetutils",
+      "source_project": "GNU Inetutils",
+      "source_version": "2.6",
+      "source_url": "https://ftp.gnu.org/gnu/inetutils/inetutils-v2.6-src.tar.gz",
+      "program_count": 12,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "dnsdomainname",
+        "ftp",
+        "hostname",
+        "ifconfig",
+        "ping",
+        "ping6",
+        "rexec",
+        "talk",
+        "telnet",
+        "tftp",
+        "traceroute",
+        "whois"
+      ]
+    },
+    {
+      "id": "less",
+      "source_project": "less",
+      "source_version": "668",
+      "source_url": "http://www.greenwoodsoftware.com/less/less-668.tar.gz",
+      "program_count": 3,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "less",
+        "lessecho",
+        "lesskey"
+      ]
+    },
+    {
+      "id": "make",
+      "source_project": "GNU Make",
+      "source_version": "4.4.1",
+      "source_url": "https://www.artfiles.org/gnu.org/make/make-4.4.1.tar.gz",
+      "program_count": 1,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "make"
+      ]
+    },
+    {
+      "id": "nano",
+      "source_project": "GNU nano",
+      "source_version": "8.3",
+      "source_url": "https://www.nano-editor.org/dist/v8/nano-8.3.tar.gz",
+      "program_count": 1,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "nano"
+      ]
+    },
+    {
+      "id": "openssh",
+      "source_project": "OpenSSH Portable",
+      "source_version": "V_10_0_P2",
+      "source_url": "https://github.com/openssh/openssh-portable/archive/refs/tags/V_10_0_P2.tar.gz",
+      "program_count": 7,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "scp",
+        "sftp",
+        "ssh",
+        "ssh-add",
+        "ssh-agent",
+        "ssh-keygen",
+        "ssh-keyscan"
+      ]
+    },
+    {
+      "id": "rsync",
+      "source_project": "rsync",
+      "source_version": "3.4.1",
+      "source_url": "https://github.com/RsyncProject/rsync/releases/download/v3.4.1/rsync-3.4.1.tar.gz",
+      "program_count": 1,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "rsync"
+      ]
+    },
+    {
+      "id": "sed",
+      "source_project": "GNU sed",
+      "source_version": "4.9",
+      "source_url": "https://www.gutscheinrausch.de/mirror/gnu/sed/sed-4.9.tar.xz",
+      "program_count": 1,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "sed"
+      ]
+    },
+    {
+      "id": "socat",
+      "source_project": "socat",
+      "source_version": "1.8.0.3",
+      "source_url": "http://www.dest-unreach.org/socat/download/socat-1.8.0.3.tar.gz",
+      "program_count": 3,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "filan",
+        "procan",
+        "socat1"
+      ],
+      "program_metadata": {
+        "socat1": {
+          "source_basename": "socat"
+        }
+      }
+    },
+    {
+      "id": "tar",
+      "source_project": "GNU tar",
+      "source_version": "1.35",
+      "source_url": "https://ftp.halifax.rwth-aachen.de/gnu/tar/tar-1.35.tar.xz",
+      "program_count": 1,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "tar"
+      ]
+    },
+    {
+      "id": "util-linux",
+      "source_project": "util-linux",
+      "source_version": "v2.39.3",
+      "source_url": "https://github.com/util-linux/util-linux/archive/refs/tags/v2.39.3.tar.gz",
+      "program_count": 76,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "blkid",
+        "cal",
+        "chmem",
+        "choom",
+        "chrt",
+        "col",
+        "colcrt",
+        "colrm",
+        "column",
+        "dmesg",
+        "eject",
+        "fadvise",
+        "fallocate",
+        "fdisk",
+        "fincore",
+        "findmnt",
+        "flock",
+        "getopt",
+        "hardlink",
+        "hexdump",
+        "ionice",
+        "ipcmk",
+        "ipcrm",
+        "ipcs",
+        "irqtop",
+        "isosize",
+        "kill",
+        "last",
+        "logger",
+        "look",
+        "losetup",
+        "losetup.static",
+        "lsblk",
+        "lscpu",
+        "lsfd",
+        "lsipc",
+        "lsirq",
+        "lslocks",
+        "lslogins",
+        "lsmem",
+        "lsns",
+        "mcookie",
+        "mesg",
+        "more",
+        "mount",
+        "mount.static",
+        "mountpoint",
+        "namei",
+        "nsenter",
+        "nsenter.static",
+        "pipesz",
+        "prlimit",
+        "rename",
+        "renice",
+        "rev",
+        "script",
+        "scriptlive",
+        "scriptreplay",
+        "setarch",
+        "setsid",
+        "setterm",
+        "sfdisk",
+        "taskset",
+        "uclampset",
+        "ul",
+        "umount",
+        "umount.static",
+        "unshare",
+        "unshare.static",
+        "utmpdump",
+        "uuidgen",
+        "uuidparse",
+        "waitpid",
+        "wall",
+        "wdctl",
+        "whereis"
+      ],
+      "program_metadata": {
+        "losetup.static": {
+          "source_basename": "losetup",
+          "alias_of": "losetup"
+        },
+        "mount.static": {
+          "source_basename": "mount",
+          "alias_of": "mount"
+        },
+        "nsenter.static": {
+          "source_basename": "nsenter",
+          "alias_of": "nsenter"
+        },
+        "umount.static": {
+          "source_basename": "umount",
+          "alias_of": "umount"
+        },
+        "unshare.static": {
+          "source_basename": "unshare",
+          "alias_of": "unshare"
+        }
+      }
+    },
+    {
+      "id": "vim",
+      "source_project": "Vim",
+      "source_version": "v9.1.1151",
+      "source_url": "https://github.com/vim/vim/archive/refs/tags/v9.1.1151.tar.gz",
+      "program_count": 2,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "vim",
+        "xxd"
+      ]
+    },
+    {
+      "id": "wget2",
+      "source_project": "GNU Wget2",
+      "source_version": "2.2.0",
+      "source_url": "https://mirror.netcologne.de/gnu/wget/wget2-latest.tar.gz",
+      "program_count": 2,
+      "compiler_support": [
+        "gcc",
+        "clang"
+      ],
+      "programs": [
+        "wget2",
+        "wget2_noinstall"
+      ],
+      "program_metadata": {
+        "wget2_noinstall": {
+          "source_basename": "wget2",
+          "alias_of": "wget2"
+        }
+      },
+      "source_version_note": "Version embedded in the original matrix binaries; source_url is a mutable latest archive."
+    }
+  ]
+}

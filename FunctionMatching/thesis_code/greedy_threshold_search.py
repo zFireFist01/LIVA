@@ -41,9 +41,14 @@ DEFAULT_NEGATIVE_LIB_ROOT = (
     REPO_ROOT / "Exploration/libseeker_repo/build_lib/all_libs"
 )
 DEFAULT_OUTPUT = TEST_DIR / "greedy_threshold_results"
+DEFAULT_ANALYSIS_CACHE = (
+    REPO_ROOT.parent
+    / f"{REPO_ROOT.name}_artifacts"
+    / "function_matching_cache"
+)
 OPTIMIZATIONS = ("O0", "O1", "O2", "O3", "Os")
 DEFAULT_MAX_POSITIVE_ARCHIVE_BYTES = 600_000
-FEATURE_SCHEMA_VERSION = 6
+FEATURE_SCHEMA_VERSION = 7
 DEFAULT_PROGRAMS = ("grep", "less", "sed", "gawk", "nano")
 DATASET_PROGRAMS = (
     "bash",
@@ -99,6 +104,9 @@ DECISION_DEFAULTS = {
     "rodata_penalty_threshold": 0.0,
     "rodata_confirm_threshold": 0.70,
     "rodata_bonus_weight": 0.30,
+    "cross_cu_call_bonus_weight": 0.0,
+    "cross_cu_call_penalty_weight": 0.0,
+    "cross_cu_call_saturation_edges": 3,
 }
 
 DECISION_GRIDS = {
@@ -131,6 +139,8 @@ DECISION_GRIDS = {
     "rodata_min_strings": (0, 1, 2, 3, 5),
     "rodata_min_ngrams": (0, 16, 32, 64, 128),
     "rodata_penalty_threshold": (0.00, 0.05, 0.10, 0.15, 0.20, 0.30),
+    "cross_cu_call_bonus_weight": (0.00, 0.025, 0.05, 0.10),
+    "cross_cu_call_penalty_weight": (0.00, 0.01, 0.02, 0.05),
 }
 
 STRUCTURAL_DEFAULTS = {
@@ -281,6 +291,17 @@ def parse_args() -> argparse.Namespace:
             "PalmTree instruction pooling used during feature collection. "
             "Changing it invalidates feature caches."
         ),
+    )
+    parser.add_argument(
+        "--analysis-cache-dir",
+        type=Path,
+        default=DEFAULT_ANALYSIS_CACHE,
+        help="Persistent radare2 + PalmTree cache used during feature collection.",
+    )
+    parser.add_argument(
+        "--no-analysis-cache",
+        action="store_true",
+        help="Disable the persistent analysis/embedding cache.",
     )
     parser.add_argument("--timeout", type=int, default=0)
     parser.add_argument("--max-rounds", type=int, default=4)
@@ -1529,6 +1550,12 @@ def collection_command(
         "--block-min-function-spread",
         "0",
     ]
+    if args.no_analysis_cache:
+        command.append("--no-analysis-cache")
+    else:
+        command.extend(
+            ["--analysis-cache-dir", str(args.analysis_cache_dir)]
+        )
     if args.timeout:
         command.extend(["--timeout", str(args.timeout)])
     if resume:
@@ -1652,6 +1679,22 @@ def parse_feature_jsonl(
         if binary_path and record_binary_path != binary_path:
             raise ValueError(f"Mixed binary paths in feature file {path}")
         binary_path = record_binary_path
+        def parse_function_matches(raw_matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            return [
+                {
+                    "target_function_index": int(match["target_function_index"]),
+                    "source_function_index": int(match["source_function_index"]),
+                    "dominant_ratio": float(match["dominant_ratio"]),
+                    "coverage_mean": float(match["coverage_mean"]),
+                    "coverage_ratio": float(match["coverage_ratio"]),
+                    "source_call_targets": [
+                        int(target)
+                        for target in match.get("source_call_targets", [])
+                    ],
+                }
+                for match in raw_matches
+            ]
+
         windows = [
             {
                 "coverage_mean": float(window["coverage_mean"]),
@@ -1663,12 +1706,16 @@ def parse_feature_jsonl(
                 "call_edges_total": int(window["call_edges_total"]),
                 "function_concentration": float(window["function_concentration"]),
                 "function_spread": float(window["function_spread"]),
+                "function_matches": parse_function_matches(
+                    window.get("function_matches", [])
+                ),
             }
             for window in payload.get("windows", [])
         ]
         libraries.setdefault(library, []).append(
             {
                 "name": record_name,
+                "target_cu_index": int(payload["target_cu_index"]),
                 "coverage_mean": float(payload["coverage_mean"]),
                 "coverage_ratio": float(payload["coverage_ratio"]),
                 "assignment_quality": float(payload["assignment_quality"]),
@@ -1679,6 +1726,21 @@ def parse_feature_jsonl(
                 "function_concentration": float(payload["function_concentration"]),
                 "function_spread": float(payload["function_spread"]),
                 "windows": windows,
+                "function_matches": parse_function_matches(
+                    payload.get("function_matches", [])
+                ),
+                "inter_cu_calls": [
+                    {
+                        "caller_function_index": int(
+                            edge["caller_function_index"]
+                        ),
+                        "callee_cu_index": int(edge["callee_cu_index"]),
+                        "callee_function_index": int(
+                            edge["callee_function_index"]
+                        ),
+                    }
+                    for edge in payload.get("inter_cu_calls", [])
+                ],
                 "rodata": float(payload["rodata"]),
                 "rodata_has_rodata": bool(payload["rodata_has_rodata"]),
                 "rodata_string_score": float(payload["rodata_string_score"]),
@@ -2331,6 +2393,94 @@ def record_match_score(
     return apply_replayed_rodata_bonus(block_score, record, params)
 
 
+def selected_record_window(
+    record: dict[str, Any],
+    params: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return the highest-scoring passing window used for relation replay."""
+    passing = [
+        window
+        for window in (record.get("windows") or [record])
+        if block_window_passes(window, params)
+    ]
+    if not passing or rodata_is_penalty(record, params):
+        return None
+    return max(passing, key=lambda window: float(window["coverage_mean"]))
+
+
+def replay_cross_cu_call_adjustment(
+    score: float,
+    accepted_records: list[dict[str, Any]],
+    params: dict[str, Any],
+) -> float:
+    """Replay cross-CU call evidence entirely from schema-7 features."""
+    selected_by_cu = {}
+    for record in accepted_records:
+        if "target_cu_index" not in record:
+            continue
+        selected = selected_record_window(record, params)
+        if selected is not None:
+            selected_by_cu[int(record["target_cu_index"])] = (record, selected)
+
+    mapping_by_cu = {
+        cu_index: {
+            int(match["target_function_index"]): match
+            for match in window.get("function_matches", [])
+        }
+        for cu_index, (_record, window) in selected_by_cu.items()
+    }
+    matched_edges = 0
+    evaluable_edges = 0
+    expected_edges = 0
+    for caller_cu_index, (caller_record, caller_window) in selected_by_cu.items():
+        caller_mapping = mapping_by_cu[caller_cu_index]
+        for edge in caller_record.get("inter_cu_calls", []):
+            callee_cu_index = int(edge["callee_cu_index"])
+            callee_entry = selected_by_cu.get(callee_cu_index)
+            if callee_entry is None:
+                continue
+            expected_edges += 1
+            caller_match = caller_mapping.get(
+                int(edge["caller_function_index"])
+            )
+            callee_mapping = mapping_by_cu[callee_cu_index]
+            callee_match = callee_mapping.get(
+                int(edge["callee_function_index"])
+            )
+            if caller_match is None or callee_match is None:
+                continue
+            evaluable_edges += 1
+            if int(callee_match["source_function_index"]) in {
+                int(target)
+                for target in caller_match.get("source_call_targets", [])
+            }:
+                matched_edges += 1
+
+    if not evaluable_edges or not expected_edges:
+        return score
+    ratio = matched_edges / evaluable_edges
+    coverage = evaluable_edges / expected_edges
+    saturation = max(
+        1,
+        int(params.get("cross_cu_call_saturation_edges", 3)),
+    )
+    reliability = min(1.0, evaluable_edges / saturation) * coverage
+    bounded_score = min(1.0, max(0.0, float(score)))
+    positive = (
+        float(params.get("cross_cu_call_bonus_weight", 0.0))
+        * reliability
+        * ratio
+        * (1.0 - bounded_score)
+    )
+    negative = (
+        float(params.get("cross_cu_call_penalty_weight", 0.0))
+        * reliability
+        * (1.0 - ratio)
+        * bounded_score
+    )
+    return min(1.0, max(0.0, bounded_score + positive - negative))
+
+
 def library_match_evidence(
     records: list[dict[str, Any]],
     params: dict[str, Any],
@@ -2360,6 +2510,11 @@ def library_match_evidence(
         scores,
         str(params.get("library_score_aggregator", "mean")),
         score_floor=float(params.get("block_coverage_mean_threshold", 0.0)),
+    )
+    library_score = replay_cross_cu_call_adjustment(
+        library_score,
+        accepted,
+        params,
     )
     return accepted, library_score
 
@@ -2972,6 +3127,7 @@ def main() -> int:
     if args.search_only and args.collect_only:
         raise ValueError("--search-only and --collect-only are mutually exclusive")
     args.output_dir = args.output_dir.resolve()
+    args.analysis_cache_dir = args.analysis_cache_dir.expanduser().resolve()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     output_lock = acquire_output_lock(args.output_dir)
     args.lib_roots = resolve_lib_roots(args)

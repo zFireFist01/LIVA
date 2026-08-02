@@ -57,7 +57,17 @@ def aggregate_library_score(
     raise ValueError(
         f"Unknown library score aggregator {mode!r}; expected one of "
         + ", ".join(LIBRARY_SCORE_AGGREGATORS)
-    )
+)
+
+
+class FunctionMatch(typing.NamedTuple):
+    """Block-derived mapping of one reference function into the source ELF."""
+
+    target_function_index: int
+    source_function_index: int
+    dominant_ratio: float
+    coverage_mean: float
+    coverage_ratio: float
 
 
 class BlockWindowResult(typing.NamedTuple):
@@ -78,6 +88,7 @@ class BlockWindowResult(typing.NamedTuple):
     call_edges_total: int
     function_concentration: float
     function_spread: float
+    function_matches: tuple[FunctionMatch, ...] = ()
 
 
 class BlockMatchResult(typing.NamedTuple):
@@ -102,6 +113,17 @@ class BlockMatchResult(typing.NamedTuple):
     windows_evaluated: int = 0
     windows_skipped: int = 0
     windows: tuple[BlockWindowResult, ...] = ()
+    function_matches: tuple[FunctionMatch, ...] = ()
+
+
+class CrossCUCallEvidence(typing.NamedTuple):
+    """Preservation statistics for direct calls between candidate CUs."""
+
+    matched_edges: int
+    evaluable_edges: int
+    expected_edges: int
+    ratio: float
+    coverage: float
 
 
 class RodataIndex(typing.NamedTuple):
@@ -480,7 +502,14 @@ def function_concentration_scores(
     target_block_records: list[dict],
     source_block_records: list[dict],
     matched_source_block_indices: np.ndarray,
-) -> tuple[float, float, dict[int, int]]:
+    matched_source_similarities: np.ndarray | None = None,
+    match_threshold: float = 0.0,
+) -> tuple[
+    float,
+    float,
+    dict[int, int],
+    tuple[FunctionMatch, ...],
+]:
     """Measure whether blocks from each target function stay in one source function.
 
     Returns:
@@ -500,11 +529,12 @@ def function_concentration_scores(
         )
 
     if not source_indices_by_target_function:
-        return 0.0, 0.0, {}
+        return 0.0, 0.0, {}, ()
 
     dominant_total = 0
     block_total = 0
     source_function_by_target: dict[int, int] = {}
+    function_matches: list[FunctionMatch] = []
 
     for target_function_index, source_indices in source_indices_by_target_function.items():
         values, counts = np.unique(source_indices, return_counts=True)
@@ -515,6 +545,27 @@ def function_concentration_scores(
         source_function_by_target[target_function_index] = dominant_source_index
         dominant_total += dominant_count
         block_total += len(source_indices)
+        target_positions = [
+            index
+            for index, record in enumerate(target_block_records)
+            if record["function_index"] == target_function_index
+        ]
+        similarities = (
+            np.asarray(matched_source_similarities)[target_positions]
+            if matched_source_similarities is not None
+            else np.ones(len(target_positions), dtype=float)
+        )
+        function_matches.append(
+            FunctionMatch(
+                target_function_index=int(target_function_index),
+                source_function_index=dominant_source_index,
+                dominant_ratio=float(dominant_count / len(source_indices)),
+                coverage_mean=float(np.mean(similarities)),
+                coverage_ratio=float(
+                    np.mean(similarities >= match_threshold)
+                ),
+            )
+        )
 
     concentration = dominant_total / block_total if block_total else 0.0
     mapped_target_functions = len(source_function_by_target)
@@ -523,7 +574,129 @@ def function_concentration_scores(
         if mapped_target_functions else 0.0
     )
 
-    return float(concentration), float(spread), source_function_by_target
+    return (
+        float(concentration),
+        float(spread),
+        source_function_by_target,
+        tuple(sorted(function_matches)),
+    )
+
+
+def cross_cu_call_evidence(
+    source_functions: list[asm.Function],
+    target_units: list[asm.CodeUnit],
+    block_results: list[BlockMatchResult],
+    call_edges: typing.Iterable[asm.InterCUCallEdge],
+    included_cu_indices: set[int] | None = None,
+    require_both_included: bool = True,
+) -> CrossCUCallEvidence:
+    """Measure reference inter-CU calls preserved by block-derived mappings.
+
+    Endpoint mappings come exclusively from block similarity. Archive symbols
+    are used beforehand only to create integer reference edges; target ELF
+    names and symbols never participate.
+    """
+    included = (
+        set(range(len(target_units)))
+        if included_cu_indices is None
+        else set(included_cu_indices)
+    )
+    source_index_by_address = {
+        function.address: index
+        for index, function in enumerate(source_functions)
+    }
+    source_edges = {
+        (caller_index, source_index_by_address[callee_address])
+        for caller_index, caller in enumerate(source_functions)
+        for callee_address in caller.resolved_call_targets
+        if callee_address in source_index_by_address
+    }
+    mapping_by_cu = [
+        {
+            match.target_function_index: match.source_function_index
+            for match in result.function_matches
+        }
+        for result in block_results
+    ]
+
+    matched_edges = 0
+    evaluable_edges = 0
+    expected_edges = 0
+    for edge in call_edges:
+        selected_endpoint_count = sum(
+            index in included
+            for index in (edge.caller_cu_index, edge.callee_cu_index)
+        )
+        if (
+            (
+                require_both_included
+                and selected_endpoint_count != 2
+            )
+            or (
+                not require_both_included
+                and selected_endpoint_count == 0
+            )
+            or not 0 <= edge.caller_cu_index < len(mapping_by_cu)
+            or not 0 <= edge.callee_cu_index < len(mapping_by_cu)
+        ):
+            continue
+        expected_edges += 1
+        source_caller = mapping_by_cu[edge.caller_cu_index].get(
+            edge.caller_function_index
+        )
+        source_callee = mapping_by_cu[edge.callee_cu_index].get(
+            edge.callee_function_index
+        )
+        if source_caller is None or source_callee is None:
+            continue
+        evaluable_edges += 1
+        if (source_caller, source_callee) in source_edges:
+            matched_edges += 1
+
+    ratio = matched_edges / evaluable_edges if evaluable_edges else 0.0
+    coverage = evaluable_edges / expected_edges if expected_edges else 0.0
+    return CrossCUCallEvidence(
+        matched_edges=matched_edges,
+        evaluable_edges=evaluable_edges,
+        expected_edges=expected_edges,
+        ratio=float(ratio),
+        coverage=float(coverage),
+    )
+
+
+def apply_cross_cu_call_adjustment(
+    score: float,
+    evidence: CrossCUCallEvidence,
+    bonus_weight: float = 0.0,
+    penalty_weight: float = 0.0,
+    saturation_edges: int = 3,
+) -> float:
+    """Apply bounded, reliability-weighted cross-CU evidence to a score.
+
+    Positive preservation is stronger evidence than a missing edge, which can
+    result from optimization. Both adjustments remain disabled until they have
+    been validated on a program-disjoint panel.
+    """
+    bounded_score = min(1.0, max(0.0, float(score)))
+    if evidence.evaluable_edges <= 0 or evidence.expected_edges <= 0:
+        return bounded_score
+
+    saturation = max(1, int(saturation_edges))
+    reliability = min(1.0, evidence.evaluable_edges / saturation)
+    reliability *= evidence.coverage
+    positive = (
+        max(0.0, float(bonus_weight))
+        * reliability
+        * evidence.ratio
+        * (1.0 - bounded_score)
+    )
+    negative = (
+        max(0.0, float(penalty_weight))
+        * reliability
+        * (1.0 - evidence.ratio)
+        * bounded_score
+    )
+    return min(1.0, max(0.0, bounded_score + positive - negative))
 
 
 def block_window_gate_values(window: BlockWindowResult) -> tuple[float, ...]:
@@ -692,6 +865,24 @@ def evaluate_block_presence(
         )
         if should_skip_window:
             windows_skipped += 1
+            sim_matrix = full_sim_matrix[:, block_start:block_stop]
+            best_source_columns = np.argmax(sim_matrix, axis=1) + block_start
+            best_source_similarities = sim_matrix[
+                np.arange(sim_matrix.shape[0]),
+                best_source_columns - block_start,
+            ]
+            (
+                _concentration,
+                _spread,
+                _source_function_by_target,
+                function_matches,
+            ) = function_concentration_scores(
+                target_block_records,
+                source_block_records,
+                best_source_columns,
+                best_source_similarities,
+                block_threshold,
+            )
             result = BlockMatchResult(
                 score=coverage_mean,
                 coverage_mean=coverage_mean,
@@ -707,6 +898,7 @@ def evaluate_block_presence(
                 function_concentration=0.0,
                 function_spread=0.0,
                 windows_total=window_total,
+                function_matches=function_matches,
             )
             sort_key = (
                 False,
@@ -731,11 +923,22 @@ def evaluate_block_presence(
         )
 
         best_source_columns = np.argmax(sim_matrix, axis=1) + block_start
-        function_concentration, function_spread, source_function_by_target = (
+        best_source_similarities = sim_matrix[
+            np.arange(sim_matrix.shape[0]),
+            best_source_columns - block_start,
+        ]
+        (
+            function_concentration,
+            function_spread,
+            source_function_by_target,
+            function_matches,
+        ) = (
             function_concentration_scores(
                 target_block_records,
                 source_block_records,
                 best_source_columns,
+                best_source_similarities,
+                block_threshold,
             )
         )
         call_edge_ratio, call_edges_evaluated, call_edges_total = (
@@ -761,6 +964,7 @@ def evaluate_block_presence(
             call_edges_total=call_edges_total,
             function_concentration=function_concentration,
             function_spread=function_spread,
+            function_matches=function_matches,
         )
         evaluated_windows.append(window_result)
         passed = (
@@ -788,6 +992,7 @@ def evaluate_block_presence(
             call_edges_total=call_edges_total,
             function_concentration=function_concentration,
             function_spread=function_spread,
+            function_matches=function_matches,
         )
 
         sort_key = (

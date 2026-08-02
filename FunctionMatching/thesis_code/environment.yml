@@ -16,3 +16,4 @@ dependencies:
   - pip:
       - r2pipe
       - bert-pytorch
+      - pyelftools

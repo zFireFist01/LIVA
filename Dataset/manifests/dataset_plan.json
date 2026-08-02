@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "seed": 20260731,
+  "artifact_root_default": "../Thesis_Binary_Analysis_artifacts",
+  "datasets": {
+    "libseeker": {
+      "description": "All 219 LibSeeker program names rebuilt across the complete Cartesian product of four compilers and four optimizations, with deterministic random library optimizations.",
+      "inventory": "libseeker_inventory.json",
+      "expected_binaries": 3504,
+      "expected_programs": 219,
+      "matrix": [
+        {"compiler": "gcc-11", "compiler_family": "gcc", "program_optimization": "O0", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "gcc-11", "compiler_family": "gcc", "program_optimization": "O2", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "gcc-11", "compiler_family": "gcc", "program_optimization": "O3", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "gcc-11", "compiler_family": "gcc", "program_optimization": "Os", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "gcc-13", "compiler_family": "gcc", "program_optimization": "O0", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "gcc-13", "compiler_family": "gcc", "program_optimization": "O2", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "gcc-13", "compiler_family": "gcc", "program_optimization": "O3", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "gcc-13", "compiler_family": "gcc", "program_optimization": "Os", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "clang-14", "compiler_family": "clang", "program_optimization": "O0", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "clang-14", "compiler_family": "clang", "program_optimization": "O2", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "clang-14", "compiler_family": "clang", "program_optimization": "O3", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "clang-14", "compiler_family": "clang", "program_optimization": "Os", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "clang-18", "compiler_family": "clang", "program_optimization": "O0", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "clang-18", "compiler_family": "clang", "program_optimization": "O2", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "clang-18", "compiler_family": "clang", "program_optimization": "O3", "program_count": 219, "cohort_offset": 0},
+        {"compiler": "clang-18", "compiler_family": "clang", "program_optimization": "Os", "program_count": 219, "cohort_offset": 0}
+      ],
+      "library_optimizations": ["O0", "O2", "O3", "Os"],
+      "library_selection": "deterministic_seeded_per_project_cell",
+      "notes": [
+        "Each of the 16 cells contains all 219 programs, yielding 1,752 GCC and 1,752 Clang ELF.",
+        "glibc O0 is excluded because glibc does not support an unoptimized build; glibc uses O2, O3 or Os."
+      ]
+    },
+    "unseen": {
+      "description": "Seventy-five normal GNU/Linux programs distinct from Dataset A, rebuilt with glibc and the same randomized static-library methodology.",
+      "inventory": "unseen_glibc_inventory.json",
+      "expected_binaries": 1200,
+      "expected_programs": 75,
+      "matrix": [
+        {"compiler": "gcc-11", "compiler_family": "gcc", "program_optimization": "O0", "program_count": 75},
+        {"compiler": "gcc-11", "compiler_family": "gcc", "program_optimization": "O2", "program_count": 75},
+        {"compiler": "gcc-11", "compiler_family": "gcc", "program_optimization": "O3", "program_count": 75},
+        {"compiler": "gcc-11", "compiler_family": "gcc", "program_optimization": "Os", "program_count": 75},
+        {"compiler": "gcc-13", "compiler_family": "gcc", "program_optimization": "O0", "program_count": 75},
+        {"compiler": "gcc-13", "compiler_family": "gcc", "program_optimization": "O2", "program_count": 75},
+        {"compiler": "gcc-13", "compiler_family": "gcc", "program_optimization": "O3", "program_count": 75},
+        {"compiler": "gcc-13", "compiler_family": "gcc", "program_optimization": "Os", "program_count": 75},
+        {"compiler": "clang-14", "compiler_family": "clang", "program_optimization": "O0", "program_count": 75},
+        {"compiler": "clang-14", "compiler_family": "clang", "program_optimization": "O2", "program_count": 75},
+        {"compiler": "clang-14", "compiler_family": "clang", "program_optimization": "O3", "program_count": 75},
+        {"compiler": "clang-14", "compiler_family": "clang", "program_optimization": "Os", "program_count": 75},
+        {"compiler": "clang-18", "compiler_family": "clang", "program_optimization": "O0", "program_count": 75},
+        {"compiler": "clang-18", "compiler_family": "clang", "program_optimization": "O2", "program_count": 75},
+        {"compiler": "clang-18", "compiler_family": "clang", "program_optimization": "O3", "program_count": 75},
+        {"compiler": "clang-18", "compiler_family": "clang", "program_optimization": "Os", "program_count": 75}
+      ],
+      "library_optimizations": ["O0", "O2", "O3", "Os"],
+      "library_selection": "deterministic_seeded_per_project_cell",
+      "library_selection_seed": 20260731,
+      "selection_policy": "normal_glibc_programs_name_disjoint_from_libseeker_inventory",
+      "notes": [
+        "All 75 programs occur in all 16 compiler/optimization cells: 600 GCC and 600 Clang ELF.",
+        "glibc O0 is excluded because glibc does not support an unoptimized build; glibc uses O2, O3 or Os."
+      ]
+    }
+  },
+  "ground_truth": {
+    "required_scope": "exact_linker_map",
+    "required_per_binary": [
+      "binary_sha256",
+      "linker_map_sha256",
+      "compiler_and_flags",
+      "source_provenance",
+      "archive_sha256_and_optimization",
+      "included_archive_members"
+    ]
+  }
+}

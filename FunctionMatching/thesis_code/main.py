@@ -8,17 +8,25 @@ import re
 import tempfile
 import subprocess
 
-from model import PALMTREE_POOLING_MODES, PalmTree
-from asm import ASM_NORMALIZATION_MODES, CodeUnit, parse_r2_file
+from model import PALMTREE_POOLING_MODES
+from analysis_cache import CachedCodeUnitLoader, DEFAULT_CACHE_DIR
+from asm import (
+    ASM_NORMALIZATION_MODES,
+    CodeUnit,
+    InterCUCallEdge,
+    resolve_archive_inter_cu_calls,
+)
 from match import (
     BlockMatchResult,
     LIBRARY_SCORE_AGGREGATORS,
     RodataEvidence,
     RodataMatchResult,
     aggregate_library_score,
+    apply_cross_cu_call_adjustment,
     build_rodata_index,
     apply_rodata_bonus,
     classify_rodata_evidence,
+    cross_cu_call_evidence,
     evaluate_block_presence,
     evaluate_rodata_match,
 )
@@ -95,6 +103,24 @@ def get_args():
         ),
     )
     parser.add_argument(
+        "--analysis_cache_dir",
+        "--analysis-cache-dir",
+        dest="analysis_cache_dir",
+        type=Path,
+        default=DEFAULT_CACHE_DIR,
+        help=(
+            "Persistent radare2 + PalmTree cache directory. Matching-only "
+            "parameter changes reuse this cache."
+        ),
+    )
+    parser.add_argument(
+        "--no_analysis_cache",
+        "--no-analysis-cache",
+        dest="no_analysis_cache",
+        action="store_true",
+        help="Disable reading and writing the persistent analysis cache.",
+    )
+    parser.add_argument(
         "--library_score_aggregator",
         "--library-score-aggregator",
         dest="library_score_aggregator",
@@ -113,6 +139,30 @@ def get_args():
             "Minimum aggregated block score across accepted CUs required to declare "
             "a library present; 0 preserves the legacy any-CU rule"
         )
+    )
+    parser.add_argument(
+        "--cross_cu_call_bonus_weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Maximum bounded library-score bonus for preserved direct calls "
+            "between matched CUs; 0 keeps the new evidence diagnostic-only"
+        ),
+    )
+    parser.add_argument(
+        "--cross_cu_call_penalty_weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Maximum bounded penalty for contradicted evaluable cross-CU calls; "
+            "the default is 0 until negative evidence is validated offline"
+        ),
+    )
+    parser.add_argument(
+        "--cross_cu_call_saturation_edges",
+        type=int,
+        default=3,
+        help="Evaluable cross-CU edges required for full relation reliability",
     )
     parser.add_argument(
         "--block_threshold",
@@ -325,8 +375,11 @@ def format_block_cu_line(
 def block_cu_feature_record(
     binary_path: str,
     library_name: str,
+    source_unit: CodeUnit,
+    target_unit_index: int,
     target_unit: CodeUnit,
     block_result: BlockMatchResult,
+    library_call_edges: tuple[InterCUCallEdge, ...],
     rodata_result: RodataMatchResult,
     rodata_evidence: RodataEvidence,
     block_status: str,
@@ -334,9 +387,41 @@ def block_cu_feature_record(
     palmtree_pooling: str,
 ) -> dict:
     """Build the full CU-level feature row used by threshold tuning."""
-    windows = [
-        window._asdict() if hasattr(window, "_asdict") else window
-        for window in (getattr(block_result, "windows", ()) or ())
+    source_index_by_address = {
+        function.address: index
+        for index, function in enumerate(source_unit.functions)
+    }
+
+    def serialize_function_match(function_match) -> dict:
+        source_function = source_unit.functions[
+            function_match.source_function_index
+        ]
+        return {
+            **function_match._asdict(),
+            "source_call_targets": sorted(
+                source_index_by_address[address]
+                for address in source_function.resolved_call_targets
+                if address in source_index_by_address
+            ),
+        }
+
+    windows = []
+    for window in (getattr(block_result, "windows", ()) or ()):
+        serialized_window = window._asdict()
+        serialized_window["function_matches"] = [
+            serialize_function_match(function_match)
+            for function_match in window.function_matches
+        ]
+        windows.append(serialized_window)
+
+    outgoing_inter_cu_calls = [
+        {
+            "caller_function_index": edge.caller_function_index,
+            "callee_cu_index": edge.callee_cu_index,
+            "callee_function_index": edge.callee_function_index,
+        }
+        for edge in library_call_edges
+        if edge.caller_cu_index == target_unit_index
     ]
     return {
         "type": "block_cu",
@@ -345,6 +430,7 @@ def block_cu_feature_record(
         "asm_normalization": asm_normalization,
         "palmtree_pooling": palmtree_pooling,
         "name": target_unit.name,
+        "target_cu_index": int(target_unit_index),
         "status": block_status,
         "block": float(block_result.score),
         "coverage_mean": float(block_result.coverage_mean),
@@ -381,11 +467,21 @@ def block_cu_feature_record(
         "function_concentration": float(block_result.function_concentration),
         "function_spread": float(block_result.function_spread),
         "windows": windows,
+        "function_matches": [
+            serialize_function_match(function_match)
+            for function_match in block_result.function_matches
+        ],
+        "inter_cu_calls": outgoing_inter_cu_calls,
         "target_functions": int(target_unit.get_num_functions()),
     }
 
 
-def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
+def process_bin(
+    binary: CodeUnit,
+    lib: dict[str, list[CodeUnit]],
+    library_call_edges: dict[str, tuple[InterCUCallEdge, ...]],
+    args,
+):
     """Process a parsed binary against all libraries."""
     output_file = args.output if args.output else None
     features_context = (
@@ -434,7 +530,8 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
             rodata_evidence_by_cu = {}
             rodata_result_by_cu = {}
 
-            for target_unit in target_comp_units:
+            call_edges = library_call_edges.get(library_name, ())
+            for target_unit_index, target_unit in enumerate(target_comp_units):
                 block_result = evaluate_block_presence(
                     source_unit=binary,
                     target_unit=target_unit,
@@ -501,8 +598,11 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
                             block_cu_feature_record(
                                 binary_path,
                                 library_name,
+                                binary,
+                                target_unit_index,
                                 target_unit,
                                 block_result,
+                                call_edges,
                                 rodata_result,
                                 rodata_evidence,
                                 block_status,
@@ -569,6 +669,40 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
                 args.library_score_aggregator,
                 score_floor=args.block_coverage_mean_threshold,
             )
+            base_score_tot = score_tot
+            accepted_cu_indices = {
+                index
+                for index, (target_unit, block_result) in enumerate(block_results)
+                if (
+                    block_result.passed
+                    and (
+                        args.disable_rodata_filter
+                        or rodata_evidence_by_cu[id(target_unit)].status != "penalty"
+                    )
+                )
+            }
+            cross_cu_evidence = cross_cu_call_evidence(
+                binary.functions,
+                target_comp_units,
+                [result for _, result in block_results],
+                call_edges,
+                included_cu_indices=accepted_cu_indices,
+            )
+            anchored_cross_cu_evidence = cross_cu_call_evidence(
+                binary.functions,
+                target_comp_units,
+                [result for _, result in block_results],
+                call_edges,
+                included_cu_indices=accepted_cu_indices,
+                require_both_included=False,
+            )
+            score_tot = apply_cross_cu_call_adjustment(
+                score_tot,
+                cross_cu_evidence,
+                bonus_weight=args.cross_cu_call_bonus_weight,
+                penalty_weight=args.cross_cu_call_penalty_weight,
+                saturation_edges=args.cross_cu_call_saturation_edges,
+            )
 
             stop_library = time.time()
             elapsed_time = time.strftime(
@@ -607,6 +741,16 @@ def process_bin(binary: CodeUnit, lib: dict[str, list[CodeUnit]], args):
                 f"library={Path(library_name).name} | "
                 f"aggregator={args.library_score_aggregator} | "
                 f"score={percentage:6.2f}% | "
+                f"base_score={base_score_tot * 100.0:6.2f}% | "
+                f"cross_cu_edges={cross_cu_evidence.matched_edges}/"
+                f"{cross_cu_evidence.evaluable_edges}/"
+                f"{cross_cu_evidence.expected_edges} | "
+                f"cross_cu_ratio={cross_cu_evidence.ratio:.4f} | "
+                f"cross_cu_coverage={cross_cu_evidence.coverage:.4f} | "
+                f"cross_cu_anchored_edges="
+                f"{anchored_cross_cu_evidence.matched_edges}/"
+                f"{anchored_cross_cu_evidence.evaluable_edges}/"
+                f"{anchored_cross_cu_evidence.expected_edges} | "
                 f"block_best_any={block_best_score * 100.0:6.2f}% | "
                 f"block_best_matched={successful_block_best_score * 100.0:6.2f}% | "
                 f"rodata_confirmed_cu={rodata_confirmed_count} | "
@@ -666,16 +810,29 @@ if __name__ == "__main__":
     else:
         print(f"Found {len(library_files)} library files in '{libraries_dir}'")
         
-    asm_model = PalmTree("Palm Tree")
-    asm_model.load(
-        args.asm_model,
+    asm_model_path = Path(args.asm_model).expanduser()
+    if not asm_model_path.is_file() and not asm_model_path.is_absolute():
+        asm_model_path = SCRIPT_DIR / asm_model_path
+    code_loader = CachedCodeUnitLoader(
+        asm_model_path,
         device=args.device,
         pooling=args.palmtree_pooling,
+        asm_normalization=args.asm_normalization,
+        cache_dir=(None if args.no_analysis_cache else args.analysis_cache_dir),
     )
-    print(f"PalmTree device: {asm_model.device}")
-    print(f"PalmTree pooling: {asm_model.pooling}")
+    print(f"PalmTree requested device: {args.device}")
+    print(f"PalmTree pooling: {args.palmtree_pooling}")
+    print(
+        "Analysis cache: "
+        + (
+            "disabled"
+            if code_loader.cache is None
+            else code_loader.cache.root.as_posix()
+        )
+    )
 
     lib: dict[str, list[CodeUnit]] = {}
+    library_call_edges: dict[str, tuple[InterCUCallEdge, ...]] = {}
     for library_file in library_files:
         comp_units = []
 
@@ -703,11 +860,9 @@ if __name__ == "__main__":
 
             for obj_file in extracted_objects:
                 try:
-                    b = parse_r2_file(
-                        obj_file.as_posix(),
-                        asm_model=asm_model,
+                    b = code_loader.load(
+                        obj_file,
                         unit_type=CodeUnit.TYPE_CU,
-                        asm_normalization=args.asm_normalization,
                     )
                     log_parse_debug(b)
                     if b.get_num_functions() > 0:
@@ -716,7 +871,19 @@ if __name__ == "__main__":
                     print(f"[WARN] Failed to parse {obj_file}: {e}")
 
         lib[library_file.as_posix()] = comp_units
+        matchable_units = [
+            unit for unit in comp_units
+            if unit.get_num_functions() > 1
+        ]
+        library_call_edges[library_file.as_posix()] = (
+            resolve_archive_inter_cu_calls(matchable_units)
+        )
         print(f"[DEBUG] {library_file.name}: loaded {len(comp_units)} object files")
+        print(
+            f"[DEBUG] {library_file.name}: resolved "
+            f"{len(library_call_edges[library_file.as_posix()])} "
+            "direct cross-CU function edge(s)"
+        )
 
     log_line(f"Found {len(library_files)} libraries to process", args.output)
     log_line(f"Target binary: {binary_path}", args.output)
@@ -724,20 +891,37 @@ if __name__ == "__main__":
     log_line(f"PalmTree pooling: {args.palmtree_pooling}", args.output)
     log_line(f"Library score aggregator: {args.library_score_aggregator}", args.output)
     log_line(f"Library minimum score: {args.library_min_score}", args.output)
+    log_line(
+        f"Cross-CU call bonus weight: {args.cross_cu_call_bonus_weight}",
+        args.output,
+    )
+    log_line(
+        f"Cross-CU call penalty weight: {args.cross_cu_call_penalty_weight}",
+        args.output,
+    )
+    log_line(
+        f"Cross-CU call saturation edges: {args.cross_cu_call_saturation_edges}",
+        args.output,
+    )
     log_line(f"Rodata penalty threshold: {args.rodata_penalty_threshold}", args.output)
     log_line(f"Rodata confirm threshold: {args.rodata_confirm_threshold}", args.output)
     log_line(f"Rodata bonus weight: {args.rodata_bonus_weight}", args.output)
     log_line(f"Start processing: {time.strftime('%H:%M:%S', time.gmtime())}\n", args.output)
 
-    binary = parse_r2_file(
-        binary_path.as_posix(),
-        asm_model=asm_model,
+    binary = code_loader.load(
+        binary_path,
         unit_type=CodeUnit.TYPE_ELF,
-        asm_normalization=args.asm_normalization,
     )
     log_parse_debug(binary)
 
-    process_bin(binary, lib, args)
+    process_bin(binary, lib, library_call_edges, args)
+
+    cache_stats = code_loader.stats
+    print(
+        "Analysis cache stats: "
+        f"hits={cache_stats.hits}, misses={cache_stats.misses}, "
+        f"writes={cache_stats.writes}, model_loaded={code_loader.model_loaded}"
+    )
 
     elapsed_main = time.strftime("%H:%M:%S", time.gmtime(time.time() - start_main))
     log_line(f"\nDone processing in {elapsed_main}", args.output)
