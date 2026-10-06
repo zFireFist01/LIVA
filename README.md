@@ -16,14 +16,14 @@ The approach is designed to remain useful when the target executable and the can
 
 LIVA was developed as part of the Master's Thesis:
 
-> **LIVA: Variability-Aware Library Identification in Static Binaries**  
-> Paolo Gennaro  
-> MSc in Computer Science and Engineering  
+> **LIVA: Variability-Aware Library Identification in Static Binaries**<br>
+> Paolo Gennaro<br>
+> MSc in Computer Science and Engineering<br>
 > Politecnico di Milano, 2026
 
 ## Repository and branches
 
-This repository contains the current LIVA implementation on `main`. It was imported from the updated local `LIVA` project; the previous `Thesis_Binary_Analysis` version is preserved on the `legacy-clean` branch. Use `main` for current development and experiments.
+The project is available in the `LIVA` repository and in `Thesis_Binary_Analysis`. Both `main` branches contain the current implementation; `Thesis_Binary_Analysis` also preserves its earlier version on the `legacy-clean` branch. This README describes the current implementation in both repositories.
 
 The source code and dataset preparation scripts are versioned. Large generated datasets, caches, experiment outputs, and local source downloads are kept outside Git and must be prepared separately; see [`Dataset/SHARDED_LIBSEEKER.md`](Dataset/SHARDED_LIBSEEKER.md) for the evaluation workflow.
 
@@ -429,11 +429,11 @@ If you use LIVA in academic work, please cite:
 
 ## Author
 
-**Paolo Gennaro**  
-Politecnico di Milano  
+**Paolo Gennaro**<br>
+Politecnico di Milano<br>
 MSc in Computer Science and Engineering
 
-Thesis advisor: **Prof. Stefano Zanero**  
+Thesis advisor: **Prof. Stefano Zanero**<br>
 Co-advisors: **Marco D'Amico** and **Lorenzo Binosi**
 
 ---
