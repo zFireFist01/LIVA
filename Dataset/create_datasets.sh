@@ -4,7 +4,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 SCRIPTS_DIR="$SCRIPT_DIR/scripts"
-DEFAULT_ARTIFACT_ROOT="$(cd -- "$REPO_DIR/.." && pwd)/$(basename -- "$REPO_DIR")_artifacts"
+DEFAULT_ARTIFACT_ROOT="$SCRIPT_DIR"
 
 ACTION=all
 ARTIFACT_ROOT="$DEFAULT_ARTIFACT_ROOT"
@@ -16,6 +16,14 @@ CLEAN=0
 SKIP_EXISTING=1
 INSIDE_CONTAINER=0
 LIBRARY_ROOT=""
+LIBRARY_MATRIX="$SCRIPT_DIR/manifests/library_matrix.tsv"
+
+TOOLCHAINS=(
+    "gcc-11|g++-11"
+    "gcc-13|g++-13"
+    "clang-14|clang++-14"
+    "clang-18|clang++-18"
+)
 
 LIBRARIES=(
     zlib-1.3.1
@@ -25,6 +33,7 @@ LIBRARIES=(
     attr
     acl-2.3.2
     file-5.46
+    libcap
     glibc-2.41
     gmp-6.3.0
     libiconv-1.18
@@ -33,6 +42,11 @@ LIBRARIES=(
     pcre2-10.47
     readline-8.2
     selinux-3.7
+    libunistring-1.4.2
+    libidn2-2.3.8
+    libpsl-0.21.5
+    brotli
+    zstd-1.5.7
 )
 
 SOURCES=(
@@ -59,9 +73,10 @@ Azioni:
 
 Opzioni:
   -j, --jobs N              job paralleli (default: CPU disponibili)
-      --artifact-root DIR   output esterno; non può essere dentro la repository
-      --library-root DIR    riusa un set di librerie già compilato (root che
-                            contiene <sorgente>/<opt>/install/lib/*.a)
+      --artifact-root DIR   root degli output (default: Dataset)
+      --library-root DIR    riusa la root multi-toolchain che contiene
+                            <compiler-id>/<sorgente>/<opt>/install/lib/*.a
+      --library-matrix FILE matrice versionata delle librerie da bilanciare
       --seed N              seed selezione librerie Dataset A (default: 20260731)
       --clean               ricrea build e output richiesti
       --skip-existing       riprende build complete (default)
@@ -73,9 +88,10 @@ Opzioni:
 Ambiente riproducibile consigliato:
   Dataset/scripts/run_reproduction_container.sh all -j 4
 
-Output di default (tutti fuori dalla repo):
-  ../Thesis_Binary_Analysis_artifacts/datasets/{libseeker,unseen}
-  ../Thesis_Binary_Analysis_artifacts/ground_truth/{libseeker,unseen}
+Output di default:
+  Dataset/builds/{libraries,programs}
+  Dataset/datasets/{libseeker,unseen}
+  Dataset/ground_truth/{libseeker,unseen}
 EOF
 }
 
@@ -127,6 +143,9 @@ parse_args() {
             --library-root)
                 (($# >= 2)) || die "$1 richiede un valore"
                 LIBRARY_ROOT="$2"; shift 2 ;;
+            --library-matrix)
+                (($# >= 2)) || die "$1 richiede un valore"
+                LIBRARY_MATRIX="$2"; shift 2 ;;
             --seed)
                 (($# >= 2)) || die "$1 richiede un valore"
                 SEED="$2"; shift 2 ;;
@@ -157,21 +176,14 @@ validate_paths() {
     [[ "$ARTIFACT_ROOT" != / ]] || die "--artifact-root non può essere /"
     [[ "$ARTIFACT_ROOT" != "$(canonical_path "${HOME:?}")" ]] ||
         die "--artifact-root non può essere HOME"
-    case "$ARTIFACT_ROOT" in
-        "$REPO_DIR"|"$REPO_DIR"/*)
-            die "--artifact-root deve essere esterna alla repository: $ARTIFACT_ROOT"
-            ;;
-    esac
-    case "$REPO_DIR" in
-        "$ARTIFACT_ROOT"/*)
-            die "--artifact-root non può essere un antenato della repository: $ARTIFACT_ROOT"
-            ;;
-    esac
     if [[ -n "$LIBRARY_ROOT" ]]; then
         LIBRARY_ROOT="$(canonical_path "$LIBRARY_ROOT")"
         [[ -d "$LIBRARY_ROOT" || "$DRY_RUN" == 1 ]] ||
             die "--library-root inesistente: $LIBRARY_ROOT"
     fi
+    LIBRARY_MATRIX="$(canonical_path "$LIBRARY_MATRIX")"
+    [[ -f "$LIBRARY_MATRIX" || "$DRY_RUN" == 1 ]] ||
+        die "--library-matrix inesistente: $LIBRARY_MATRIX"
 }
 
 fetch_sources() {
@@ -189,26 +201,51 @@ fetch_sources() {
 }
 
 build_libraries() {
+    local library_build_root="$ARTIFACT_ROOT/builds/libraries"
+    local toolchain cc cxx library
+    local -a libraries_for_toolchain
+
     if [[ -n "$LIBRARY_ROOT" ]]; then
-        printf 'REUSE librerie: %s\n' "$LIBRARY_ROOT"
+        printf 'REUSE librerie multi-toolchain: %s\n' "$LIBRARY_ROOT"
         return
     fi
-    local library_build_root="$ARTIFACT_ROOT/builds/libraries"
-    local args=(
-        "$SCRIPTS_DIR/build_libraries.sh"
-        --libraries "$(join_csv "${LIBRARIES[@]}")"
-        --optimizations O0,O2,O3,Os
-        --jobs "$JOBS"
-        --cc gcc
-        --cxx g++
-        --output "$library_build_root"
-        --continue-on-error
-    )
-    (( CLEAN )) && args+=(--clean)
-    (( SKIP_EXISTING )) && args+=(--skip-existing)
-    (( DRY_RUN )) && args+=(--dry-run)
-    run "${args[@]}"
-    LIBRARY_ROOT="$library_build_root/$(compiler_id gcc)"
+
+    for toolchain in "${TOOLCHAINS[@]}"; do
+        IFS='|' read -r cc cxx <<< "$toolchain"
+
+        libraries_for_toolchain=("${LIBRARIES[@]}")
+
+        # glibc viene costruita soltanto con GCC.
+        # Le altre librerie continuano a essere costruite con tutte le toolchain.
+        if [[ "$cc" == clang-* ]]; then
+            libraries_for_toolchain=()
+
+            for library in "${LIBRARIES[@]}"; do
+                [[ "$library" == "glibc-2.41" ]] && continue
+                libraries_for_toolchain+=("$library")
+            done
+        fi
+
+        local args=(
+            "$SCRIPTS_DIR/build_libraries.sh"
+            --libraries "$(join_csv "${libraries_for_toolchain[@]}")"
+            --optimizations O0,O2,O3,Os
+            --jobs "$JOBS"
+            --cc "$cc"
+            --cxx "$cxx"
+            --output "$library_build_root"
+            --continue-on-error
+        )
+
+        (( CLEAN )) && args+=(--clean)
+        (( SKIP_EXISTING )) && args+=(--skip-existing)
+        (( DRY_RUN )) && args+=(--dry-run)
+
+        run "${args[@]}"
+    done
+
+    # La root passata al generatore contiene tutte le directory compiler-id.
+    LIBRARY_ROOT="$library_build_root"
 }
 
 build_libseeker() {
@@ -223,7 +260,8 @@ build_libseeker() {
             --elf-optimizations "$optimization_csv"
             --seed "$SEED"
             --lib-root "$LIBRARY_ROOT"
-            --output-root "$ARTIFACT_ROOT/builds/libseeker_balanced"
+            --library-matrix "$LIBRARY_MATRIX"
+            --output-root "$ARTIFACT_ROOT/builds/programs"
             --ground-truth-root "$ARTIFACT_ROOT/ground_truth/legacy-libseeker-primary-balanced"
             --jobs "$JOBS"
             --continue-on-error
@@ -236,22 +274,22 @@ build_libseeker() {
         (( SKIP_EXISTING )) && args+=(--skip-existing)
         run "${args[@]}"
     done <<'EOF'
-gcc-11|O0|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-gcc-11|O2|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-gcc-11|O3|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-gcc-11|Os|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-gcc-13|O0|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-gcc-13|O2|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-gcc-13|O3|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-gcc-13|Os|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-clang-14|O0|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-clang-14|O2|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-clang-14|O3|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-clang-14|Os|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-clang-18|O0|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-clang-18|O2|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-clang-18|O3|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
-clang-18|Os|bash,coreutils,gawk,gnuchess,grep,gzip,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+gcc-11|O0|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+gcc-11|O2|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+gcc-11|O3|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+gcc-11|Os|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+gcc-13|O0|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+gcc-13|O2|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+gcc-13|O3|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+gcc-13|Os|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+clang-14|O0|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+clang-14|O2|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+clang-14|O3|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+clang-14|Os|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+clang-18|O0|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+clang-18|O2|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+clang-18|O3|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
+clang-18|Os|bash,coreutils,gawk,gnuchess,grep,inetutils,less,make,nano,openssh,rsync,sed,socat,tar,util-linux,vim,wget2
 EOF
 }
 
@@ -263,9 +301,9 @@ collect_profile() {
     local profile="$1"
     local build_root
     if [[ "$profile" == libseeker ]]; then
-        build_root="$ARTIFACT_ROOT/builds/libseeker_balanced"
+        build_root="$ARTIFACT_ROOT/builds/programs"
     else
-        build_root="$ARTIFACT_ROOT/builds/libseeker_balanced"
+        build_root="$ARTIFACT_ROOT/builds/programs"
     fi
     local args=(
         python3 "$SCRIPTS_DIR/assemble_datasets.py"

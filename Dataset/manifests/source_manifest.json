@@ -22,8 +22,8 @@
       "kind": "elf",
       "name": "less-668",
       "type": "archive",
-      "url": "http://www.greenwoodsoftware.com/less/less-668.tar.gz",
-      "sha256": "dbd5cacc9998374f45b7b371889670670d4626d805c3457f6dbeef127c671fe0",
+      "url": "https://ftp.gnu.org/gnu/less/less-668.tar.gz",
+      "sha256": "2819f55564d86d542abbecafd82ff61e819a3eec967faa36cd3e68f1596a44b8",
       "destination": "elf_sources/less-668"
     },
     {
@@ -135,8 +135,8 @@
       "kind": "elf",
       "name": "util-linux-v2.39.3",
       "type": "archive",
-      "url": "https://github.com/util-linux/util-linux/archive/refs/tags/v2.39.3.tar.gz",
-      "sha256": "2434edd1cf2aaca2a2b76b5de5ce7c98b12f75af9f600800c0655af20be85956",
+      "url": "https://www.kernel.org/pub/linux/utils/util-linux/v2.39/util-linux-2.39.3.tar.xz",
+      "sha256": "7b6605e48d1a49f43cc4b4cfc59f313d0dd5402fa40b96810bd572e167dfed0f",
       "destination": "elf_sources/util-linux-v2.39.3"
     },
     {
@@ -182,9 +182,9 @@
     {
       "kind": "library",
       "name": "attr",
-      "type": "git",
-      "url": "https://git.launchpad.net/ubuntu/+source/attr",
-      "revision": "a3f391c05e792a805c613d74872a0d25d6728c1b",
+      "type": "archive",
+      "url": "https://download-mirror.savannah.gnu.org/releases/attr/attr-2.5.2.tar.xz",
+      "sha256": "f2e97b0ab7ce293681ab701915766190d607a1dba7fae8a718138150b700a70b",
       "destination": "lib_sources/attr"
     },
     {
@@ -198,9 +198,9 @@
     {
       "kind": "library",
       "name": "libcap",
-      "type": "git",
-      "url": "https://gitlab.com/cet-software/libcap.git",
-      "revision": "9bdfc8609add40594fc2537b22722d16ccd56227",
+      "type": "archive",
+      "url": "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.75.tar.xz",
+      "sha256": "de4e7e064c9ba451d5234dd46e897d7c71c96a9ebf9a0c445bc04f4742d83632",
       "destination": "lib_sources/libcap"
     },
     {
@@ -218,6 +218,30 @@
       "url": "https://github.com/libexpat/libexpat.git",
       "revision": "74f0b8b241ddca25c26709512425e041aff8784d",
       "destination": "lib_sources/libexpat"
+    },
+    {
+      "kind": "library",
+      "name": "libunistring-1.4.2",
+      "type": "archive",
+      "url": "https://ftp.gnu.org/gnu/libunistring/libunistring-1.4.2.tar.xz",
+      "sha256": "5b46e74377ed7409c5b75e7a96f95377b095623b689d8522620927964a41499c",
+      "destination": "lib_sources/libunistring-1.4.2"
+    },
+    {
+      "kind": "library",
+      "name": "libidn2-2.3.8",
+      "type": "archive",
+      "url": "https://ftp.gnu.org/gnu/libidn/libidn2-2.3.8.tar.gz",
+      "sha256": "f557911bf6171621e1f72ff35f5b1825bb35b52ed45325dcdee931e5d3c0787a",
+      "destination": "lib_sources/libidn2-2.3.8"
+    },
+    {
+      "kind": "library",
+      "name": "libpsl-0.21.5",
+      "type": "archive",
+      "url": "https://github.com/rockdaboot/libpsl/releases/download/0.21.5/libpsl-0.21.5.tar.gz",
+      "sha256": "1dcc9ceae8b128f3c0b3f654decd0e1e891afc6ff81098f227ef260449dae208",
+      "destination": "lib_sources/libpsl-0.21.5"
     },
     {
       "kind": "library",
@@ -304,9 +328,17 @@
       "kind": "library",
       "name": "zlib-1.3.1",
       "type": "archive",
-      "url": "https://zlib.net/zlib-1.3.1.tar.gz",
+      "url": "https://zlib.net/fossils/zlib-1.3.1.tar.gz",
       "sha256": "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
       "destination": "lib_sources/zlib-1.3.1"
+    },
+    {
+      "kind": "library",
+      "name": "zstd-1.5.7",
+      "type": "git",
+      "url": "https://github.com/facebook/zstd.git",
+      "revision": "f8745da6ff1ad1e7bab384bd1f9d742439278e99",
+      "destination": "lib_sources/zstd-1.5.7"
     },
     {
       "kind": "library",
@@ -344,6 +376,1221 @@
       "path": "../../Exploration/libseeker_repo/build_lib/lib_origins.txt",
       "destination_root": "lib_sources",
       "git_revisions": "libseeker_git_revisions.tsv"
+    }
+  ],
+  "historical_packages": [
+    {
+      "name": "glibc",
+      "source_type": "archive",
+      "url_template": "https://ftp.gnu.org/gnu/glibc/glibc-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "2.17",
+          "version": "2.17"
+        },
+        {
+          "label": "2.39",
+          "version": "2.39"
+        },
+        {
+          "label": "2.41",
+          "version": "2.41",
+          "covered_by": "glibc-2.41"
+        }
+      ]
+    },
+    {
+      "name": "libice",
+      "source_type": "archive",
+      "repo": "libice",
+      "tag_prefix": "libICE-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.0.10",
+          "version": "1.0.10"
+        },
+        {
+          "label": "1.0.2",
+          "version": "1.0.2"
+        },
+        {
+          "label": "1.0.9",
+          "version": "1.0.9"
+        }
+      ]
+    },
+    {
+      "name": "libsm",
+      "source_type": "archive",
+      "repo": "libsm",
+      "tag_prefix": "libSM-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.1.1",
+          "version": "1.1.1"
+        },
+        {
+          "label": "1.2.2",
+          "version": "1.2.2"
+        },
+        {
+          "label": "1.2.3",
+          "version": "1.2.3"
+        }
+      ]
+    },
+    {
+      "name": "libx11",
+      "source_type": "archive",
+      "repo": "libx11",
+      "tag_prefix": "libX11-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "11-1.7.5",
+          "version": "1.7.5"
+        },
+        {
+          "label": "11-1.8.6",
+          "version": "1.8.6"
+        },
+        {
+          "label": "11-1.8.7",
+          "version": "1.8.7"
+        }
+      ]
+    },
+    {
+      "name": "libxau",
+      "source_type": "archive",
+      "repo": "libxau",
+      "tag_prefix": "libXau-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.0.2",
+          "version": "1.0.2"
+        },
+        {
+          "label": "1.0.8",
+          "version": "1.0.8"
+        },
+        {
+          "label": "1.0.9",
+          "version": "1.0.9"
+        }
+      ]
+    },
+    {
+      "name": "libxcomposite",
+      "source_type": "archive",
+      "repo": "libxcomposite",
+      "tag_prefix": "libXcomposite-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "0.3.2",
+          "version": "0.3.2"
+        },
+        {
+          "label": "0.4.4",
+          "version": "0.4.4"
+        },
+        {
+          "label": "0.4.5",
+          "version": "0.4.5"
+        }
+      ]
+    },
+    {
+      "name": "libxcursor",
+      "source_type": "archive",
+      "repo": "libxcursor",
+      "tag_prefix": "libXcursor-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.1.9",
+          "version": "1.1.9"
+        },
+        {
+          "label": "1.2.0",
+          "version": "1.2.0"
+        },
+        {
+          "label": "1.2.1",
+          "version": "1.2.1"
+        }
+      ]
+    },
+    {
+      "name": "libxdamage",
+      "source_type": "archive",
+      "repo": "libxdamage",
+      "tag_prefix": "libXdamage-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.0.4",
+          "version": "1.0.4"
+        },
+        {
+          "label": "1.1.5",
+          "version": "1.1.5"
+        },
+        {
+          "label": "1.1.6",
+          "version": "1.1.6"
+        }
+      ]
+    },
+    {
+      "name": "libxdmcp",
+      "source_type": "archive",
+      "repo": "libxdmcp",
+      "tag_prefix": "libXdmcp-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.0.3",
+          "version": "1.0.3"
+        },
+        {
+          "label": "1.1.1",
+          "version": "1.1.1"
+        },
+        {
+          "label": "1.1.3",
+          "version": "1.1.3"
+        }
+      ]
+    },
+    {
+      "name": "libxext",
+      "source_type": "archive",
+      "repo": "libxext",
+      "tag_prefix": "libXext-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.2.0",
+          "version": "1.2.0"
+        },
+        {
+          "label": "1.3.3",
+          "version": "1.3.3"
+        },
+        {
+          "label": "1.3.4",
+          "version": "1.3.4"
+        }
+      ]
+    },
+    {
+      "name": "libxfixes",
+      "source_type": "archive",
+      "repo": "libxfixes",
+      "tag_prefix": "libXfixes-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "5.0.3",
+          "version": "5.0.3"
+        },
+        {
+          "label": "6.0.0",
+          "version": "6.0.0"
+        },
+        {
+          "label": "6.0.1",
+          "version": "6.0.1"
+        }
+      ]
+    },
+    {
+      "name": "libxi",
+      "source_type": "archive",
+      "repo": "libxi",
+      "tag_prefix": "libXi-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.7.9",
+          "version": "1.7.9"
+        },
+        {
+          "label": "1.8",
+          "version": "1.8"
+        },
+        {
+          "label": "1.8.1",
+          "version": "1.8.1"
+        }
+      ]
+    },
+    {
+      "name": "libxinerama",
+      "source_type": "archive",
+      "repo": "libxinerama",
+      "tag_prefix": "libXinerama-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.0.3",
+          "version": "1.0.3"
+        },
+        {
+          "label": "1.1.3",
+          "version": "1.1.3"
+        },
+        {
+          "label": "1.1.4",
+          "version": "1.1.4"
+        }
+      ]
+    },
+    {
+      "name": "libxrandr",
+      "source_type": "archive",
+      "repo": "libxrandr",
+      "tag_prefix": "libXrandr-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.4.2",
+          "version": "1.4.2"
+        },
+        {
+          "label": "1.5.1",
+          "version": "1.5.1"
+        },
+        {
+          "label": "1.5.2",
+          "version": "1.5.2"
+        }
+      ]
+    },
+    {
+      "name": "libxrender",
+      "source_type": "archive",
+      "repo": "libxrender",
+      "tag_prefix": "libXrender-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "0.9.10",
+          "version": "0.9.10"
+        },
+        {
+          "label": "0.9.2",
+          "version": "0.9.2"
+        },
+        {
+          "label": "0.9.9",
+          "version": "0.9.9"
+        }
+      ]
+    },
+    {
+      "name": "libxt",
+      "source_type": "archive",
+      "repo": "libxt",
+      "tag_prefix": "libXt-",
+      "url_template": "https://gitlab.freedesktop.org/xorg/lib/{repo}/-/archive/{tag_prefix}{version}/{repo}-{tag_prefix}{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.1.5",
+          "version": "1.1.5"
+        },
+        {
+          "label": "1.2.0",
+          "version": "1.2.0"
+        },
+        {
+          "label": "1.2.1",
+          "version": "1.2.1"
+        }
+      ]
+    },
+    {
+      "name": "acl",
+      "source_type": "debian-snapshot",
+      "snapshot_package": "acl",
+      "versions": [
+        {
+          "label": "2.0.8-1",
+          "version": "2.0.8-1"
+        },
+        {
+          "label": "2.2.53-9",
+          "version": "2.2.53-9"
+        },
+        {
+          "label": "2.3.2-1",
+          "version": "2.3.2-1",
+          "covered_by": "acl-2.3.2"
+        }
+      ]
+    },
+    {
+      "name": "openssl",
+      "source_type": "archive",
+      "url_template": "https://www.openssl.org/source/old/3.0/openssl-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.1.1w",
+          "version": "1.1.1w",
+          "url": "https://www.openssl.org/source/old/1.1.1/openssl-1.1.1w.tar.gz"
+        },
+        {
+          "label": "3.0.12",
+          "version": "3.0.12"
+        },
+        {
+          "label": "3.5.0",
+          "version": "3.5.0",
+          "url": "https://www.openssl.org/source/openssl-3.5.0.tar.gz",
+          "covered_by": "openssl-3.5.0"
+        }
+      ]
+    },
+    {
+      "name": "at-spi2-core",
+      "source_type": "archive",
+      "url_template": "https://download.gnome.org/sources/at-spi2-core/{series}/at-spi2-core-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "2.50.0",
+          "version": "2.50.0"
+        },
+        {
+          "label": "2.51.90",
+          "version": "2.51.90"
+        },
+        {
+          "label": "2.52.0",
+          "version": "2.52.0"
+        }
+      ]
+    },
+    {
+      "name": "attr",
+      "source_type": "debian-snapshot",
+      "snapshot_package": "attr",
+      "versions": [
+        {
+          "label": "2.0.7-1",
+          "version": "2.0.7-1",
+          "directory_version": "2.0.7-1"
+        },
+        {
+          "label": "2.4.48-6",
+          "version": "1:2.4.48-6",
+          "directory_version": "2.4.48-6"
+        },
+        {
+          "label": "2.5.2-1",
+          "version": "1:2.5.2-1",
+          "directory_version": "2.5.2-1",
+          "covered_by": "attr"
+        }
+      ]
+    },
+    {
+      "name": "util-linux",
+      "source_type": "archive",
+      "url_template": "https://www.kernel.org/pub/linux/utils/util-linux/v{series}/util-linux-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "2.38.1",
+          "version": "2.38.1"
+        },
+        {
+          "label": "2.39.2",
+          "version": "2.39.2"
+        },
+        {
+          "label": "2.39.3",
+          "version": "2.39.3"
+        }
+      ]
+    },
+    {
+      "name": "brotli",
+      "source_type": "archive",
+      "url_template": "https://github.com/google/brotli/archive/refs/tags/v{version}.tar.gz",
+      "versions": [
+        {
+          "label": "0.6.0",
+          "version": "0.6.0"
+        },
+        {
+          "label": "1.0.9",
+          "version": "1.0.9"
+        },
+        {
+          "label": "1.1.0",
+          "version": "1.1.0",
+          "covered_by": "brotli"
+        }
+      ]
+    },
+    {
+      "name": "libbsd",
+      "source_type": "archive",
+      "url_template": "https://libbsd.freedesktop.org/releases/libbsd-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "0.11.8",
+          "version": "0.11.8"
+        },
+        {
+          "label": "0.12.0",
+          "version": "0.12.0"
+        },
+        {
+          "label": "0.12.1",
+          "version": "0.12.1"
+        }
+      ]
+    },
+    {
+      "name": "bzip2",
+      "source_type": "archive",
+      "url_template": "https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "0.9.5d-2",
+          "version": "0.9.5d-2",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "bzip2"
+        },
+        {
+          "label": "2-1.0.6",
+          "version": "1.0.6"
+        },
+        {
+          "label": "2-1.0.8",
+          "version": "1.0.8",
+          "covered_by": "bzip2"
+        }
+      ]
+    },
+    {
+      "name": "libcap",
+      "source_type": "archive",
+      "url_template": "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "1.10",
+          "version": "1.10",
+          "url": "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap1/libcap-1.10.tar.xz"
+        },
+        {
+          "label": "2.65",
+          "version": "2.65"
+        },
+        {
+          "label": "2.75",
+          "version": "2.75",
+          "covered_by": "libcap"
+        }
+      ]
+    },
+    {
+      "name": "glib",
+      "source_type": "archive",
+      "url_template": "https://download.gnome.org/sources/glib/{series}/glib-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "1.2.10-20",
+          "version": "1.2.10-20",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "glib1.2"
+        },
+        {
+          "label": "2.80.1",
+          "version": "2.80.1"
+        },
+        {
+          "label": "2.81.0",
+          "version": "2.81.0"
+        }
+      ]
+    },
+    {
+      "name": "libxcrypt",
+      "source_type": "archive",
+      "url_template": "https://github.com/besser82/libxcrypt/releases/download/v{version}/libxcrypt-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "3.0-2",
+          "version": "3.0-2",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "libxcrypt"
+        },
+        {
+          "label": "4.4.35",
+          "version": "4.4.35"
+        },
+        {
+          "label": "4.4.36",
+          "version": "4.4.36"
+        }
+      ]
+    },
+    {
+      "name": "libdatrie",
+      "source_type": "archive",
+      "url_template": "https://linux.thai.net/pub/thailinux/software/libthai/libdatrie-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "0.2.10",
+          "version": "0.2.10"
+        },
+        {
+          "label": "0.2.12",
+          "version": "0.2.12"
+        },
+        {
+          "label": "0.2.13",
+          "version": "0.2.13"
+        }
+      ]
+    },
+    {
+      "name": "libexpat",
+      "source_type": "archive",
+      "url_template": "https://github.com/libexpat/libexpat/releases/download/{tag}/expat-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "1.95.8-4",
+          "version": "1.95.8-4",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "expat"
+        },
+        {
+          "label": "2_6_0",
+          "version": "2.6.0",
+          "tag": "R_2_6_0"
+        },
+        {
+          "label": "2_6_1",
+          "version": "2.6.1",
+          "tag": "R_2_6_1"
+        }
+      ]
+    },
+    {
+      "name": "libffi",
+      "source_type": "archive",
+      "url_template": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "2.99.9",
+          "version": "2.99.9",
+          "url": "https://sourceware.org/pub/libffi/libffi-2.99.9.tar.gz"
+        },
+        {
+          "label": "3.4.5",
+          "version": "3.4.5"
+        },
+        {
+          "label": "3.4.6",
+          "version": "3.4.6"
+        }
+      ]
+    },
+    {
+      "name": "fontconfig",
+      "source_type": "archive",
+      "url_template": "https://www.freedesktop.org/software/fontconfig/release/fontconfig-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "2.14.2",
+          "version": "2.14.2"
+        },
+        {
+          "label": "2.15.0",
+          "version": "2.15.0"
+        },
+        {
+          "label": "2.16.0",
+          "version": "2.16.0"
+        }
+      ]
+    },
+    {
+      "name": "ncurses",
+      "source_type": "archive",
+      "url_template": "https://ftp.gnu.org/gnu/ncurses/ncurses-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "5.9",
+          "version": "5.9"
+        },
+        {
+          "label": "6.4",
+          "version": "6.4"
+        },
+        {
+          "label": "6.5",
+          "version": "6.5",
+          "covered_by": "ncurses-6.5"
+        }
+      ]
+    },
+    {
+      "name": "freetype",
+      "source_type": "archive",
+      "url_template": "https://download-mirror.savannah.gnu.org/releases/freetype/freetype-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "1.3.1-1",
+          "version": "1.3.1-1",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "freetype"
+        },
+        {
+          "label": "2-13-1",
+          "version": "2.13.1"
+        },
+        {
+          "label": "2-13-2",
+          "version": "2.13.2"
+        }
+      ]
+    },
+    {
+      "name": "fribidi",
+      "source_type": "archive",
+      "url_template": "https://github.com/fribidi/fribidi/releases/download/v{version}/fribidi-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "1.0.12",
+          "version": "1.0.12"
+        },
+        {
+          "label": "1.0.13",
+          "version": "1.0.13"
+        },
+        {
+          "label": "0.19.7-5",
+          "version": "0.19.7-5",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "fribidi"
+        }
+      ]
+    },
+    {
+      "name": "gtk",
+      "source_type": "archive",
+      "url_template": "https://download.gnome.org/sources/gtk+/{series}/gtk+-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "1.2.10-18.1",
+          "version": "1.2.10-18.1",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "gtk+1.2"
+        },
+        {
+          "label": "2.24.32",
+          "version": "2.24.32"
+        },
+        {
+          "label": "2.24.33",
+          "version": "2.24.33"
+        }
+      ]
+    },
+    {
+      "name": "gmp",
+      "source_type": "archive",
+      "url_template": "https://ftp.gnu.org/gnu/gmp/gmp-{archive_version}.tar.xz",
+      "versions": [
+        {
+          "label": "5.1",
+          "version": "5.1",
+          "archive_version": "5.1.0a"
+        },
+        {
+          "label": "6.2",
+          "version": "6.2",
+          "archive_version": "6.2.0"
+        },
+        {
+          "label": "6.3",
+          "version": "6.3",
+          "archive_version": "6.3.0",
+          "covered_by": "gmp-6.3.0"
+        }
+      ]
+    },
+    {
+      "name": "gpm",
+      "source_type": "debian-snapshot",
+      "snapshot_package": "gpm",
+      "versions": [
+        {
+          "label": "1.20.7-10",
+          "version": "1.20.7-10"
+        },
+        {
+          "label": "1.20.7-11",
+          "version": "1.20.7-11"
+        },
+        {
+          "label": "1.20.7-6",
+          "version": "1.20.7-6"
+        }
+      ]
+    },
+    {
+      "name": "graphite2",
+      "source_type": "archive",
+      "url_template": "https://github.com/silnrsi/graphite/archive/refs/tags/{version}.tar.gz",
+      "versions": [
+        {
+          "label": "0.9.4.dfsg-4",
+          "version": "0.9.4.dfsg-4",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "graphite2"
+        },
+        {
+          "label": "1.3.13",
+          "version": "1.3.13"
+        },
+        {
+          "label": "1.3.14",
+          "version": "1.3.14"
+        }
+      ]
+    },
+    {
+      "name": "harfbuzz",
+      "source_type": "archive",
+      "url_template": "https://github.com/harfbuzz/harfbuzz/releases/download/{version}/harfbuzz-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "7.3.0",
+          "version": "7.3.0"
+        },
+        {
+          "label": "8.2.2",
+          "version": "8.2.2"
+        },
+        {
+          "label": "8.3.0",
+          "version": "8.3.0"
+        }
+      ]
+    },
+    {
+      "name": "readline",
+      "source_type": "debian-snapshot",
+      "snapshot_package": "readline",
+      "versions": [
+        {
+          "label": "7.0-1",
+          "version": "7.0-1"
+        },
+        {
+          "label": "8.1-1",
+          "version": "8.1-1"
+        },
+        {
+          "label": "8.2-1",
+          "version": "8.2-1",
+          "covered_by": "readline-8.2"
+        }
+      ]
+    },
+    {
+      "name": "xz",
+      "source_type": "archive",
+      "url_template": "https://github.com/tukaani-project/xz/archive/refs/tags/v{version}.tar.gz",
+      "versions": [
+        {
+          "label": "4.999.9beta+20100927-1",
+          "version": "4.999.9beta+20100927-1",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "xz-utils"
+        },
+        {
+          "label": "5.4.7",
+          "version": "5.4.7"
+        },
+        {
+          "label": "5.6.1",
+          "version": "5.6.1",
+          "covered_by": "xz"
+        }
+      ]
+    },
+    {
+      "name": "file",
+      "source_type": "archive",
+      "url_template": "https://astron.com/pub/file/file-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "4.26-2",
+          "version": "4.26-2",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "file"
+        },
+        {
+          "label": "5.45",
+          "version": "5.45"
+        },
+        {
+          "label": "5.46",
+          "version": "5.46",
+          "covered_by": "file-5.46"
+        }
+      ]
+    },
+    {
+      "name": "libmd",
+      "source_type": "archive",
+      "url_template": "https://archive.hadrons.org/software/libmd/libmd-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "0.0.0-3",
+          "version": "0.0.0-3",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "libmd"
+        },
+        {
+          "label": "1.0.4",
+          "version": "1.0.4"
+        },
+        {
+          "label": "1.1.0",
+          "version": "1.1.0"
+        }
+      ]
+    },
+    {
+      "name": "mpfr",
+      "source_type": "archive",
+      "url_template": "https://www.mpfr.org/mpfr-{version}/mpfr-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "3.1.6",
+          "version": "3.1.6"
+        },
+        {
+          "label": "4.1.0",
+          "version": "4.1.0"
+        },
+        {
+          "label": "4.2.1",
+          "version": "4.2.1",
+          "covered_by": "mpfr-4.2.1"
+        }
+      ]
+    },
+    {
+      "name": "pango",
+      "source_type": "archive",
+      "url_template": "https://download.gnome.org/sources/pango/{series}/pango-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "0.26",
+          "version": "0.26",
+          "url": "https://download.gnome.org/sources/pango/0.26/pango-0.26.tar.gz"
+        },
+        {
+          "label": "1.52.0",
+          "version": "1.52.0"
+        },
+        {
+          "label": "1.52.1",
+          "version": "1.52.1"
+        }
+      ]
+    },
+    {
+      "name": "pcre2",
+      "source_type": "archive",
+      "url_template": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-{version}/pcre2-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "2-10.00",
+          "version": "10.00"
+        },
+        {
+          "label": "2-10.41",
+          "version": "10.41"
+        },
+        {
+          "label": "2-10.47",
+          "version": "10.47",
+          "covered_by": "pcre2-10.47"
+        }
+      ]
+    },
+    {
+      "name": "pixman",
+      "source_type": "archive",
+      "url_template": "https://www.cairographics.org/releases/pixman-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "0.40.0",
+          "version": "0.40.0"
+        },
+        {
+          "label": "0.42.0",
+          "version": "0.42.0"
+        },
+        {
+          "label": "0.42.2",
+          "version": "0.42.2"
+        }
+      ]
+    },
+    {
+      "name": "libpng",
+      "source_type": "archive",
+      "url_template": "https://download.sourceforge.net/libpng/libpng-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "1.6.30",
+          "version": "1.6.30"
+        },
+        {
+          "label": "1.6.42",
+          "version": "1.6.42"
+        },
+        {
+          "label": "1.6.43",
+          "version": "1.6.43"
+        }
+      ]
+    },
+    {
+      "name": "selinux",
+      "source_type": "archive",
+      "url_template": "https://github.com/SELinuxProject/selinux/archive/refs/tags/{tag}.tar.gz",
+      "versions": [
+        {
+          "label": "2.9-3",
+          "version": "2.9-3",
+          "source_type": "debian-snapshot",
+          "snapshot_package": "libselinux"
+        },
+        {
+          "label": "3.2",
+          "version": "3.2"
+        },
+        {
+          "label": "3.7",
+          "version": "3.7",
+          "covered_by": "selinux-3.7"
+        }
+      ]
+    },
+    {
+      "name": "libsodium",
+      "source_type": "archive",
+      "url_template": "https://github.com/jedisct1/libsodium/archive/refs/tags/{tag}.tar.gz",
+      "versions": [
+        {
+          "label": "0.7.0",
+          "version": "0.7.0",
+          "tag": "0.7.0"
+        },
+        {
+          "label": "1.0.17",
+          "version": "1.0.17",
+          "tag": "1.0.17-RELEASE"
+        },
+        {
+          "label": "1.0.18",
+          "version": "1.0.18",
+          "tag": "1.0.18-RELEASE"
+        }
+      ]
+    },
+    {
+      "name": "libthai",
+      "source_type": "archive",
+      "url_template": "https://linux.thai.net/pub/thailinux/software/libthai/libthai-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "0.1.25",
+          "version": "0.1.25"
+        },
+        {
+          "label": "0.1.28",
+          "version": "0.1.28"
+        },
+        {
+          "label": "0.1.29",
+          "version": "0.1.29"
+        }
+      ]
+    },
+    {
+      "name": "tcp-wrappers",
+      "source_type": "debian-snapshot",
+      "snapshot_package": "tcp-wrappers",
+      "versions": [
+        {
+          "label": "7.6.q-25",
+          "version": "7.6.q-25"
+        },
+        {
+          "label": "7.6.q-32",
+          "version": "7.6.q-32"
+        },
+        {
+          "label": "7.6.q-33",
+          "version": "7.6.q-33"
+        }
+      ]
+    },
+    {
+      "name": "libxcb",
+      "source_type": "debian-snapshot",
+      "snapshot_package": "libxcb",
+      "versions": [
+        {
+          "label": "0.9.92-1",
+          "version": "0.9.92-1"
+        },
+        {
+          "label": "1.14-3",
+          "version": "1.14-3"
+        },
+        {
+          "label": "1.15-1",
+          "version": "1.15-1"
+        }
+      ]
+    },
+    {
+      "name": "libiconv",
+      "source_type": "archive",
+      "url_template": "https://ftp.gnu.org/gnu/libiconv/libiconv-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "1.9.2",
+          "version": "1.9.2"
+        },
+        {
+          "label": "1.17",
+          "version": "1.17"
+        },
+        {
+          "label": "1.18",
+          "version": "1.18",
+          "covered_by": "libiconv-1.18"
+        }
+      ]
+    },
+    {
+      "name": "libunistring",
+      "source_type": "archive",
+      "url_template": "https://ftp.gnu.org/gnu/libunistring/libunistring-{version}.tar.xz",
+      "versions": [
+        {
+          "label": "0.9.10",
+          "version": "0.9.10"
+        },
+        {
+          "label": "1.3",
+          "version": "1.3"
+        },
+        {
+          "label": "1.4.2",
+          "version": "1.4.2",
+          "covered_by": "libunistring-1.4.2"
+        }
+      ]
+    },
+    {
+      "name": "libidn2",
+      "source_type": "archive",
+      "url_template": "https://ftp.gnu.org/gnu/libidn/libidn2-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "2.0.1",
+          "version": "2.0.1"
+        },
+        {
+          "label": "2.2.0",
+          "version": "2.2.0"
+        },
+        {
+          "label": "2.3.8",
+          "version": "2.3.8",
+          "covered_by": "libidn2-2.3.8"
+        }
+      ]
+    },
+    {
+      "name": "libpsl",
+      "source_type": "archive",
+      "url_template": "https://github.com/rockdaboot/libpsl/releases/download/libpsl-{version}/libpsl-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "0.13.0",
+          "version": "0.13.0"
+        },
+        {
+          "label": "0.20.2",
+          "version": "0.20.2"
+        },
+        {
+          "label": "0.21.5",
+          "version": "0.21.5",
+          "covered_by": "libpsl-0.21.5"
+        }
+      ]
+    },
+    {
+      "name": "zstd",
+      "source_type": "archive",
+      "url_template": "https://github.com/facebook/zstd/archive/refs/tags/v{version}.tar.gz",
+      "versions": [
+        {
+          "label": "0.8.1",
+          "version": "0.8.1"
+        },
+        {
+          "label": "1.4.9",
+          "version": "1.4.9"
+        },
+        {
+          "label": "1.5.7",
+          "version": "1.5.7",
+          "covered_by": "zstd-1.5.7"
+        }
+      ]
+    },
+    {
+      "name": "zlib",
+      "source_type": "archive",
+      "url_template": "https://zlib.net/fossils/zlib-{version}.tar.gz",
+      "versions": [
+        {
+          "label": "0.99",
+          "version": "0.99",
+          "url": "https://zlib.net/fossils/zlib-0.99.tar.gz"
+        },
+        {
+          "label": "1.2.1200",
+          "version": "1.2.12"
+        },
+        {
+          "label": "1.3.100",
+          "version": "1.3.1",
+          "covered_by": "zlib-1.3.1"
+        }
+      ]
     }
   ]
 }

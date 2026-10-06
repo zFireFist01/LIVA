@@ -1,0 +1,10 @@
+--- a/src/crypt_util.c
++++ b/src/crypt_util.c
+@@ -32,2 +32,6 @@
+-#include <bits/libc-lock.h>
++#include <pthread.h>
+ #define __libc_lock_t pthread_mutex_t
++#define __libc_lock_define_initialized(CLASS, NAME) \
++  CLASS __libc_lock_t NAME = PTHREAD_MUTEX_INITIALIZER;
++#define __libc_lock_lock(NAME) pthread_mutex_lock (&(NAME))
++#define __libc_lock_unlock(NAME) pthread_mutex_unlock (&(NAME))

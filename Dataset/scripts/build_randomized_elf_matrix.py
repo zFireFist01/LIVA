@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import os
@@ -13,13 +14,11 @@ import shlex
 import shutil
 import subprocess
 import sys
+from itertools import chain
 from dataclasses import dataclass
 from pathlib import Path
 
-from enrich_cu_ground_truth import (
-    enrich_archives,
-    inter_cu_ground_truth_summary,
-)
+from enrich_cu_ground_truth import enrich_archives
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -28,7 +27,7 @@ REPO_DIR = DATASET_DIR.parent
 DEFAULT_ARTIFACT_ROOT = REPO_DIR.parent / f"{REPO_DIR.name}_artifacts"
 SOURCE_ROOT = DATASET_DIR / "sources/elf_sources"
 LIB_ROOT = DATASET_DIR / "builds/lib_builds/gcc-16.1.1"
-OUTPUT_ROOT = DEFAULT_ARTIFACT_ROOT / "builds/libseeker_balanced"
+OUTPUT_ROOT = DEFAULT_ARTIFACT_ROOT / "builds/programs"
 GROUND_TRUTH_ROOT = (
     DEFAULT_ARTIFACT_ROOT / "ground_truth/legacy-libseeker-primary"
 )
@@ -52,6 +51,23 @@ class LinkContext:
     library_prefixes: dict[str, Path]
 
 
+@dataclass(frozen=True)
+class LibraryVariant:
+    source: str
+    role: str
+    compiler: str
+    optimization: str
+    archives: tuple[Path, ...]
+
+
+@dataclass
+class LibrarySelectionPlan:
+    selected: dict[str, str]
+    archive_overrides: dict[tuple[str, str], Path]
+    changed_library: str | None = None
+    variant: LibraryVariant | None = None
+
+
 LIBRARIES = {
     "glibc": LibraryDefinition("glibc-2.41", ("libc.a",)),
     "pcre2": LibraryDefinition("pcre2-10.47", ("libpcre2-8.a",)),
@@ -63,14 +79,52 @@ LIBRARIES = {
     "mpfr": LibraryDefinition("mpfr-4.2.1", ("libmpfr.a",)),
     "readline": LibraryDefinition("readline-8.2", ("libreadline.a", "libhistory.a")),
     "magic": LibraryDefinition("file-5.46", ("libmagic.a",)),
+    "cap": LibraryDefinition("libcap", ("libcap.a",)),
     "zlib": LibraryDefinition("zlib-1.3.1", ("libz.a",)),
     "bzip2": LibraryDefinition("bzip2", ("libbz2.a",)),
     "xz": LibraryDefinition("xz", ("liblzma.a",)),
+    "zstd": LibraryDefinition("zstd-1.5.7", ("libzstd.a",)),
+    "brotli": LibraryDefinition(
+        "brotli", ("libbrotlidec.a", "libbrotlicommon.a")
+    ),
+    "unistring": LibraryDefinition(
+        "libunistring-1.4.2", ("libunistring.a",)
+    ),
+    "idn2": LibraryDefinition("libidn2-2.3.8", ("libidn2.a",)),
+    "psl": LibraryDefinition("libpsl-0.21.5", ("libpsl.a",)),
     "openssl": LibraryDefinition("openssl-3.5.0", ("libssl.a", "libcrypto.a")),
     "attr": LibraryDefinition("attr", ("libattr.a",)),
     "acl": LibraryDefinition("acl-2.3.2", ("libacl.a",)),
     "selinux": LibraryDefinition("selinux-3.7", ("libselinux.a",)),
 }
+
+LIBRARY_PACKAGES = {
+    "glibc": "glibc",
+    "pcre2": "pcre2",
+    "iconv": "libiconv",
+    "ncurses": "ncurses",
+    "gmp": "gmp",
+    "mpfr": "mpfr",
+    "readline": "readline",
+    "magic": "file",
+    "cap": "libcap",
+    "zlib": "zlib",
+    "bzip2": "bzip2",
+    "xz": "xz",
+    "zstd": "zstd",
+    "brotli": "brotli",
+    "unistring": "libunistring",
+    "idn2": "libidn2",
+    "psl": "libpsl",
+    "openssl": "openssl",
+    "attr": "attr",
+    "acl": "acl",
+    "selinux": "selinux",
+}
+
+MATRIX_LIBRARY_VARIANTS: dict[str, list[LibraryVariant]] = {}
+MATRIX_ARCHIVE_METADATA: dict[str, dict[str, str]] = {}
+BALANCED_LIBRARY_PLANNER: "BalancedLibraryPlanner | None" = None
 
 
 PROGRAMS = {
@@ -89,7 +143,9 @@ PROGRAMS = {
     "coreutils": {
         "source": "coreutils-9.6",
         "binary": "src/ls",
-        "libraries": ("glibc", "acl", "attr", "iconv", "gmp", "openssl"),
+        "libraries": (
+            "glibc", "acl", "attr", "iconv", "gmp", "openssl", "cap"
+        ),
         "libs": (
             "glibc",
             "acl",
@@ -224,7 +280,7 @@ PROGRAMS = {
     "rsync": {
         "source": "rsync-3.4.1",
         "binary": "rsync",
-        "libraries": ("glibc", "acl", "attr", "iconv", "zlib"),
+        "libraries": ("glibc", "acl", "attr", "iconv", "zlib", "zstd"),
         "libs": (
             "glibc",
             "acl",
@@ -240,9 +296,13 @@ PROGRAMS = {
         "configure": (
             "--disable-openssl",
             "--disable-xxhash",
-            "--disable-zstd",
+            "--enable-zstd",
             "--disable-lz4",
         ),
+        # Static zstd archives reference pthread symbols.  This must follow
+        # libzstd in LIBS, especially with glibc versions predating the 2.34
+        # libpthread merge.
+        "system_libs": ("-pthread",),
     },
     "socat": {
         "source": "socat-1.8.0.3",
@@ -266,8 +326,8 @@ PROGRAMS = {
         "source": "util-linux-v2.39.3",
         "binary": "lsblk",
         "libtool_all_static": True,
-        "libraries": ("glibc", "ncurses"),
-        "libs": ("glibc", "ncurses", "tinfo"),
+        "libraries": ("glibc", "ncurses", "magic", "zlib"),
+        "libs": ("glibc", "ncurses", "tinfo", "magic", "zlib"),
         "include_suffixes": {"ncurses": ("ncursesw",)},
         "configure": (
             "--disable-nls",
@@ -283,8 +343,8 @@ PROGRAMS = {
             "--without-python",
             "--without-readline",
             "--without-cap-ng",
-            "--without-libz",
-            "--without-libmagic",
+            "--with-libz",
+            "--with-libmagic",
             "--without-user",
             "--without-btrfs",
             "--without-econf",
@@ -311,7 +371,27 @@ PROGRAMS = {
         "source": "wget2-2.2.0",
         "binary": "src/wget2",
         "libtool_all_static": True,
-        "libraries": ("glibc", "iconv", "zlib", "openssl", "bzip2", "xz"),
+        # The top-level default also builds examples that may inherit optional
+        # transitive pkg-config dependencies (for example ICU from libidn2).
+        # They are not part of the dataset, so build only the directories
+        # needed by the two wget2 executable names.
+        "make_directories": ("lib", "include", "libwget", "src"),
+        # Keep dependent archives before their dependencies for static links:
+        # libpsl -> libidn2 -> libunistring and brotlidec -> brotlicommon.
+        "libraries": (
+            "glibc",
+            "zlib",
+            "openssl",
+            "bzip2",
+            "xz",
+            "pcre2",
+            "psl",
+            "idn2",
+            "unistring",
+            "iconv",
+            "brotli",
+            "zstd",
+        ),
         "libs": (
             "glibc",
             "iconv",
@@ -336,16 +416,16 @@ PROGRAMS = {
             "--with-ssl=openssl",
             "--with-bzip2",
             "--with-lzma",
-            "--without-libpsl",
+            "--with-libpsl",
             "--without-libhsts",
             "--without-libnghttp2",
             "--without-gpgme",
-            "--without-brotlidec",
-            "--without-zstd",
+            "--with-brotlidec",
+            "--with-zstd",
             "--without-lzip",
-            "--without-libidn2",
+            "--with-libidn2",
             "--without-libidn",
-            "--without-libpcre2",
+            "--with-libpcre2",
             "--without-libpcre",
             "--without-libmicrohttpd",
             "--without-plugin-support",
@@ -471,8 +551,17 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=LIB_ROOT,
         help=(
-            "Compiler-specific library root to use for linked libraries "
+            "Multi-toolchain library root containing compiler-id directories "
             f"(default: {LIB_ROOT})."
+        ),
+    )
+    parser.add_argument(
+        "--library-matrix",
+        type=Path,
+        help=(
+            "Select complete version/toolchain/optimization bundles from a "
+            "library_matrix.tsv. Source versions are balanced globally and "
+            "seeded tie-breaking keeps all shards reproducible."
         ),
     )
     parser.add_argument(
@@ -547,6 +636,8 @@ def parse_args() -> argparse.Namespace:
         library_sources[key] = source
     args.library_source = library_sources
     args.lib_root = args.lib_root.resolve()
+    if args.library_matrix:
+        args.library_matrix = args.library_matrix.resolve()
     args.output_root = args.output_root.resolve()
     args.ground_truth_root = args.ground_truth_root.resolve()
     return args
@@ -586,35 +677,797 @@ def archive_path(
     archive_name: str,
     archive_overrides: dict[tuple[str, str], Path] | None = None,
 ) -> Path:
+    """Resolve one concrete static archive.
+
+    Mixed-toolchain cases provide archive_overrides. The fallback preserves
+    compatibility with an old compiler-specific --lib-root.
+    """
     if archive_overrides:
         override = archive_overrides.get((key, archive_name))
         if override is not None:
             if not override.is_file():
                 raise FileNotFoundError(f"Missing archive: {override}")
             return override.resolve()
-    definition = LIBRARIES[key]
-    path = (
-        LIB_ROOT / definition.source / optimization / "install/lib" / archive_name
-    )
-    if not path.is_file():
-        raise FileNotFoundError(f"Missing archive: {path}")
-    return path.resolve()
 
+    definition = LIBRARIES[key]
+
+    for lib_dir in ("lib", "lib64"):
+        path = (
+            LIB_ROOT
+            / definition.source
+            / optimization
+            / "install"
+            / lib_dir
+            / archive_name
+        )
+        if path.is_file():
+            return path.resolve()
+
+    raise FileNotFoundError(
+        "Missing archive and no mixed-toolchain override for "
+        f"{key}/{optimization}/{archive_name} below {LIB_ROOT}"
+    )
+
+
+def library_compiler_roots() -> list[Path]:
+    """Return compiler-specific roots below LIB_ROOT.
+
+    A direct compiler-specific root remains accepted for compatibility.
+    """
+    known_sources = {
+        definition.source
+        for definition in LIBRARIES.values()
+    }
+
+    if any((LIB_ROOT / source).is_dir() for source in known_sources):
+        return [LIB_ROOT]
+
+    return sorted(
+        path
+        for path in LIB_ROOT.iterdir()
+        if path.is_dir()
+    )
+
+
+def archive_in_variant(
+    compiler_root: Path,
+    source: str,
+    optimization: str,
+    archive_name: str,
+) -> Path | None:
+    for lib_dir in ("lib", "lib64"):
+        candidate = (
+            compiler_root
+            / source
+            / optimization
+            / "install"
+            / lib_dir
+            / archive_name
+        )
+
+        if candidate.is_file():
+            return candidate.resolve()
+
+    return None
+
+
+def library_variants(
+    key: str,
+    forced_optimization: str | None,
+) -> list[tuple[str, str, tuple[Path, ...]]]:
+    """Enumerate complete compiler/optimization variants for one library."""
+    definition = LIBRARIES[key]
+
+    optimizations = (
+        (forced_optimization,)
+        if forced_optimization is not None
+        else (
+            GLIBC_OPTIMIZATIONS
+            if key == "glibc"
+            else OPTIMIZATIONS
+        )
+    )
+
+    variants: list[tuple[str, str, tuple[Path, ...]]] = []
+
+    for compiler_root in library_compiler_roots():
+        for optimization in optimizations:
+            archives: list[Path] = []
+
+            for archive_name in definition.archives:
+                archive = archive_in_variant(
+                    compiler_root,
+                    definition.source,
+                    optimization,
+                    archive_name,
+                )
+
+                if archive is None:
+                    break
+
+                archives.append(archive)
+            else:
+                variants.append(
+                    (
+                        compiler_root.name,
+                        optimization,
+                        tuple(archives),
+                    )
+                )
+
+    return sorted(
+        variants,
+        key=lambda item: (item[0], item[1]),
+    )
+
+
+def load_matrix_library_variants(
+    matrix_path: Path,
+) -> tuple[dict[str, list[LibraryVariant]], dict[str, dict[str, str]]]:
+    """Load complete logical-library bundles from the pruned library matrix."""
+    grouped: dict[
+        tuple[str, str, str, str, str], dict[str, Path]
+    ] = {}
+    metadata: dict[str, dict[str, str]] = {}
+    with matrix_path.open(encoding="utf-8", newline="") as stream:
+        for row in csv.DictReader(stream, delimiter="\t"):
+            if row.get("status") != "selected" or not row.get("path"):
+                continue
+            relative = Path(row["path"])
+            if len(relative.parts) < 6:
+                raise ValueError(f"invalid library matrix path: {relative}")
+            source = relative.parts[1]
+            path = Path(os.path.abspath(LIB_ROOT / relative))
+            key = (
+                row["package"], row["role"], row["toolchain"],
+                row["optimization"], source,
+            )
+            grouped.setdefault(key, {})[row["archive"]] = path
+            details = {
+                "package": row["package"],
+                "role": row["role"],
+                "source": source,
+                "compiler": row["toolchain"],
+                "optimization": row["optimization"],
+            }
+            metadata[path.as_posix()] = details
+            if path.exists():
+                metadata[path.resolve().as_posix()] = details
+
+    result: dict[str, list[LibraryVariant]] = {}
+    for library, definition in LIBRARIES.items():
+        package = LIBRARY_PACKAGES[library]
+        variants: list[LibraryVariant] = []
+        for (candidate_package, role, compiler, optimization, source), archives in grouped.items():
+            if candidate_package != package:
+                continue
+            if not all(name in archives for name in definition.archives):
+                continue
+            variants.append(
+                LibraryVariant(
+                    source=source,
+                    role=role,
+                    compiler=compiler,
+                    optimization=optimization,
+                    archives=tuple(archives[name] for name in definition.archives),
+                )
+            )
+        result[library] = sorted(
+            variants,
+            key=lambda item: (
+                item.role, item.source, item.compiler, item.optimization,
+            ),
+        )
+    return result, metadata
+
+
+def stable_rank(*parts: object) -> str:
+    return hashlib.sha256(
+        ":".join(str(part) for part in parts).encode("utf-8")
+    ).hexdigest()
+
+
+def project_output_weights() -> dict[str, int]:
+    inventory = json.loads(
+        (DATASET_DIR / "manifests/libseeker_inventory.json").read_text()
+    )
+    return {
+        str(project["id"]): int(project["program_count"])
+        for project in inventory["projects"]
+    }
+
+
+class BalancedLibraryPlanner:
+    """Assign library versions reproducibly while minimizing weighted skew.
+
+    A source-project build can emit many program names.  The greedy load uses
+    that project output count as its weight, so balancing is measured over the
+    final 3,504 ELF records rather than merely over the smaller build matrix.
+    """
+
+    COMPILERS = ("gcc-11", "gcc-13", "clang-14", "clang-18")
+
+    def __init__(
+        self,
+        *,
+        seed: int,
+        profile: str | None,
+        forced: dict[str, str],
+        variants: dict[str, list[LibraryVariant]],
+        programs: tuple[str, ...] | list[str] | None = None,
+    ) -> None:
+        self.seed = seed
+        self.profile = profile
+        self.forced = forced
+        self.variants = variants
+        self.programs = tuple(
+            programs
+            or DATASET_PROFILES.get(profile or "", DEFAULT_PROGRAMS)
+        )
+        self.assignments: dict[
+            tuple[str, str, str, str], LibraryVariant
+        ] = {}
+        self.weights = project_output_weights()
+        self._build()
+
+    def eligible_cases(self, library: str) -> list[tuple[str, str, str, int]]:
+        cases: list[tuple[str, str, str, int]] = []
+        for program in self.programs:
+            definition = PROGRAMS[program]
+            if library not in definition["libraries"]:
+                continue
+            supported = definition.get("compilers", ("gcc", "clang"))
+            for compiler in self.COMPILERS:
+                if compiler_family(compiler) not in supported:
+                    continue
+                for optimization in OPTIMIZATIONS:
+                    cases.append(
+                        (
+                            program,
+                            compiler,
+                            optimization,
+                            self.weights.get(program, 1),
+                        )
+                    )
+        return sorted(
+            cases,
+            key=lambda case: stable_rank(
+                self.seed, library, "case", *case[:3]
+            ),
+        )
+
+    def _build(self) -> None:
+        for library in sorted(self.variants):
+            candidates = [
+                variant
+                for variant in self.variants[library]
+                if (
+                    library not in self.forced
+                    or variant.optimization == self.forced[library]
+                )
+            ]
+            if not candidates:
+                continue
+            by_version: dict[str, list[LibraryVariant]] = {}
+            for variant in candidates:
+                by_version.setdefault(variant.role, []).append(variant)
+            version_loads = {version: 0 for version in by_version}
+            variant_loads = {variant: 0 for variant in candidates}
+
+            for program, compiler, optimization, weight in self.eligible_cases(library):
+                def version_objective(version: str) -> tuple[int, int, str]:
+                    projected = dict(version_loads)
+                    projected[version] += weight
+                    return (
+                        max(projected.values()) - min(projected.values()),
+                        projected[version],
+                        stable_rank(
+                            self.seed, library, program, compiler,
+                            optimization, "version", version,
+                        ),
+                    )
+
+                version = min(by_version, key=version_objective)
+                version_loads[version] += weight
+                version_candidates = by_version[version]
+
+                def variant_objective(variant: LibraryVariant) -> tuple[int, int, str]:
+                    projected_loads = {
+                        item: variant_loads[item]
+                        for item in version_candidates
+                    }
+                    projected = variant_loads[variant] + weight
+                    projected_loads[variant] = projected
+                    return (
+                        max(projected_loads.values()) - min(projected_loads.values()),
+                        projected,
+                        stable_rank(
+                            self.seed, library, program, compiler,
+                            optimization, "variant", variant.source,
+                            variant.compiler, variant.optimization,
+                        ),
+                    )
+
+                variant = min(version_candidates, key=variant_objective)
+                variant_loads[variant] += weight
+                self.assignments[
+                    (program, compiler, optimization, library)
+                ] = variant
+
+    def select(
+        self, program: str, compiler: str, optimization: str, library: str
+    ) -> LibraryVariant:
+        key = (program, compiler, optimization, library)
+        try:
+            return self.assignments[key]
+        except KeyError as error:
+            available = self.variants.get(library, [])
+            raise FileNotFoundError(
+                f"No balanced matrix assignment for {key}; "
+                f"complete variants={len(available)}"
+            ) from error
 
 def library_selection(
     rng: random.Random,
     keys: tuple[str, ...],
     forced: dict[str, str],
-) -> dict[str, str]:
-    result = {}
+    *,
+    program: str | None = None,
+    compiler: str | None = None,
+    elf_optimization: str | None = None,
+) -> tuple[
+    dict[str, str],
+    dict[tuple[str, str], Path],
+]:
+    """Choose compiler and optimization independently for each library.
+
+    The choice remains deterministic because rng is initialized from the
+    dataset seed, program, ELF compiler and ELF optimization.
+    """
+    selected_optimizations: dict[str, str] = {}
+    archive_overrides: dict[tuple[str, str], Path] = {}
+
     for key in keys:
-        if key in forced:
-            result[key] = forced[key]
-        else:
-            choices = OPTIMIZATIONS if key != "glibc" else GLIBC_OPTIMIZATIONS
-            result[key] = rng.choice(choices)
+        if BALANCED_LIBRARY_PLANNER is not None:
+            if not all((program, compiler, elf_optimization)):
+                raise ValueError("balanced library selection requires case identity")
+            variant = BALANCED_LIBRARY_PLANNER.select(
+                str(program), str(compiler), str(elf_optimization), key
+            )
+            selected_optimizations[key] = variant.optimization
+            for archive in variant.archives:
+                if not archive.is_file():
+                    raise FileNotFoundError(f"Missing matrix archive: {archive}")
+                archive_overrides[(key, archive.name)] = archive
+            print(
+                f"[LIB-SELECT] {key}: source={variant.source} "
+                f"role={variant.role} compiler={variant.compiler} "
+                f"optimization={variant.optimization}"
+            )
+            continue
+        variants = library_variants(
+            key,
+            forced.get(key),
+        )
+
+        if not variants:
+            requested = forced.get(key, "any")
+            raise FileNotFoundError(
+                f"No complete compiler/optimization build for {key} "
+                f"(optimization={requested}) below {LIB_ROOT}"
+            )
+
+        compiler_id, optimization, archives = rng.choice(variants)
+
+        selected_optimizations[key] = optimization
+
+        for archive in archives:
+            archive_overrides[(key, archive.name)] = archive
+
+        print(
+            f"[LIB-SELECT] {key}: "
+            f"compiler={compiler_id} optimization={optimization}"
+        )
+
+    return selected_optimizations, archive_overrides
+
+
+def selected_matrix_variant(
+    library: str,
+    archive_overrides: dict[tuple[str, str], Path],
+) -> LibraryVariant:
+    """Resolve the matrix variant represented by a concrete archive bundle."""
+    archive_names = LIBRARIES[library].archives
+    selected_archives = tuple(
+        archive_overrides[(library, archive_name)].resolve()
+        for archive_name in archive_names
+    )
+    for variant in MATRIX_LIBRARY_VARIANTS.get(library, []):
+        if tuple(archive.resolve() for archive in variant.archives) == selected_archives:
+            return variant
+    raise ValueError(
+        f"Selected archives do not match a matrix variant for {library}: "
+        f"{selected_archives}"
+    )
+
+
+def selection_plan_details(plan: LibrarySelectionPlan) -> dict[str, dict[str, str]]:
+    details: dict[str, dict[str, str]] = {}
+    for library in sorted(plan.selected):
+        variant = selected_matrix_variant(library, plan.archive_overrides)
+        details[library] = {
+            "source": variant.source,
+            "role": variant.role,
+            "compiler": variant.compiler,
+            "optimization": variant.optimization,
+        }
+    return details
+
+
+def selection_plan_signature(plan: LibrarySelectionPlan) -> tuple:
+    return tuple(
+        (library, *sorted(details.items()))
+        for library, details in sorted(selection_plan_details(plan).items())
+    )
+
+
+def metadata_selection_signature(metadata: dict) -> tuple:
+    sources = metadata.get("seeded_library_version_selection", {})
+    roles = metadata.get("seeded_library_version_roles", {})
+    compilers = metadata.get("seeded_library_compiler_selection", {})
+    optimizations = metadata.get("seeded_library_selection", {})
+    if not all(
+        isinstance(mapping, dict)
+        for mapping in (sources, roles, compilers, optimizations)
+    ):
+        return ()
+    libraries = set(sources) | set(roles) | set(compilers) | set(optimizations)
+    if not libraries:
+        return ()
+    return tuple(
+        (
+            library,
+            ("compiler", compilers.get(library)),
+            ("optimization", optimizations.get(library)),
+            ("role", roles.get(library)),
+            ("source", sources.get(library)),
+        )
+        for library in sorted(libraries)
+    )
+
+
+def alternate_version_plans(
+    *,
+    seed: int,
+    program: str,
+    compiler: str,
+    elf_optimization: str,
+    libraries: tuple[str, ...],
+    selected: dict[str, str],
+    archive_overrides: dict[tuple[str, str], Path],
+    forced: dict[str, str],
+) -> list[LibrarySelectionPlan]:
+    """Return deterministic one-library-at-a-time source-version fallbacks.
+
+    A fallback changes the source version, not merely the toolchain or the
+    optimization used to build the same source.  Within an alternative source
+    it keeps the original toolchain and optimization whenever that exact cell
+    exists in the library matrix.
+    """
+    initial_plan = LibrarySelectionPlan(
+        selected=dict(selected),
+        archive_overrides=dict(archive_overrides),
+    )
+    plans = [initial_plan]
+    for library in libraries:
+        plans.extend(alternate_library_plans(
+            seed=seed,
+            program=program,
+            compiler=compiler,
+            elf_optimization=elf_optimization,
+            library=library,
+            plan=initial_plan,
+            forced=forced,
+        ))
+    return plans
+
+
+def alternate_library_plans(
+    *,
+    seed: int,
+    program: str,
+    compiler: str,
+    elf_optimization: str,
+    library: str,
+    plan: LibrarySelectionPlan,
+    forced: dict[str, str],
+) -> list[LibrarySelectionPlan]:
+    """Change one library while preserving changes made by earlier retries."""
+    role_order = {
+        "current": 0,
+        "minor-alternative": 1,
+        "major-alternative": 2,
+    }
+    initial = selected_matrix_variant(library, plan.archive_overrides)
+    candidates = [
+        variant
+        for variant in MATRIX_LIBRARY_VARIANTS.get(library, [])
+        if (
+            variant.source != initial.source
+            and (
+                library not in forced
+                or variant.optimization == forced[library]
+            )
+            and all(archive.is_file() for archive in variant.archives)
+        )
+    ]
+    by_source: dict[str, list[LibraryVariant]] = {}
+    for variant in candidates:
+        by_source.setdefault(variant.source, []).append(variant)
+
+    source_variants: list[LibraryVariant] = []
+    for source, variants in by_source.items():
+        source_variants.append(min(
+            variants,
+            key=lambda variant: (
+                variant.compiler != initial.compiler,
+                variant.optimization != initial.optimization,
+                stable_rank(
+                    seed,
+                    program,
+                    compiler,
+                    elf_optimization,
+                    library,
+                    source,
+                    variant.compiler,
+                    variant.optimization,
+                ),
+            ),
+        ))
+    source_variants.sort(key=lambda variant: (
+        role_order.get(variant.role, len(role_order)),
+        stable_rank(
+            seed,
+            program,
+            compiler,
+            elf_optimization,
+            library,
+            "fallback-source",
+            variant.source,
+        ),
+    ))
+
+    plans: list[LibrarySelectionPlan] = []
+    for variant in source_variants:
+        fallback_selected = dict(plan.selected)
+        fallback_selected[library] = variant.optimization
+        fallback_overrides = dict(plan.archive_overrides)
+        for archive in variant.archives:
+            fallback_overrides[(library, archive.name)] = archive
+        plans.append(LibrarySelectionPlan(
+            selected=fallback_selected,
+            archive_overrides=fallback_overrides,
+            changed_library=library,
+            variant=variant,
+        ))
+    return plans
+
+
+VERSION_LINK_FAILURE_RE = re.compile(
+    r"undefined reference|undefined symbol|multiple definition|"
+    r"duplicate symbol|version [`']?GLIBC_|"
+    r"error adding symbols|file format not recognized|"
+    r"relocation .* can not be used|failed to set dynamic section|"
+    r"linker command failed",
+    re.IGNORECASE,
+)
+VERSION_CONFIGURE_FAILURE_RE = re.compile(
+    r"configure(?:\.sh)?: error:|"
+    r"failed to find|support not detected|"
+    r"(?:fatal error|error:).*(?:version|too old|"
+    r"incompatib|unsupported|requires?)|"
+    r"(?:version|too old|incompatib|unsupported|requires?).*"
+    r"(?:configure: error|fatal error|failed)",
+    re.IGNORECASE,
+)
+LIBRARY_COMPILE_FAILURE_RE = re.compile(
+    r":\s*(?:fatal\s+)?error:",
+    re.IGNORECASE,
+)
+LIBRARY_DIAGNOSTIC_PATTERNS = {
+    "glibc": re.compile(
+        r"__isoc\d+_|\bGLIBC_|\b_dl_find_object\b|\bclose_range\b|\bstatx\b|"
+        r"\bpthread_[A-Za-z0-9_]+\b",
+        re.IGNORECASE,
+    ),
+    "zlib": re.compile(r"\bzError\b|\bzlib\b", re.IGNORECASE),
+    "zstd": re.compile(r"\bZSTD_[A-Za-z0-9_]+\b", re.IGNORECASE),
+    "ncurses": re.compile(
+        r"\btgetent\b|\btgoto\b|\btputs\b|\bsetupterm\b",
+        re.IGNORECASE,
+    ),
+    "acl": re.compile(
+        r"\bacls?\b|\bacl_[A-Za-z0-9_]+\b",
+        re.IGNORECASE,
+    ),
+}
+CONFIG_VERSION_SYMBOL_RE = re.compile(
+    r"__isoc\d+_|\bGLIBC_|\b_dl_find_object\b|\bclose_range\b|\bstatx\b|\bzError\b|"
+    r"\bZSTD_[A-Za-z0-9_]+\b|\btgetent\b|\btgoto\b|\btputs\b|"
+    r"\bsetupterm\b|\bpthread_[A-Za-z0-9_]+\b",
+    re.IGNORECASE,
+)
+CONFIG_FAILURE_MARKER_RE = re.compile(
+    r"undefined reference|multiple definition|(?:fatal\s+)?error:|"
+    r"static declaration|conflicting types|too old|incompatib",
+    re.IGNORECASE,
+)
+
+
+def version_failure_libraries(
+    log_text: str,
+    libraries: tuple[str, ...],
+    archive_overrides: dict[tuple[str, str], Path],
+) -> list[str]:
+    """Identify selected libraries involved in version-sensitive link errors."""
+    lines = log_text.splitlines()
+    link_diagnostic_indexes = [
+        index
+        for index, line in enumerate(lines)
+        if VERSION_LINK_FAILURE_RE.search(line)
+    ]
+    configure_diagnostic_indexes = [
+        index
+        for index, line in enumerate(lines)
+        if VERSION_CONFIGURE_FAILURE_RE.search(line)
+    ]
+    compile_diagnostic_indexes = [
+        index
+        for index, line in enumerate(lines)
+        if LIBRARY_COMPILE_FAILURE_RE.search(line)
+    ]
+    diagnostic_indexes = sorted(set(
+        link_diagnostic_indexes
+        + configure_diagnostic_indexes
+        + compile_diagnostic_indexes
+    ))
+    if not diagnostic_indexes:
+        return []
+
+    implicated: list[str] = []
+    for index in diagnostic_indexes:
+        line = lines[index]
+        # GNU ld normally prints the archive on the diagnostic line or the
+        # line immediately before it.  LLD instead commonly prints it in one
+        # of the following ``>>> referenced by`` lines.  Keep a small bounded
+        # context so Clang shards can identify the same offending archive.
+        archive_context = "\n".join(
+            lines[max(0, index - 2) : min(len(lines), index + 5)]
+        )
+        for library in libraries:
+            if library in implicated:
+                continue
+            archive_names = LIBRARIES[library].archives
+            if any(
+                (
+                    str(archive_overrides[(library, name)].resolve())
+                    in archive_context
+                )
+                for name in archive_names
+                if (library, name) in archive_overrides
+            ):
+                implicated.append(library)
+                continue
+            identifiers = {
+                library.lower(),
+                LIBRARY_PACKAGES[library].lower(),
+            }
+            identifiers.update(
+                stem
+                for name in archive_names
+                if len(
+                    stem := Path(name).stem.removeprefix("lib").lower()
+                ) >= 3
+            )
+            lowered = line.lower()
+            if any(
+                re.search(rf"(?<![a-z0-9]){re.escape(name)}(?![a-z0-9])", lowered)
+                for name in identifiers
+            ):
+                implicated.append(library)
+                continue
+            pattern = LIBRARY_DIAGNOSTIC_PATTERNS.get(library)
+            if pattern and pattern.search(line):
+                implicated.append(library)
+
+    joined_diagnostics = "\n".join(
+        lines[index] for index in diagnostic_indexes
+    )
+    libc_abi_error = bool(re.search(
+        r"__isoc\d+_|GLIBC_|\b_dl_find_object\b|multiple definition|\bclose_range\b|\bstatx\b|"
+        r"\bpthread_[A-Za-z0-9_]+\b",
+        joined_diagnostics,
+        re.IGNORECASE,
+    ))
+    if "glibc" in libraries and libc_abi_error:
+        if "glibc" in implicated:
+            implicated.remove("glibc")
+        implicated.insert(0, "glibc")
+    return implicated
+
+
+def archive_compiler_id(archive: Path) -> str:
+    """Infer compiler-id from compiler/source/opt/install/lib/archive."""
+    archive = archive.resolve()
+
+    if (
+        archive.parent.name in {"lib", "lib64"}
+        and archive.parent.parent.name == "install"
+        and len(archive.parents) >= 5
+    ):
+        return archive.parents[4].name
+
+    return LIB_ROOT.name
+
+
+def archive_source_name(archive: Path, fallback: str) -> str:
+    details = MATRIX_ARCHIVE_METADATA.get(archive.resolve().as_posix())
+    if details and details.get("source"):
+        return details["source"]
+    resolved = archive.resolve()
+    if (
+        resolved.parent.name in {"lib", "lib64"}
+        and resolved.parent.parent.name == "install"
+        and len(resolved.parents) >= 4
+    ):
+        return resolved.parents[3].name
+    return fallback
+
+
+def archive_version_role(archive: Path) -> str:
+    details = MATRIX_ARCHIVE_METADATA.get(archive.resolve().as_posix())
+    return details.get("role", "current") if details else "current"
+
+
+def compiler_selection_from_metadata(
+    archive_metadata: list[dict[str, str]],
+) -> dict[str, str]:
+    result: dict[str, str] = {}
+
+    for entry in archive_metadata:
+        library = entry.get("library")
+        compiler = entry.get("compiler")
+
+        if not library or not compiler:
+            continue
+
+        previous = result.setdefault(library, compiler)
+
+        if previous != compiler:
+            raise ValueError(
+                f"Library {library} uses multiple compiler roots: "
+                f"{previous}, {compiler}"
+            )
+
     return result
 
+
+def version_selection_from_metadata(
+    archive_metadata: list[dict[str, str]], field: str
+) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for entry in archive_metadata:
+        library = entry.get("library")
+        value = entry.get(field)
+        if not library or not value:
+            continue
+        previous = result.setdefault(library, value)
+        if previous != value:
+            raise ValueError(
+                f"Library {library} uses multiple {field} values: "
+                f"{previous}, {value}"
+            )
+    return result
 
 def apply_library_sources(overrides: dict[str, str]) -> None:
     for key, source in overrides.items():
@@ -666,6 +1519,42 @@ def relocate_glibc_linker_scripts(prefix: Path) -> list[Path]:
             if updated != text:
                 candidate.write_text(updated)
                 relocated.append(candidate)
+    return relocated
+
+
+def relocate_library_metadata(root: Path) -> list[Path]:
+    """Rebase installed build metadata after the repository is moved.
+
+    Libtool archives, pkg-config files and ``*-config`` helpers often embed
+    the absolute installation prefix.  The selected static archives remain
+    relocatable, but consumers such as wget2 follow these metadata files and
+    otherwise try to open the checkout path used while the libraries were
+    built (for example ``/workspace/libseeker/Dataset``).
+    """
+    dataset_prefix = str(DATASET_DIR.resolve())
+    stale_dataset_prefix = re.compile(
+        r"/(?:[^/'\"\s]+/)*Dataset(?=/)"
+    )
+    candidates = chain(
+        root.glob("**/install/**/*.la"),
+        root.glob("**/install/**/*.pc"),
+        root.glob("**/install/**/*-config"),
+    )
+    relocated: list[Path] = []
+    seen: set[Path] = set()
+    for candidate in candidates:
+        if candidate in seen or not candidate.is_file():
+            continue
+        seen.add(candidate)
+        try:
+            text = candidate.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        updated = stale_dataset_prefix.sub(dataset_prefix, text)
+        if updated == text:
+            continue
+        candidate.write_text(updated, encoding="utf-8")
+        relocated.append(candidate)
     return relocated
 
 
@@ -737,36 +1626,78 @@ def matrix_case_library_selection(case: dict) -> dict[str, str]:
     return result
 
 
-def matrix_case_archive_overrides(case: dict) -> dict[tuple[str, str], Path]:
+def resolve_recorded_archive(record: dict) -> Path:
+    archive_value = Path(
+        str(record.get("archive", ""))
+    ).expanduser()
+
+    if archive_value.is_file():
+        return archive_value.resolve()
+
+    source = record.get("source")
+    optimization = record.get("optimization")
+    compiler = record.get("compiler")
+
+    if not source or not optimization or not archive_value.name:
+        return archive_value.resolve()
+
+    roots = library_compiler_roots()
+
+    if compiler:
+        roots = [
+            root
+            for root in roots
+            if root.name == str(compiler)
+        ]
+
+    candidates = [
+        candidate
+        for root in roots
+        if (
+            candidate := archive_in_variant(
+                root,
+                str(source),
+                str(optimization),
+                archive_value.name,
+            )
+        ) is not None
+    ]
+
+    if len(candidates) == 1:
+        return candidates[0]
+
+    if not candidates:
+        return archive_value.resolve()
+
+    raise ValueError(
+        f"Ambiguous archive relocation for "
+        f"{archive_value.name}: {candidates}"
+    )
+
+
+def matrix_case_archive_overrides(
+    case: dict,
+) -> dict[tuple[str, str], Path]:
     result: dict[tuple[str, str], Path] = {}
-    records = case.get("passed_archives") or case.get("archives") or []
+
+    records = (
+        case.get("passed_archives")
+        or case.get("archives")
+        or []
+    )
+
     for record in records:
         if not isinstance(record, dict):
             continue
+
         library = record.get("library")
         archive = record.get("archive")
-        if library and archive:
-            archive_path_value = Path(str(archive)).resolve()
-            if not archive_path_value.is_file():
-                source = record.get("source")
-                optimization = record.get("optimization")
-                if source and optimization:
-                    archive_name = Path(str(archive)).name
-                    candidates = (
-                        LIB_ROOT
-                        / str(source)
-                        / str(optimization)
-                        / install_dir
-                        / archive_name
-                        for install_dir in ("install/lib", "install/lib64")
-                    )
-                    archive_path_value = next(
-                        (candidate for candidate in candidates if candidate.is_file()),
-                        archive_path_value,
-                    )
-            result[(str(library), archive_path_value.name)] = archive_path_value
-    return result
 
+        if library and archive:
+            resolved = resolve_recorded_archive(record)
+            result[(str(library), resolved.name)] = resolved
+
+    return result
 
 def load_matrix_cases(path: Path) -> tuple[dict, list[dict]]:
     payload = json.loads(path.read_text())
@@ -776,47 +1707,46 @@ def load_matrix_cases(path: Path) -> tuple[dict, list[dict]]:
     return payload, cases
 
 
-def localize_case_paths(case: dict, output_dir: Path) -> dict:
+def localize_case_paths(
+    case: dict,
+    output_dir: Path,
+) -> dict:
     localized = dict(case)
     program = str(localized["program"])
     definition = PROGRAMS[program]
+
     localized["source"] = str(
         (SOURCE_ROOT / definition["source"]).resolve()
     )
-    localized["binary"] = str((output_dir / program).resolve())
-    localized["linker_map"] = str((output_dir / f"{program}.map").resolve())
+    localized["binary"] = str(
+        (output_dir / program).resolve()
+    )
+    localized["linker_map"] = str(
+        (output_dir / f"{program}.map").resolve()
+    )
 
     for records_key in ("passed_archives", "archives"):
         localized_records = []
+
         for original in localized.get(records_key, []):
             if not isinstance(original, dict):
                 localized_records.append(original)
                 continue
+
             record = dict(original)
-            archive = record.get("archive")
-            source = record.get("source")
-            optimization = record.get("optimization")
-            if archive and source and optimization:
-                archive_name = Path(str(archive)).name
-                candidates = (
-                    LIB_ROOT
-                    / str(source)
-                    / str(optimization)
-                    / install_dir
-                    / archive_name
-                    for install_dir in ("install/lib", "install/lib64")
-                )
-                current = next(
-                    (candidate for candidate in candidates if candidate.is_file()),
-                    None,
-                )
-                if current is not None:
-                    record["archive"] = str(current.resolve())
+
+            if record.get("archive"):
+                current = resolve_recorded_archive(record)
+
+                if current.is_file():
+                    record["archive"] = str(current)
+
             localized_records.append(record)
+
         if records_key in localized:
             localized[records_key] = localized_records
-    return localized
 
+    return localized
 
 def read_build_info_for_case(case: dict) -> dict | None:
     binary = case.get("binary")
@@ -832,7 +1762,6 @@ def read_build_info_for_case(case: dict) -> dict | None:
             build_info = (
                 OUTPUT_ROOT
                 / PROGRAMS[str(program)]["source"]
-                / "randomized"
                 / str(variant)
                 / "build-info.json"
             )
@@ -856,7 +1785,7 @@ def merge_local_successful_cases(new_cases: list[dict]) -> list[dict]:
     """
     merged: dict[tuple[str, str, str], dict] = {}
     for info_path in sorted(
-        OUTPUT_ROOT.glob("*/randomized/*/build-info.json")
+        OUTPUT_ROOT.glob("*/*/build-info.json")
     ):
         try:
             case = json.loads(info_path.read_text())
@@ -963,22 +1892,38 @@ def reproduction_fingerprint(
             "archive": str(archive.resolve()),
             "sha256": file_sha256(archive),
         })
-    return {
+    fingerprint = {
         "schema_version": 1,
         "program": program,
         "compiler": compiler_name,
         "compiler_metadata": compiler_details,
         "elf_optimization": elf_optimization,
         "seeded_library_selection": selected,
-        "library_sources": {
-            key: LIBRARIES[key].source for key in sorted(selected)
-        },
+        "seeded_library_compiler_selection": (
+            compiler_selection_from_metadata(
+                context.archive_metadata
+            )
+        ),
+        "library_sources": version_selection_from_metadata(
+            context.archive_metadata, "source"
+        ),
+        "library_version_roles": version_selection_from_metadata(
+            context.archive_metadata, "version_role"
+        ),
         "program_optimization_flags": {
             key: context.env.get(key, "")
             for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS", "LIBS")
         },
         "archives": archives,
     }
+    configure_cache = {
+        key: value
+        for key, value in sorted(context.env.items())
+        if key.startswith(("ac_cv_", "bash_cv_"))
+    }
+    if configure_cache:
+        fingerprint["configure_cache_overrides"] = configure_cache
+    return fingerprint
 
 
 def static_elf_complete(path: Path) -> bool:
@@ -1058,6 +2003,7 @@ def build_archive_ground_truth(
         map_file,
         binary,
         use_symbol_fallback=False,
+        include_inter_cu_calls=False,
     )
     return archives
 
@@ -1136,6 +2082,36 @@ def map_ldflags(map_file: Path) -> str:
     return f"-Wl,-Map={map_file} -Wl,--cref"
 
 
+def configure_cache_overrides(
+    program: str,
+    library_prefixes: dict[str, Path],
+) -> dict[str, str]:
+    """Keep configure probes consistent with the selected static libc."""
+    overrides: dict[str, str] = {}
+    glibc_prefix = library_prefixes.get("glibc")
+    if (
+        program == "bash"
+        and glibc_prefix is not None
+        and not (glibc_prefix / "include/sys/random.h").is_file()
+    ):
+        # Bash otherwise sees the host's modern sys/random.h, while its link
+        # probe correctly finds that an older selected glibc lacks getrandom.
+        # That combination makes Bash's static fallback conflict with the host
+        # declaration.  Hiding the unavailable header keeps both probes tied
+        # to the selected glibc and enables Bash's compatible fallback.
+        overrides.update({
+            "ac_cv_header_sys_random_h": "no",
+            "ac_cv_func_getrandom": "no",
+        })
+    if program in {"coreutils", "sed", "tar"} and "acl" in library_prefixes:
+        # Gnulib runs acl_get_file(".") and disables ACL support when the
+        # build filesystem itself does not expose ACLs.  The result then says
+        # nothing about the selected libacl archive.  All supported builders
+        # run on Linux, so bypass the obsolete Darwin-specific runtime probe.
+        overrides["gl_cv_func_working_acl_get_file"] = "yes"
+    return overrides
+
+
 def relink_final_binary(
     build_dir: Path,
     source_binary: Path,
@@ -1211,9 +2187,10 @@ def prepare_link_context(
             archives.append(str(archive))
             archive_metadata.append({
                 "library": key,
-                "source": library.source,
+                "source": archive_source_name(archive, library.source),
+                "version_role": archive_version_role(archive),
                 "optimization": optimization,
-                "compiler": LIB_ROOT.name,
+                "compiler": archive_compiler_id(archive),
                 "archive": str(archive),
             })
 
@@ -1252,11 +2229,17 @@ def prepare_link_context(
             for key in definition["libraries"]
         ),
     })
+    env.update(configure_cache_overrides(program, library_prefixes))
     if program == "coreutils":
         # coreutils builds libstdbuf.so as an intermediate helper.  Keep that
         # one shared link dynamic while every collected program link retains
         # the global -static flag.
         env["DYNAMIC_SHARED_HELPERS"] = "1"
+    if program in {"coreutils", "tar"}:
+        # Gnulib refuses its mknod runtime probe for uid 0.  The official
+        # builder runs inside Docker as root, so explicitly allow configure's
+        # documented container build path.
+        env["FORCE_UNSAFE_CONFIGURE"] = "1"
 
     if "pcre2" in selected:
         pcre_archive = archive_path(
@@ -1267,6 +2250,31 @@ def prepare_link_context(
         )
         env["PCRE_CFLAGS"] = f"-I{library_prefixes['pcre2'] / 'include'}"
         env["PCRE_LIBS"] = str(pcre_archive)
+    if "psl" in selected:
+        # Do not let libtool expand libpsl.la.  Its dependency_libs describe
+        # the libraries used when libpsl itself was built and can therefore
+        # pull a different libidn2/libunistring variant (and optional ICU)
+        # into this ELF.  Point configure at the exact selected archive;
+        # its selected dependencies already follow it in LIBS.
+        psl_archive = archive_path(
+            "psl",
+            selected["psl"],
+            "libpsl.a",
+            archive_overrides,
+        )
+        env["LIBPSL_CFLAGS"] = f"-I{library_prefixes['psl'] / 'include'}"
+        env["LIBPSL_LIBS"] = str(psl_archive)
+    if "idn2" in selected:
+        # The same rule keeps configure/libtool from following libidn2.la
+        # metadata to an unselected libunistring or optional ICU build.
+        idn2_archive = archive_path(
+            "idn2",
+            selected["idn2"],
+            "libidn2.a",
+            archive_overrides,
+        )
+        env["LIBIDN2_CFLAGS"] = f"-I{library_prefixes['idn2'] / 'include'}"
+        env["LIBIDN2_LIBS"] = str(idn2_archive)
     if "ncurses" in selected:
         ncurses_prefix = library_prefixes["ncurses"]
         env["NCURSESW_CFLAGS"] = f"-I{ncurses_prefix / 'include'}"
@@ -1340,7 +2348,7 @@ def build_case(
         )
     compiler_name = compiler_id(compiler)
     variant = f"{program}_{compiler_name}_{elf_optimization}"
-    output_dir = OUTPUT_ROOT / definition["source"] / "randomized" / variant
+    output_dir = OUTPUT_ROOT / definition["source"] / variant
     build_dir = output_dir / "build"
     report_dir = GROUND_TRUTH_ROOT / program / variant
     binary = output_dir / program
@@ -1457,12 +2465,19 @@ def build_case(
     if dry:
         log = NullLog()
         run(configure, build_dir, link_context.env, log, dry)
-        build_command = ["make", f"-j{jobs}", "V=1"]
-        if definition.get("libtool_all_static"):
-            build_command.append(
-                f"LDFLAGS={link_context.env['LDFLAGS']} -all-static"
+        for relative_dir in definition.get("make_directories", (".",)):
+            build_command = ["make", f"-j{jobs}", "V=1"]
+            if definition.get("libtool_all_static"):
+                build_command.append(
+                    f"LDFLAGS={link_context.env['LDFLAGS']} -all-static"
+                )
+            run(
+                build_command,
+                build_dir / relative_dir,
+                link_context.env,
+                log,
+                dry,
             )
-        run(build_command, build_dir, link_context.env, log, dry)
         relink_final_binary(
             build_dir,
             source_binary,
@@ -1477,12 +2492,19 @@ def build_case(
         log_path = output_dir / "build.log"
         with log_path.open("w") as log:
             run(configure, build_dir, link_context.env, log, dry)
-            build_command = ["make", f"-j{jobs}", "V=1"]
-            if definition.get("libtool_all_static"):
-                build_command.append(
-                    f"LDFLAGS={link_context.env['LDFLAGS']} -all-static"
+            for relative_dir in definition.get("make_directories", (".",)):
+                build_command = ["make", f"-j{jobs}", "V=1"]
+                if definition.get("libtool_all_static"):
+                    build_command.append(
+                        f"LDFLAGS={link_context.env['LDFLAGS']} -all-static"
+                    )
+                run(
+                    build_command,
+                    build_dir / relative_dir,
+                    link_context.env,
+                    log,
+                    dry,
                 )
-            run(build_command, build_dir, link_context.env, log, dry)
             relink_final_binary(
                 build_dir,
                 source_binary,
@@ -1527,11 +2549,21 @@ def build_case(
         "link_type": "static",
         "libs": list(definition.get("libs", definition["libraries"])),
         "seeded_library_selection": selected,
+        "seeded_library_compiler_selection": (
+            compiler_selection_from_metadata(
+                link_context.archive_metadata
+            )
+        ),
+        "seeded_library_version_selection": version_selection_from_metadata(
+            link_context.archive_metadata, "source"
+        ),
+        "seeded_library_version_roles": version_selection_from_metadata(
+            link_context.archive_metadata, "version_role"
+        ),
         "passed_archives": link_context.archive_metadata,
         "archives": linked_archives,
         "cu_ground_truth": archive_ground_truth_summary(linked_archives),
         "library_ground_truth": library_ground_truth_summary(linked_archives),
-        "inter_cu_ground_truth": inter_cu_ground_truth_summary(linked_archives),
         "linker_map": str(link_context.map_file.resolve()),
         "binary_sha256": file_sha256(binary) if not dry else None,
         "linker_map_sha256": (
@@ -1539,6 +2571,13 @@ def build_case(
         ),
         "reproduction_fingerprint": fingerprint,
     }
+    configure_cache = {
+        key: value
+        for key, value in sorted(link_context.env.items())
+        if key.startswith(("ac_cv_", "bash_cv_"))
+    }
+    if configure_cache:
+        metadata["configure_cache_overrides"] = configure_cache
     if not dry:
         (output_dir / "build-info.json").write_text(
             json.dumps(metadata, indent=2, sort_keys=True) + "\n"
@@ -1547,6 +2586,281 @@ def build_case(
             json.dumps(metadata, indent=2, sort_keys=True) + "\n"
         )
     return metadata
+
+
+class LibraryVersionFallbackExhausted(ValueError):
+    pass
+
+
+def case_output_dir(
+    program: str,
+    compiler: str,
+    elf_optimization: str,
+) -> Path:
+    definition = PROGRAMS[program]
+    variant = f"{program}_{compiler_id(compiler)}_{elf_optimization}"
+    return OUTPUT_ROOT / definition["source"] / variant
+
+
+def build_failure_log(output_dir: Path) -> str:
+    """Collect final build errors and strong nested configure diagnostics."""
+    build_log = output_dir / "build.log"
+    sections: list[str] = []
+    if build_log.is_file():
+        try:
+            lines = build_log.read_text(errors="replace").splitlines()
+            sections.append(
+                f"===== {build_log} =====\n" + "\n".join(lines[-3000:])
+            )
+        except OSError:
+            pass
+
+    try:
+        config_logs = sorted(output_dir.rglob("config.log"))
+    except OSError:
+        config_logs = []
+
+    for log_path in config_logs:
+        if not log_path.is_file():
+            continue
+        try:
+            lines = log_path.read_text(errors="replace").splitlines()
+        except OSError:
+            continue
+        selected_indexes: set[int] = set()
+        for index, line in enumerate(lines):
+            # config.status can serialize thousands of substitutions into a
+            # single line.  Such a line contains every selected archive and
+            # words like "error", but it is not a diagnostic.
+            if len(line) > 2000:
+                continue
+            final_configure_error = VERSION_CONFIGURE_FAILURE_RE.search(line)
+            strong_version_error = (
+                CONFIG_VERSION_SYMBOL_RE.search(line)
+                and CONFIG_FAILURE_MARKER_RE.search(line)
+            )
+            if not (final_configure_error or strong_version_error):
+                continue
+            selected_indexes.add(index)
+            if index:
+                selected_indexes.add(index - 1)
+        if selected_indexes:
+            diagnostic_lines = "\n".join(
+                lines[index] for index in sorted(selected_indexes)
+            )
+            sections.append(f"===== {log_path} =====\n{diagnostic_lines}")
+    return "\n".join(sections)
+
+
+def concise_build_error(error: subprocess.CalledProcessError) -> str:
+    command = error.cmd
+    rendered = (
+        shlex.join([str(part) for part in command])
+        if isinstance(command, (list, tuple))
+        else str(command)
+    )
+    return f"exit {error.returncode}: {rendered}"
+
+
+def write_fallback_metadata(case: dict, fallback: dict) -> None:
+    case["library_version_fallback"] = fallback
+    output_dir = Path(str(case["binary"])).resolve().parent
+    variant = str(case["variant"])
+    paths = (
+        output_dir / "build-info.json",
+        GROUND_TRUTH_ROOT / str(case["program"]) / variant / "ground_truth.json",
+    )
+    for path in paths:
+        if not path.is_file():
+            continue
+        payload = json.loads(path.read_text())
+        payload["library_version_fallback"] = fallback
+        path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def build_case_with_version_fallbacks(
+    *,
+    seed: int,
+    program: str,
+    compiler: str,
+    elf_optimization: str,
+    libraries: tuple[str, ...],
+    selected: dict[str, str],
+    archive_overrides: dict[tuple[str, str], Path],
+    forced: dict[str, str],
+    jobs: int,
+    clean: bool,
+    skip_existing: bool,
+    dry: bool,
+) -> dict:
+    """Build a case and retry version-sensitive failures deterministically."""
+    plans = alternate_version_plans(
+        seed=seed,
+        program=program,
+        compiler=compiler,
+        elf_optimization=elf_optimization,
+        libraries=libraries,
+        selected=selected,
+        archive_overrides=archive_overrides,
+        forced=forced,
+    )
+    initial_plan = plans[0]
+    output_dir = case_output_dir(program, compiler, elf_optimization)
+
+    first_plan = initial_plan
+    if skip_existing and not clean:
+        build_info = output_dir / "build-info.json"
+        if build_info.is_file():
+            try:
+                existing_metadata = json.loads(build_info.read_text())
+                existing_selected = matrix_case_library_selection(
+                    existing_metadata
+                )
+                existing_overrides = matrix_case_archive_overrides(
+                    existing_metadata
+                )
+                first_plan = LibrarySelectionPlan(
+                    selected={
+                        library: existing_selected[library]
+                        for library in libraries
+                    },
+                    archive_overrides={
+                        (library, archive_name): existing_overrides[
+                            (library, archive_name)
+                        ]
+                        for library in libraries
+                        for archive_name in LIBRARIES[library].archives
+                    },
+                )
+                # Reject stale or partial metadata before it reaches build_case.
+                selection_plan_details(first_plan)
+            except (
+                KeyError,
+                OSError,
+                ValueError,
+                json.JSONDecodeError,
+            ):
+                first_plan = initial_plan
+
+    pending = [first_plan]
+    attempted: set[tuple] = set()
+    failed_attempts: list[dict] = []
+    last_error: subprocess.CalledProcessError | None = None
+    saw_version_failure = False
+
+    while pending:
+        plan = pending.pop(0)
+        signature = selection_plan_signature(plan)
+        if signature in attempted:
+            continue
+        attempted.add(signature)
+        details = selection_plan_details(plan)
+        attempt_number = len(failed_attempts) + 1
+        if plan.changed_library and plan.variant:
+            print(
+                f"[LIB-FALLBACK] attempt={attempt_number} "
+                f"library={plan.changed_library} "
+                f"source={plan.variant.source} role={plan.variant.role} "
+                f"compiler={plan.variant.compiler} "
+                f"optimization={plan.variant.optimization}",
+                flush=True,
+            )
+        try:
+            case = build_case(
+                program,
+                compiler,
+                elf_optimization,
+                plan.selected,
+                jobs,
+                clean or len(attempted) > 1,
+                skip_existing,
+                dry,
+                plan.archive_overrides,
+            )
+        except subprocess.CalledProcessError as error:
+            last_error = error
+            failed_attempts.append({
+                "attempt": attempt_number,
+                "changed_library": plan.changed_library,
+                "library_selection": details,
+                "error": concise_build_error(error),
+            })
+            implicated = version_failure_libraries(
+                build_failure_log(output_dir),
+                libraries,
+                plan.archive_overrides,
+            )
+            if implicated:
+                saw_version_failure = True
+                print(
+                    f"[LIB-FALLBACK] version-sensitive failure; candidates="
+                    f"{','.join(implicated)}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                retry_candidates: list[LibrarySelectionPlan] = []
+                for library in implicated:
+                    retry_candidates.extend(alternate_library_plans(
+                        seed=seed,
+                        program=program,
+                        compiler=compiler,
+                        elf_optimization=elf_optimization,
+                        library=library,
+                        plan=plan,
+                        forced=forced,
+                    ))
+                # Follow the new diagnostic first.  Every candidate retains
+                # successful changes from earlier attempts, so two or more
+                # incompatible libraries can be corrected cumulatively.
+                pending = retry_candidates + pending
+            elif not saw_version_failure:
+                raise
+            continue
+
+        if (
+            plan.changed_library
+            and not failed_attempts
+            and case.get("library_version_fallback")
+        ):
+            return case
+        if failed_attempts or plan.changed_library:
+            success = {
+                "attempt": len(failed_attempts) + 1,
+                "changed_library": plan.changed_library,
+                "library_selection": details,
+                "error": None,
+            }
+            fallback = {
+                "strategy": "diagnostic_cumulative_source_version_v2",
+                "used": plan.changed_library is not None,
+                "attempts": [*failed_attempts, success],
+            }
+            write_fallback_metadata(case, fallback)
+        return case
+
+    if last_error is not None and saw_version_failure:
+        attempted_versions = []
+        for attempt in failed_attempts:
+            library = attempt.get("changed_library")
+            if library:
+                source = attempt["library_selection"].get(library, {}).get(
+                    "source", "?"
+                )
+                attempted_versions.append(f"{library}={source}")
+            else:
+                attempted_versions.append("initial")
+        raise LibraryVersionFallbackExhausted(
+            f"all compatible library-version fallbacks failed for "
+            f"{program} {compiler} {elf_optimization}; attempts: "
+            f"{', '.join(attempted_versions)}; last error: "
+            f"{concise_build_error(last_error)}"
+        ) from last_error
+    if last_error is not None:
+        raise last_error
+    raise ValueError(
+        f"No library selection plan available for "
+        f"{program} {compiler} {elf_optimization}"
+    )
 
 
 def matrix_case_selected(case: dict, args: argparse.Namespace) -> bool:
@@ -1662,7 +2976,6 @@ def refresh_ground_truth_case(case: dict, dry: bool) -> dict:
         "archives": linked_archives,
         "cu_ground_truth": archive_ground_truth_summary(linked_archives),
         "library_ground_truth": library_ground_truth_summary(linked_archives),
-        "inter_cu_ground_truth": inter_cu_ground_truth_summary(linked_archives),
     }
 
     if not dry:
@@ -1748,8 +3061,40 @@ def refresh_ground_truth_from_matrix(args: argparse.Namespace) -> int:
 LIBRARIES_BASELINE = dict(LIBRARIES)
 
 
+def summarize_library_selection(cases: list[dict]) -> dict[str, dict]:
+    weights = project_output_weights()
+    summary: dict[str, dict] = {}
+    for case in cases:
+        weight = weights.get(str(case.get("program", "")), 1)
+        versions = case.get("seeded_library_version_selection", {})
+        roles = case.get("seeded_library_version_roles", {})
+        optimizations = case.get("seeded_library_selection", {})
+        compilers = case.get("seeded_library_compiler_selection", {})
+        for library, source in versions.items():
+            entry = summary.setdefault(
+                library,
+                {
+                    "elf_records": 0,
+                    "sources": {},
+                    "roles": {},
+                    "toolchains": {},
+                    "optimizations": {},
+                },
+            )
+            entry["elf_records"] += weight
+            for field, value in (
+                ("sources", source),
+                ("roles", roles.get(library, "unknown")),
+                ("toolchains", compilers.get(library, "unknown")),
+                ("optimizations", optimizations.get(library, "unknown")),
+            ):
+                counts = entry[field]
+                counts[value] = counts.get(value, 0) + weight
+    return summary
+
+
 def main() -> int:
-    global LIB_ROOT, OUTPUT_ROOT, GROUND_TRUTH_ROOT
+    global LIB_ROOT, OUTPUT_ROOT, GROUND_TRUTH_ROOT, BALANCED_LIBRARY_PLANNER
     args = parse_args()
     LIB_ROOT = args.lib_root
     OUTPUT_ROOT = args.output_root
@@ -1759,6 +3104,51 @@ def main() -> int:
     cli_libraries = dict(LIBRARIES)
     if not LIB_ROOT.is_dir():
         raise FileNotFoundError(f"Library root not found: {LIB_ROOT}")
+    if not args.dry_run:
+        relocated_metadata = relocate_library_metadata(LIB_ROOT)
+        if relocated_metadata:
+            print(
+                "REBASE installed library metadata: "
+                f"{len(relocated_metadata)} file(s)"
+            )
+    if args.library_matrix:
+        variants, archive_metadata = load_matrix_library_variants(
+            args.library_matrix
+        )
+        MATRIX_LIBRARY_VARIANTS.clear()
+        MATRIX_LIBRARY_VARIANTS.update(variants)
+        MATRIX_ARCHIVE_METADATA.clear()
+        MATRIX_ARCHIVE_METADATA.update(archive_metadata)
+        if not args.matrix:
+            requested_programs = (
+                args.program
+                or DATASET_PROFILES.get(args.profile)
+                or DEFAULT_PROGRAMS
+            )
+            required_libraries = {
+                library
+                for program in requested_programs
+                for library in PROGRAMS[program]["libraries"]
+            }
+            missing = sorted(
+                library
+                for library in required_libraries
+                if not variants.get(library)
+            )
+            if missing:
+                raise FileNotFoundError(
+                    "No complete selected matrix bundle for libraries: "
+                    + ", ".join(missing)
+                    + ". Run Dataset/prepare_libseeker_libraries.sh and "
+                    "redistribute the resulting library root and matrix."
+                )
+            BALANCED_LIBRARY_PLANNER = BalancedLibraryPlanner(
+                seed=args.seed,
+                profile=args.profile,
+                forced=args.library_optimization,
+                variants=variants,
+                programs=tuple(requested_programs),
+            )
     requested_compilers = set(
         args.compiler or ("gcc-11", "gcc-13", "clang-14", "clang-18")
     )
@@ -1854,26 +3244,47 @@ def main() -> int:
                     case_rng = random.Random(
                         f"{args.seed}:{program}:{compiler}:{elf_optimization}"
                     )
-                    selected = library_selection(
-                        case_rng,
-                        definition["libraries"],
-                        args.library_optimization,
-                    )
                     try:
-                        matrix.append(build_case(
-                            program,
-                            compiler,
-                            elf_optimization,
-                            selected,
-                            args.jobs,
-                            args.clean,
-                            args.skip_existing,
-                            args.dry_run,
-                        ))
+                        selected, archive_overrides = library_selection(
+                            case_rng,
+                            definition["libraries"],
+                            args.library_optimization,
+                            program=program,
+                            compiler=compiler,
+                            elf_optimization=elf_optimization,
+                        )
+                        if args.library_matrix:
+                            matrix.append(build_case_with_version_fallbacks(
+                                seed=args.seed,
+                                program=program,
+                                compiler=compiler,
+                                elf_optimization=elf_optimization,
+                                libraries=definition["libraries"],
+                                selected=selected,
+                                archive_overrides=archive_overrides,
+                                forced=args.library_optimization,
+                                jobs=args.jobs,
+                                clean=args.clean,
+                                skip_existing=args.skip_existing,
+                                dry=args.dry_run,
+                            ))
+                        else:
+                            matrix.append(build_case(
+                                program,
+                                compiler,
+                                elf_optimization,
+                                selected,
+                                args.jobs,
+                                args.clean,
+                                args.skip_existing,
+                                args.dry_run,
+                                archive_overrides,
+                            ))
                     except (
                         FileExistsError,
                         FileNotFoundError,
                         subprocess.CalledProcessError,
+                        ValueError,
                     ) as error:
                         failure = {
                             "program": program,
@@ -1908,6 +3319,15 @@ def main() -> int:
         "seed": manifest_seed,
         "profile": manifest_profile,
         "elf_optimizations": manifest_optimizations,
+        "library_selection_policy": (
+            "balanced_seeded_explicit_version_role_toolchain_and_optimization_v2"
+            if args.library_matrix else
+            "deterministic_seeded_random_variant_v1"
+        ),
+        "library_matrix": (
+            args.library_matrix.as_posix() if args.library_matrix else None
+        ),
+        "library_selection_summary": summarize_library_selection(matrix),
         "cases": matrix,
         "failures": failures,
     }

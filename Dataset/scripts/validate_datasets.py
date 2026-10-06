@@ -94,6 +94,14 @@ def parse_args() -> argparse.Namespace:
         help="validate one profile only; by default both are validated",
     )
     parser.add_argument(
+        "--compiler",
+        action="append",
+        help=(
+            "Validate only matrix cells for one or more compiler commands. "
+            "Requires --profile and is intended for a 1/4 shard."
+        ),
+    )
+    parser.add_argument(
         "--allow-hash-overlap",
         action="store_true",
         help="report cross-dataset SHA-256 overlap as a warning, not an error",
@@ -101,7 +109,36 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     args.artifact_root = args.artifact_root.resolve()
     args.plan = args.plan.resolve()
+    if args.compiler and args.profile != "libseeker":
+        parser.error("--compiler currently requires --profile libseeker")
     return args
+
+
+def restrict_plan_compilers(
+    plan: dict[str, Any], compilers: list[str] | None
+) -> dict[str, Any]:
+    if not compilers:
+        return plan
+    requested = set(compilers)
+    available = {
+        str(cell.get("compiler"))
+        for cell in plan.get("matrix", [])
+        if isinstance(cell, dict)
+    }
+    unknown = sorted(requested - available)
+    if unknown:
+        raise ValueError(f"compiler not present in dataset plan: {unknown}")
+    restricted = dict(plan)
+    restricted["matrix"] = [
+        dict(cell)
+        for cell in plan.get("matrix", [])
+        if str(cell.get("compiler")) in requested
+    ]
+    restricted["matrix_scope"] = {
+        "kind": "compiler_subset",
+        "compilers": sorted(requested),
+    }
+    return restricted
 
 
 def sha256(path: Path) -> str:
@@ -422,8 +459,8 @@ def validate_catalog_entry(
         return len(included)
     if catalog.get("archive_sha256") != archive_digest:
         reporter.error(f"{context}: catalog archive_sha256 does not match ground truth")
-    if catalog.get("schema_version") != 3:
-        reporter.error(f"{context}: archive catalog schema is not occurrence-aware v3")
+    if catalog.get("schema_version") != 4:
+        reporter.error(f"{context}: archive catalog schema is not minimal occurrence-aware v4")
     members = catalog.get("members")
     if not isinstance(members, list):
         reporter.error(f"{context}: catalog members must be a list")
@@ -568,6 +605,11 @@ def validate_ground_truth(
             f"{context}: ground-truth scope is {ground_truth.get('scope')!r}, "
             f"expected {GROUND_TRUTH_SCOPE!r}"
         )
+    if "inter_cu_ground_truth" in ground_truth:
+        reporter.error(
+            f"{context}: call-graph diagnostics must not be embedded in the "
+            "library/CU ground truth"
+        )
     build = ground_truth.get("build")
     if not isinstance(build, dict):
         reporter.error(f"{context}: ground-truth build provenance must be an object")
@@ -587,26 +629,32 @@ def validate_ground_truth(
         "program_optimization": record.get("program_optimization"),
         "program_optimization_flags": record.get("program_optimization_flags"),
         "library_optimizations": record.get("library_optimizations"),
+        "library_versions": record.get("library_versions", {}),
+        "library_version_roles": record.get("library_version_roles", {}),
     }
     for field_name, expected_value in build_field_map.items():
         if build.get(field_name) != expected_value:
             reporter.error(
                 f"{context}: build.{field_name} does not match manifest record"
             )
-    compatibility_fields = {
+    pipeline_metadata_fields = {
         "program": record.get("program"),
         "compiler": record.get("compiler"),
         "elf_optimization": record.get("program_optimization"),
         "link_type": "static",
         "seeded_library_selection": record.get("library_optimizations"),
+        "seeded_library_version_selection": record.get("library_versions", {}),
+        "seeded_library_version_roles": record.get(
+            "library_version_roles", {}
+        ),
     }
-    for field_name, expected_value in compatibility_fields.items():
+    for field_name, expected_value in pipeline_metadata_fields.items():
         if ground_truth.get(field_name) != expected_value:
             reporter.error(
-                f"{context}: compatibility field {field_name} does not match manifest"
+                f"{context}: pipeline metadata field {field_name} does not match manifest"
             )
     if not isinstance(ground_truth.get("variant"), str):
-        reporter.error(f"{context}: compatibility variant is missing")
+        reporter.error(f"{context}: pipeline variant is missing")
     link = build.get("link")
     if not isinstance(link, dict) or not isinstance(link.get("command"), list):
         reporter.error(f"{context}: exact link-command provenance is missing")
@@ -664,6 +712,18 @@ def validate_ground_truth(
         if not isinstance(archive, dict):
             reporter.error(f"{context}: archive[{index}] is not an object")
             continue
+        unexpected_call_fields = {
+            "inter_cu_ground_truth_method",
+            "expected_inter_cu_calls",
+            "expected_inter_cu_function_edges",
+            "expected_inter_cu_call_relocations",
+            "expected_inter_cu_cu_edges",
+        } & set(archive)
+        if unexpected_call_fields:
+            reporter.error(
+                f"{context}: archive[{index}] contains call-graph diagnostics: "
+                f"{sorted(unexpected_call_fields)}"
+            )
         raw_archive = archive.get("linker_map_archive")
         selected_by_linker = archive.get("selected_by_linker")
         if selected_by_linker is True:
@@ -690,6 +750,20 @@ def validate_ground_truth(
                     f"{context}: archive[{index}] optimization does not match "
                     f"selection for {library}"
                 )
+            versions = record.get("library_versions")
+            if isinstance(versions, dict) and library in versions:
+                if archive.get("source") != versions[library]:
+                    reporter.error(
+                        f"{context}: archive[{index}] source does not match "
+                        f"version selection for {library}"
+                    )
+            roles = record.get("library_version_roles")
+            if isinstance(roles, dict) and library in roles:
+                if archive.get("version_role") != roles[library]:
+                    reporter.error(
+                        f"{context}: archive[{index}] version role does not "
+                        f"match selection for {library}"
+                    )
         included_total += validate_catalog_entry(
             profile=profile,
             record_label=record_label,
@@ -813,13 +887,14 @@ def validate_profile(
     json_cache: dict[Path, dict[str, Any] | None],
     hash_cache: dict[Path, str],
 ) -> ProfileResult:
-    expected_binary_count, expected_program_count = CANONICAL_COUNTS[profile]
+    canonical_binary_count, expected_program_count = CANONICAL_COUNTS[profile]
+    scoped = isinstance(profile_plan.get("matrix_scope"), dict)
     plan_binary_count = profile_plan.get("expected_binaries")
     plan_program_count = profile_plan.get("expected_programs")
-    if plan_binary_count != expected_binary_count:
+    if not scoped and plan_binary_count != canonical_binary_count:
         reporter.error(
             f"{profile}: plan expected_binaries is {plan_binary_count!r}, "
-            f"expected canonical value {expected_binary_count}"
+            f"expected canonical value {canonical_binary_count}"
         )
     if plan_program_count != expected_program_count:
         reporter.error(
@@ -830,6 +905,7 @@ def validate_profile(
     expected_programs, expected_matrix = load_expected_matrix(
         profile, profile_plan, plan_dir, reporter
     )
+    expected_binary_count = len(expected_matrix)
     expected_provenance, source_entries = expected_record_provenance(
         profile, profile_plan, plan_dir, reporter
     )
@@ -838,10 +914,10 @@ def validate_profile(
             f"{profile}: inventory has {len(expected_programs)} programs, "
             f"expected {expected_program_count}"
         )
-    if len(expected_matrix) != expected_binary_count:
+    if not scoped and len(expected_matrix) != canonical_binary_count:
         reporter.error(
             f"{profile}: plan/inventory define {len(expected_matrix)} unique matrix cells, "
-            f"expected {expected_binary_count}"
+            f"expected {canonical_binary_count}"
         )
 
     dataset_root = (artifact_root / "datasets" / profile).resolve()
@@ -866,9 +942,38 @@ def validate_profile(
         records: list[dict[str, Any]] = []
     else:
         records = records_value
-    if len(records) != expected_binary_count:
+    summary_value = dataset_manifest.get("summary")
+    deduplicated = (
+        isinstance(summary_value, dict)
+        and summary_value.get("deduplicated_by")
+        == "binary_sha256"
+    )
+    deduplication_requested = (
+        profile_plan.get("deduplicate_binary_sha256") is True
+    )
+
+    if deduplication_requested != deduplicated:
         reporter.error(
-            f"{profile}: manifest has {len(records)} records, expected {expected_binary_count}"
+            f"{profile}: deduplication policy in plan "
+            "and manifest do not match"
+        )
+
+    if (
+        not deduplicated
+        and len(records) != expected_binary_count
+    ):
+        reporter.error(
+            f"{profile}: manifest has {len(records)} records, "
+            f"expected {expected_binary_count}"
+        )
+
+    if (
+        deduplicated
+        and not (0 < len(records) <= expected_binary_count)
+    ):
+        reporter.error(
+            f"{profile}: invalid deduplicated record count "
+            f"{len(records)}"
         )
 
     summary = dataset_manifest.get("summary")
@@ -877,8 +982,48 @@ def validate_profile(
         summary = {}
     if summary.get("binaries") != len(records):
         reporter.error(f"{profile}: summary.binaries does not match record count")
-    if summary.get("binaries") != expected_binary_count:
-        reporter.error(f"{profile}: summary.binaries does not match dataset plan")
+    if (
+        not deduplicated
+        and summary.get("binaries") != expected_binary_count
+    ):
+        reporter.error(
+            f"{profile}: summary.binaries "
+            "does not match dataset plan"
+        )
+
+    if deduplicated:
+        candidate_binaries = summary.get(
+            "candidate_binaries"
+        )
+        duplicates_removed = summary.get(
+            "duplicates_removed"
+        )
+
+        if candidate_binaries != expected_binary_count:
+            reporter.error(
+                f"{profile}: summary.candidate_binaries is "
+                f"{candidate_binaries!r}, "
+                f"expected {expected_binary_count}"
+            )
+
+        if (
+            duplicates_removed
+            != expected_binary_count - len(records)
+        ):
+            reporter.error(
+                f"{profile}: summary.duplicates_removed "
+                "is inconsistent"
+            )
+
+        if (
+            summary.get("unique_binary_hashes")
+            != len(records)
+        ):
+            reporter.error(
+                f"{profile}: deduplicated summary must have "
+                "one unique hash per record"
+            )
+
     diagnostics = dataset_manifest.get("diagnostics")
     if diagnostics not in ([], None):
         reporter.error(f"{profile}: dataset manifest contains build diagnostics")
@@ -891,8 +1036,6 @@ def validate_profile(
     seen_binary_paths: set[Path] = set()
     seen_gt_paths: set[Path] = set()
     seen_map_paths: set[Path] = set()
-    seen_compat_gt_paths: set[Path] = set()
-    seen_compat_binary_paths: set[Path] = set()
     allowed_library_optimizations = set(profile_plan.get("library_optimizations", []))
     allowed_program_optimizations = {
         str(cell.get("program_optimization"))
@@ -971,6 +1114,28 @@ def validate_profile(
                     )
                 if "O1" in selections.values():
                     reporter.error(f"{profile}:{label}: O1 library optimization is forbidden")
+            versions = record.get("library_versions")
+            roles = record.get("library_version_roles")
+            if profile_plan.get("library_selection") == (
+                "balanced_seeded_explicit_version_role_toolchain_and_optimization_v2"
+            ):
+                selected_keys = set(selections) if isinstance(selections, dict) else set()
+                if not isinstance(versions, dict) or set(versions) != selected_keys:
+                    reporter.error(
+                        f"{profile}:{label}: library_versions do not match "
+                        "the selected libraries"
+                    )
+                allowed_roles = set(profile_plan.get("library_version_roles", []))
+                if not isinstance(roles, dict) or set(roles) != selected_keys:
+                    reporter.error(
+                        f"{profile}:{label}: library_version_roles do not match "
+                        "the selected libraries"
+                    )
+                elif set(roles.values()) - allowed_roles:
+                    reporter.error(
+                        f"{profile}:{label}: unsupported library version roles "
+                        f"{sorted(set(roles.values()) - allowed_roles)}"
+                    )
 
         binary_path = resolve_declared_path(
             record.get("binary"),
@@ -1036,62 +1201,71 @@ def validate_profile(
             hash_cache=hash_cache,
         )
 
-        compat_gt_value = record.get("ground_truth_compat")
-        compat_binary_value = record.get("binary_compat")
-        if not isinstance(compat_gt_value, str) or not compat_gt_value:
-            reporter.error(f"{profile}:{label}: ground_truth_compat is missing")
-        else:
-            compat_gt_path = (
-                Path(compat_gt_value)
-                if Path(compat_gt_value).is_absolute()
-                else artifact_root / compat_gt_value
-            ).absolute()
-            if compat_gt_path in seen_compat_gt_paths:
-                reporter.error(f"{profile}:{label}: compatibility GT path is reused")
-            seen_compat_gt_paths.add(compat_gt_path)
-            compat_payload = read_json(
-                compat_gt_path, reporter, f"{profile}:{label} compatibility GT"
+    if profile_plan.get("library_selection") == (
+        "balanced_seeded_explicit_version_role_toolchain_and_optimization_v2"
+    ):
+        role_counts: dict[str, Counter[str]] = defaultdict(Counter)
+        for record in records:
+            for library, role in record.get("library_version_roles", {}).items():
+                role_counts[str(library)][str(role)] += 1
+        serialized_role_counts = {
+            library: dict(sorted(counts.items()))
+            for library, counts in sorted(role_counts.items())
+        }
+        if summary.get("library_version_role_counts") != serialized_role_counts:
+            reporter.error(
+                f"{profile}: summary.library_version_role_counts is inconsistent"
             )
-            if compat_payload is not None:
-                for field_name, expected_value in {
-                    "program": record.get("program"),
-                    "compiler": record.get("compiler"),
-                    "elf_optimization": record.get("program_optimization"),
-                    "seeded_library_selection": record.get("library_optimizations"),
-                    "binary_sha256": actual_binary_sha,
-                }.items():
-                    if compat_payload.get(field_name) != expected_value:
-                        reporter.error(
-                            f"{profile}:{label}: compatibility GT {field_name} mismatch"
-                        )
-                compat_declared_binary = resolve_declared_path(
-                    compat_payload.get("binary_portable"),
-                    manifest_dir=compat_gt_path.parent,
-                    artifact_root=artifact_root,
-                )
-                if compat_declared_binary != binary_path:
+        if not scoped:
+            for library, counts in sorted(role_counts.items()):
+                if len(counts) > 1 and max(counts.values()) - min(counts.values()) > 104:
                     reporter.error(
-                        f"{profile}:{label}: compatibility GT binary path mismatch"
+                        f"{profile}: library version roles are not balanced for "
+                        f"{library}: {dict(sorted(counts.items()))}"
                     )
-        if not isinstance(compat_binary_value, str) or not compat_binary_value:
-            reporter.error(f"{profile}:{label}: binary_compat is missing")
+
+    duplicate_hashes = {
+        digest: labels
+        for digest, labels in hashes.items()
+        if len(labels) > 1
+    }
+
+    if duplicate_hashes:
+        if not profile_plan.get("allow_alias_sha256_duplicates"):
+            examples = "; ".join(
+                f"{digest} [{', '.join(labels[:4])}]"
+                for digest, labels
+                in list(sorted(duplicate_hashes.items()))[:10]
+            )
+            reporter.error(
+                f"{profile}: {len(duplicate_hashes)} "
+                f"duplicate ELF SHA-256 groups: {examples}"
+            )
         else:
-            compat_binary_path = (
-                Path(compat_binary_value)
-                if Path(compat_binary_value).is_absolute()
-                else artifact_root / compat_binary_value
-            ).absolute()
-            if compat_binary_path in seen_compat_binary_paths:
-                reporter.error(f"{profile}:{label}: compatibility ELF path is reused")
-            seen_compat_binary_paths.add(compat_binary_path)
-            if not compat_binary_path.is_symlink():
-                reporter.error(
-                    f"{profile}:{label}: compatibility ELF is not a symlink"
-                )
-            elif compat_binary_path.resolve() != binary_path:
-                reporter.error(
-                    f"{profile}:{label}: compatibility ELF symlink target mismatch"
-                )
+            records_by_hash: dict[str, list[dict[str, Any]]] = defaultdict(list)
+            for record in records:
+                digest = record.get("binary_sha256")
+                if isinstance(digest, str):
+                    records_by_hash[digest].append(record)
+            for digest in duplicate_hashes:
+                group = records_by_hash[digest]
+                canonical_names = {
+                    str(record.get("alias_of") or record.get("program"))
+                    for record in group
+                }
+                coordinates = {
+                    (
+                        compiler_command(record),
+                        str(record.get("program_optimization", "")),
+                    )
+                    for record in group
+                }
+                if len(canonical_names) != 1 or len(coordinates) != 1:
+                    reporter.error(
+                        f"{profile}: non-alias duplicate ELF SHA-256 {digest}: "
+                        f"program roots={sorted(canonical_names)}, "
+                        f"coordinates={sorted(coordinates)}"
+                    )
 
     key_counts = Counter(keys)
     duplicate_keys = [key for key, count in key_counts.items() if count > 1]
@@ -1102,12 +1276,14 @@ def validate_profile(
         values=duplicate_keys,
     )
     actual_matrix = set(keys)
-    report_set_difference(
-        reporter,
-        profile=profile,
-        label="missing matrix cells",
-        values=expected_matrix - actual_matrix,
-    )
+    if not deduplicated:
+        report_set_difference(
+            reporter,
+            profile=profile,
+            label="missing matrix cells",
+            values=expected_matrix - actual_matrix,
+        )
+
     report_set_difference(
         reporter,
         profile=profile,
@@ -1115,7 +1291,12 @@ def validate_profile(
         values=actual_matrix - expected_matrix,
     )
     family_counts = Counter(compiler_family(record) for record in records)
-    if family_counts.get("gcc", 0) != family_counts.get("clang", 0):
+    if (
+        not scoped
+        and not deduplicated
+        and family_counts.get("gcc", 0)
+        != family_counts.get("clang", 0)
+    ):
         reporter.error(
             f"{profile}: GCC/Clang counts are not balanced: "
             f"{family_counts.get('gcc', 0)} != {family_counts.get('clang', 0)}"
@@ -1128,42 +1309,81 @@ def validate_profile(
         optimization = record.get("program_optimization")
         if isinstance(optimization, str):
             optimizations_by_compiler[command].add(optimization)
-    for family in ("gcc", "clang"):
-        if len(versions_by_family[family]) != 2:
-            reporter.error(
-                f"{profile}: expected two {family} versions, found "
-                f"{sorted(versions_by_family[family])}"
-            )
-    required_optimizations = {"O0", "O2", "O3", "Os"}
-    for command in sorted(allowed_compiler_commands):
-        if optimizations_by_compiler[command] != required_optimizations:
-            reporter.error(
-                f"{profile}: compiler {command} has optimizations "
-                f"{sorted(optimizations_by_compiler[command])}, expected "
-                f"{sorted(required_optimizations)}"
-            )
-    if programs != expected_programs:
-        missing_names = sorted(expected_programs - programs)
-        extra_names = sorted(programs - expected_programs)
-        if missing_names:
-            reporter.error(
-                f"{profile}: missing program names ({len(missing_names)}): "
-                + ", ".join(missing_names[:30])
-            )
-        if extra_names:
-            reporter.error(
-                f"{profile}: unexpected program names ({len(extra_names)}): "
-                + ", ".join(extra_names[:30])
-            )
-    if len(programs) != expected_program_count:
+    if not deduplicated:
+        required_versions: dict[str, set[str]] = defaultdict(set)
+        for command in allowed_compiler_commands:
+            required_versions[compiler_family({"compiler": command})].add(command)
+        for family, required in required_versions.items():
+            if versions_by_family[family] != required:
+                reporter.error(
+                    f"{profile}: expected {family} versions {sorted(required)}, found "
+                    f"{sorted(versions_by_family[family])}"
+                )
+
+        required_optimizations = {
+            "O0", "O2", "O3", "Os"
+        }
+
+        for command in sorted(
+            allowed_compiler_commands
+        ):
+            if (
+                optimizations_by_compiler[command]
+                != required_optimizations
+            ):
+                reporter.error(
+                    f"{profile}: compiler {command} "
+                    f"has optimizations "
+                    f"{sorted(optimizations_by_compiler[command])}, "
+                    f"expected "
+                    f"{sorted(required_optimizations)}"
+                )
+    missing_names = sorted(
+        expected_programs - programs
+    )
+    extra_names = sorted(
+        programs - expected_programs
+    )
+
+    if not deduplicated and missing_names:
         reporter.error(
-            f"{profile}: manifest has {len(programs)} unique programs, "
+            f"{profile}: missing program names "
+            f"({len(missing_names)}): "
+            + ", ".join(missing_names[:30])
+        )
+
+    if extra_names:
+        reporter.error(
+            f"{profile}: unexpected program names "
+            f"({len(extra_names)}): "
+            + ", ".join(extra_names[:30])
+        )
+
+    if (
+        not deduplicated
+        and len(programs) != expected_program_count
+    ):
+        reporter.error(
+            f"{profile}: manifest has {len(programs)} "
+            f"unique programs, "
             f"expected {expected_program_count}"
         )
+
     if summary.get("programs") != len(programs):
-        reporter.error(f"{profile}: summary.programs does not match manifest records")
-    if summary.get("programs") != expected_program_count:
-        reporter.error(f"{profile}: summary.programs does not match dataset plan")
+        reporter.error(
+            f"{profile}: summary.programs "
+            "does not match manifest records"
+        )
+
+    if (
+        not deduplicated
+        and summary.get("programs")
+        != expected_program_count
+    ):
+        reporter.error(
+            f"{profile}: summary.programs "
+            "does not match dataset plan"
+        )
 
     def compare_snapshot_files(
         label: str, expected_paths: set[Path], actual_paths: set[Path]
@@ -1196,25 +1416,6 @@ def validate_profile(
     compare_snapshot_files("ELF", seen_binary_paths, actual_binaries)
     compare_snapshot_files("ground-truth JSON", seen_gt_paths, actual_gt)
     compare_snapshot_files("linker map", seen_map_paths, actual_maps)
-
-    compatibility_gt_root = artifact_root / "ground_truth_compat" / profile
-    compatibility_dataset_root = artifact_root / "datasets_compat" / profile
-    actual_compat_gt = {
-        path.absolute()
-        for path in compatibility_gt_root.rglob("ground_truth.json")
-        if path.is_file()
-    } if compatibility_gt_root.is_dir() else set()
-    actual_compat_binaries = {
-        path.absolute()
-        for path in compatibility_dataset_root.iterdir()
-        if path.is_symlink()
-    } if compatibility_dataset_root.is_dir() else set()
-    compare_snapshot_files(
-        "compatibility ground-truth JSON", seen_compat_gt_paths, actual_compat_gt
-    )
-    compare_snapshot_files(
-        "compatibility ELF symlink", seen_compat_binary_paths, actual_compat_binaries
-    )
 
     expected_catalogs: set[Path] = set()
     for gt_path in seen_gt_paths:
@@ -1314,6 +1515,11 @@ def main() -> int:
         profile_plan = datasets.get(profile)
         if not isinstance(profile_plan, dict):
             reporter.error(f"dataset plan: missing profile {profile!r}")
+            continue
+        try:
+            profile_plan = restrict_plan_compilers(profile_plan, args.compiler)
+        except ValueError as error:
+            reporter.error(f"{profile}: {error}")
             continue
         before = len(reporter.errors)
         result = validate_profile(

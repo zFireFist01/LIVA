@@ -1,0 +1,23 @@
+--- a/libcap/cap_sys.c
++++ b/libcap/cap_sys.c
+@@ -10,10 +10,12 @@
+-#define __LIBRARY__
+-#include <linux/unistd.h>
++#include <unistd.h>
++#include <sys/syscall.h>
+ 
+-_syscall2(int, capget,
+-	  cap_user_header_t, header,
+-	  cap_user_data_t, data)
++int capget(cap_user_header_t header, cap_user_data_t data)
++{
++	return (int) syscall(SYS_capget, header, data);
++}
+ 
+-_syscall2(int, capset,
+-	  cap_user_header_t, header,
+-	  const cap_user_data_t, data)
++int capset(cap_user_header_t header, const cap_user_data_t data)
++{
++	return (int) syscall(SYS_capset, header, data);
++}

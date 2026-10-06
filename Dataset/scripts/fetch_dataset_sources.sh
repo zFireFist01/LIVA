@@ -4,8 +4,10 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DATASET_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 MANIFEST="$DATASET_DIR/manifests/source_manifest.json"
+HISTORICAL_MANIFEST="$MANIFEST"
 ONLY_KIND=""
 ONLY_NAME=""
+HISTORICAL_ONLY=""
 SKIP_ORIGIN_FILES=0
 INCLUDE_DISABLED=0
 FORCE=0
@@ -13,6 +15,10 @@ DOWNLOAD_ONLY=0
 KEEP_TEMP=0
 DRY_RUN=0
 LIST_ONLY=0
+INCLUDE_HISTORICAL=0
+HISTORICAL_JOBS=4
+HISTORICAL_USE_COVERED=0
+HISTORICAL_PRINT_BUILD_NAMES=0
 PYTHON="${PYTHON:-python3}"
 
 usage() {
@@ -28,6 +34,12 @@ Opzioni:
   --only-kind KIND         Limita per tipo (`elf`, `library`,
                            `unseen-program`, `unseen-library`). Ripetibile.
   --only-name LIST         Limita ai nomi manifest separati da virgola
+  --historical             Include le versioni del manifest storico
+  --historical-only LIST   Scarica solo le versioni storiche; LIST contiene
+                           pacchetti separati da virgola (usa `all` per tutti)
+  --historical-manifest P  Manifest storico alternativo
+  --historical-jobs N      Download storici paralleli (default: 4)
+  --use-covered            Per le historical usa una build simile già presente
   --skip-origin-files      Usa solo le entry esplicite del manifest
   --include-disabled       Include entry disabilitate
   --force                  Rimuove destinazioni esistenti prima di scaricare
@@ -41,6 +53,8 @@ Esempi:
   Dataset/scripts/fetch_dataset_sources.sh --list
   Dataset/scripts/fetch_dataset_sources.sh --skip-origin-files
   Dataset/scripts/fetch_dataset_sources.sh --only-kind library --dry-run
+  Dataset/scripts/fetch_dataset_sources.sh --historical-only all
+  Dataset/scripts/fetch_dataset_sources.sh --historical-only acl,attr --historical-jobs 8
 EOF
 }
 
@@ -373,6 +387,23 @@ while (($#)); do
         --only-name)
             [[ -n "$ONLY_NAME" ]] && ONLY_NAME+=","
             ONLY_NAME+="$2"; shift 2 ;;
+        --historical)
+            INCLUDE_HISTORICAL=1; shift ;;
+        --historical-only)
+            (($# >= 2)) || die "$1 richiede un valore"
+            INCLUDE_HISTORICAL=1
+            HISTORICAL_ONLY="$2"
+            shift 2 ;;
+        --historical-manifest)
+            (($# >= 2)) || die "$1 richiede un valore"
+            HISTORICAL_MANIFEST="$2"; shift 2 ;;
+        --historical-jobs)
+            (($# >= 2)) || die "$1 richiede un valore"
+            HISTORICAL_JOBS="$2"; shift 2 ;;
+        --use-covered)
+            HISTORICAL_USE_COVERED=1; shift ;;
+        --historical-build-names)
+            HISTORICAL_PRINT_BUILD_NAMES=1; shift ;;
         --skip-origin-files)
             SKIP_ORIGIN_FILES=1; shift ;;
         --include-disabled)
@@ -401,6 +432,311 @@ need_cmd "$PYTHON"
 need_cmd git
 need_cmd tar
 need_cmd sha256sum
+
+[[ "$HISTORICAL_JOBS" =~ ^[1-9][0-9]*$ ]] ||
+    die "--historical-jobs deve essere positivo"
+
+historical_fetch_backend() {
+    "$PYTHON" - "$@" <<'PY'
+import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import threading
+import time
+from urllib.parse import quote, urlparse
+from urllib.request import Request, urlopen
+
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument("--manifest", type=Path, required=True)
+parser.add_argument("--dataset-dir", type=Path, required=True)
+parser.add_argument("--only", default="")
+parser.add_argument("--jobs", type=int, default=4)
+parser.add_argument("--use-covered", action="store_true")
+parser.add_argument("--dry-run", action="store_true")
+parser.add_argument("--list", action="store_true")
+parser.add_argument("--print-build-names", action="store_true")
+args = parser.parse_args()
+
+if args.jobs < 1:
+    raise SystemExit("--historical-jobs deve essere positivo")
+
+manifest = json.loads(args.manifest.resolve().read_text(encoding="utf-8"))
+packages = manifest.get("historical_packages", [])
+selected = {item.strip().lower() for item in args.only.split(",") if item.strip()}
+known = {str(package["name"]).lower() for package in packages}
+unknown = selected - known
+if unknown:
+    raise SystemExit("Pacchetti historical sconosciuti: " + ", ".join(sorted(unknown)))
+
+print_lock = threading.Lock()
+
+def log(message, *, error=False):
+    with print_lock:
+        print(message, file=sys.stderr if error else sys.stdout, flush=True)
+
+def series(version):
+    clean = version.split(":", 1)[-1]
+    pieces = clean.split(".")
+    return ".".join(pieces[:2]) if len(pieces) >= 2 else clean
+
+entries = []
+for package in packages:
+    name = str(package["name"])
+    if selected and name.lower() not in selected:
+        continue
+    for record in package["versions"]:
+        version = str(record["version"])
+        directory_version = str(record.get("directory_version", version)).replace(":", "_")
+        context = {
+            key: str(value)
+            for source in (package, record)
+            for key, value in source.items()
+            if isinstance(value, (str, int, float))
+        }
+        context.setdefault("archive_version", version)
+        context.setdefault("tag", version)
+        context["series"] = series(context["archive_version"])
+        context["directory_version"] = directory_version
+        source_type = str(record.get("source_type", package["source_type"]))
+        snapshot_package = str(
+            record.get("snapshot_package", package.get("snapshot_package", name))
+        )
+        if source_type == "archive":
+            url = str(record.get("url", package.get("url_template", ""))).format(**context)
+            if not url:
+                raise SystemExit(f"URL mancante per {name} {version}")
+        elif source_type == "debian-snapshot":
+            url = (
+                "https://snapshot.debian.org/mr/package/"
+                f"{snapshot_package}/{quote(version, safe='')}/srcfiles"
+            )
+        else:
+            raise SystemExit(f"Tipo historical non supportato: {source_type}")
+        covered_by = str(record.get("covered_by", ""))
+        entries.append({
+            "package": name,
+            "label": str(record["label"]),
+            "version": version,
+            "directory": f"{name}-{directory_version}",
+            "source_type": source_type,
+            "snapshot_package": snapshot_package,
+            "url": url,
+            "covered_by": covered_by,
+            "status": "covered" if covered_by and args.use_covered else "fetch",
+        })
+
+if args.print_build_names:
+    seen = set()
+    for entry in entries:
+        directory = entry["covered_by"] if entry["status"] == "covered" else entry["directory"]
+        if directory and directory not in seen:
+            print(directory)
+            seen.add(directory)
+    raise SystemExit(0)
+
+if args.list:
+    for entry in entries:
+        detail = f"covered by {entry['covered_by']}" if entry["status"] == "covered" else entry["url"]
+        print(
+            f"{entry['status']:<7}\t{entry['package']:<16}\t{entry['label']:<12}\t"
+            f"{entry['directory']:<30}\t{detail}"
+        )
+    fetched = sum(entry["status"] == "fetch" for entry in entries)
+    print(f"\nsource versions to fetch: {fetched}; covered by current builds: {len(entries)-fetched}")
+    raise SystemExit(0)
+
+sources = args.dataset_dir.resolve() / "sources" / "lib_sources"
+cache = args.dataset_dir.resolve() / "sources" / "downloads" / "historical_libraries"
+if not args.dry_run:
+    sources.mkdir(parents=True, exist_ok=True)
+
+def request_bytes(url, attempts=3):
+    last_error = None
+    for attempt in range(1, attempts + 1):
+        try:
+            with urlopen(Request(url, headers={"User-Agent": "libseeker-source-fetch/1"}), timeout=120) as response:
+                return response.read()
+        except Exception as error:
+            last_error = error
+            if attempt < attempts:
+                time.sleep(attempt)
+    raise last_error
+
+def request_json(url):
+    return json.loads(request_bytes(url).decode("utf-8"))
+
+def download(url, destination):
+    if destination.is_file():
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(destination.name + ".part")
+    temporary.write_bytes(request_bytes(url))
+    temporary.replace(destination)
+
+def extract_archive(archive, destination):
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="historical-source-", dir=destination.parent) as temp_name:
+        temporary = Path(temp_name)
+        with tarfile.open(archive, mode="r:*") as source:
+            source.extractall(temporary, filter="data")
+        children = [child for child in temporary.iterdir() if child.name != "__MACOSX"]
+        if len(children) == 1 and children[0].is_dir():
+            children[0].replace(destination)
+        else:
+            destination.mkdir()
+            for child in children:
+                child.replace(destination / child.name)
+
+def fetch_archive(entry):
+    destination = sources / entry["directory"]
+    if destination.exists():
+        log(f"SKIP  {entry['directory']}: source directory already exists")
+        return
+    filename = Path(urlparse(entry["url"]).path).name
+    archive = cache / "archives" / entry["directory"] / filename
+    if args.dry_run:
+        log(f"GET   {entry['directory']} <- {entry['url']}")
+        return
+    log(f"GET   {entry['directory']} <- {entry['url']}")
+    download(entry["url"], archive)
+    extract_archive(archive, destination)
+    log(f"READY {destination}")
+
+def snapshot_files(package, version):
+    encoded = quote(version, safe="")
+    listing = request_json(
+        f"https://snapshot.debian.org/mr/package/{package}/{encoded}/srcfiles"
+    )
+    files = []
+    for record in listing.get("result", []):
+        digest = str(record["hash"])
+        info = request_json(f"https://snapshot.debian.org/mr/file/{digest}/info")
+        names = sorted({str(item["name"]) for item in info.get("result", [])})
+        files.append((digest, names))
+    if not any(name.endswith(".dsc") for _, names in files for name in names):
+        raise RuntimeError(f"Nessun .dsc per {package} {version}")
+    return files
+
+def dsc_records(path):
+    records = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        fields = line.split()
+        if len(fields) == 3 and fields[1].isdigit() and len(fields[0]) in {32, 40, 64}:
+            if all(character in "0123456789abcdefABCDEF" for character in fields[0]):
+                records.append((fields[0].lower(), fields[2]))
+    return records
+
+def fetch_snapshot(entry):
+    destination = sources / entry["directory"]
+    if destination.exists():
+        log(f"SKIP  {entry['directory']}: source directory already exists")
+        return
+    if args.dry_run:
+        log(f"GET   {entry['directory']} <- {entry['url']}")
+        return
+    files = snapshot_files(entry["snapshot_package"], entry["version"])
+    package_cache = cache / "debian" / entry["directory"]
+    dsc_candidates = [(digest, name) for digest, names in files for name in names if name.endswith(".dsc")]
+    suffix = "_" + entry["version"].split(":", 1)[-1] + ".dsc"
+    dsc_digest, dsc_name = next((item for item in dsc_candidates if item[1].endswith(suffix)), dsc_candidates[0])
+    dsc_path = package_cache / dsc_name
+    log(f"GET   {entry['directory']} file={dsc_name}")
+    download(f"https://snapshot.debian.org/file/{dsc_digest}", dsc_path)
+    records = dsc_records(dsc_path)
+    sha1_names = {digest: name for digest, name in records if len(digest) == 40}
+    for digest, names in files:
+        if digest == dsc_digest:
+            continue
+        name = sha1_names.get(digest.lower(), names[0])
+        log(f"GET   {entry['directory']} file={name}")
+        download(f"https://snapshot.debian.org/file/{digest}", package_cache / name)
+    for _, required_name in records:
+        required = package_cache / required_name
+        if required.exists():
+            continue
+        name_suffix = required_name.partition("_")[2]
+        aliases = [path for path in package_cache.iterdir() if path.is_file() and path.name.partition("_")[2] == name_suffix]
+        if len(aliases) == 1:
+            shutil.copyfile(aliases[0], required)
+            log(f"ALIAS {entry['directory']} file={required_name} <- {aliases[0].name}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="historical-debian-source-", dir=destination.parent) as temp_name:
+        extracted = Path(temp_name) / "source"
+        result = subprocess.run(
+            ["dpkg-source", "--no-check", "-x", str(dsc_path), str(extracted)],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        )
+        if result.returncode:
+            raise RuntimeError("dpkg-source failed: " + result.stdout.strip())
+        extracted.replace(destination)
+    log(f"READY {destination}")
+
+def fetch(entry):
+    if entry["source_type"] == "archive":
+        fetch_archive(entry)
+    else:
+        fetch_snapshot(entry)
+
+active = [entry for entry in entries if entry["status"] == "fetch"]
+if not selected or "libxcb" in selected:
+    active.append({
+        "package": "xcb-proto",
+        "label": "1.10-1",
+        "version": "1.10-1",
+        "directory": "xcb-proto-1.10",
+        "source_type": "debian-snapshot",
+        "snapshot_package": "xcb-proto",
+        "url": "https://snapshot.debian.org/mr/package/xcb-proto/1.10-1/srcfiles",
+        "covered_by": "",
+        "status": "fetch",
+    })
+failures = []
+with ThreadPoolExecutor(max_workers=min(args.jobs, max(1, len(active)))) as executor:
+    futures = {executor.submit(fetch, entry): entry for entry in active}
+    for future in as_completed(futures):
+        entry = futures[future]
+        try:
+            future.result()
+        except Exception as error:
+            failures.append((entry["directory"], error))
+            log(f"FAIL  {entry['directory']}: {error}", error=True)
+
+if failures:
+    log("\nFailed source downloads:", error=True)
+    for directory, error in sorted(failures):
+        log(f"  {directory}: {error}", error=True)
+    raise SystemExit(1)
+log(f"Done: {len(active)} historical source versions are available in {sources}")
+PY
+}
+
+run_historical_fetch() {
+    local args=(
+        --manifest "$HISTORICAL_MANIFEST"
+        --dataset-dir "$DATASET_DIR"
+        --jobs "$HISTORICAL_JOBS"
+    )
+    if [[ -n "$HISTORICAL_ONLY" && "$HISTORICAL_ONLY" != all ]]; then
+        args+=(--only "$HISTORICAL_ONLY")
+    fi
+    (( HISTORICAL_USE_COVERED )) && args+=(--use-covered)
+    (( DRY_RUN )) && args+=(--dry-run)
+    (( LIST_ONLY )) && args+=(--list)
+    (( HISTORICAL_PRINT_BUILD_NAMES )) && args+=(--print-build-names)
+    historical_fetch_backend "${args[@]}"
+}
+
+# `--historical-only` deliberately bypasses the normal source manifest.
+if [[ -n "$HISTORICAL_ONLY" ]]; then
+    run_historical_fetch
+    exit $?
+fi
 
 failures=()
 while IFS=$'\x1f' read -r kind source_type status name url relative_destination expected_sha256 revision note; do
@@ -431,6 +767,9 @@ while IFS=$'\x1f' read -r kind source_type status name url relative_destination 
 done < <(parse_entries)
 
 if (( LIST_ONLY )); then
+    if (( INCLUDE_HISTORICAL )); then
+        run_historical_fetch
+    fi
     exit 0
 fi
 
@@ -441,3 +780,7 @@ if ((${#failures[@]})); then
 fi
 
 printf 'Done. Sources are under %s\n' "$SOURCES_DIR"
+
+if (( INCLUDE_HISTORICAL )); then
+    run_historical_fetch
+fi

@@ -1,0 +1,39 @@
+--- a/gstrfuncs.c
++++ b/gstrfuncs.c
+@@ -867,6 +867,6 @@
+                    */
+                 case '$':
+-                  g_warning (G_GNUC_PRETTY_FUNCTION
+-                             "(): unable to handle positional parameters (%%n$)");
++                  g_warning ("%s(): unable to handle positional parameters (%%n$)",
++                             G_GNUC_PRETTY_FUNCTION);
+                   len += 1024; /* try adding some safety padding */
+                   break;
+@@ -1034,6 +1034,6 @@
+                   conv_len += 1 + 1 + MAX (24, spec.precision) + 1 + 1 + 4;
+                   if (spec.mod_extra_long)
+-                    g_warning (G_GNUC_PRETTY_FUNCTION
+-                               "(): unable to handle long double, collecting double only");
++                    g_warning ("%s(): unable to handle long double, collecting double only",
++                               G_GNUC_PRETTY_FUNCTION);
+ #ifdef HAVE_LONG_DOUBLE
+ #error need to implement special handling for long double
+@@ -1077,6 +1077,6 @@
+                   if (spec.mod_long)
+                     {
+-                      g_warning (G_GNUC_PRETTY_FUNCTION
+-                                 "(): unable to handle wide char strings");
++                      g_warning ("%s(): unable to handle wide char strings",
++                                 G_GNUC_PRETTY_FUNCTION);
+                       len += 1024; /* try adding some safety padding */
+                     }
+@@ -1108,7 +1108,6 @@
+                   break;
+                 default:
+-                  g_warning (G_GNUC_PRETTY_FUNCTION
+-                             "(): unable to handle `%c' while parsing format",
+-                             c);
++                  g_warning ("%s(): unable to handle `%c' while parsing format",
++                             G_GNUC_PRETTY_FUNCTION, c);
+                   break;
+                 }

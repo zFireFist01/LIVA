@@ -21,6 +21,12 @@ LIVA was developed as part of the Master's Thesis:
 > MSc in Computer Science and Engineering  
 > Politecnico di Milano, 2026
 
+## Repository and branches
+
+This repository contains the current LIVA implementation on `main`. It was imported from the updated local `LIVA` project; the previous `Thesis_Binary_Analysis` version is preserved on the `legacy-clean` branch. Use `main` for current development and experiments.
+
+The source code and dataset preparation scripts are versioned. Large generated datasets, caches, experiment outputs, and local source downloads are kept outside Git and must be prepared separately; see [`Dataset/SHARDED_LIBSEEKER.md`](Dataset/SHARDED_LIBSEEKER.md) for the evaluation workflow.
+
 ---
 
 ## Motivation
@@ -194,7 +200,7 @@ The experimental environment used for the thesis was:
 The PalmTree checkpoint and its vocabulary must also be available, by default under:
 
 ```text
-palmtree/model/transformer.ep19
+thesis_code/palmtree/model/transformer.ep19
 ```
 
 GNU `ar`, provided by GNU Binutils, is required for static-archive extraction.
@@ -203,10 +209,10 @@ GNU `ar`, provided by GNU Binutils, is required for static-archive extraction.
 
 ## Running LIVA
 
-The main entry point is:
+From the repository root, run the main entry point with an ELF binary and a directory containing static archives:
 
 ```bash
-python main.py \
+python3 thesis_code/main.py \
     --path_to_binary /path/to/target \
     --libraries_dir /path/to/static/libraries
 ```
@@ -214,13 +220,13 @@ python main.py \
 By default, LIVA expects the PalmTree checkpoint at:
 
 ```text
-palmtree/model/transformer.ep19
+thesis_code/palmtree/model/transformer.ep19
 ```
 
 A custom model path can be specified with:
 
 ```bash
-python main.py \
+python3 thesis_code/main.py \
     --path_to_binary /path/to/target \
     --libraries_dir /path/to/static/libraries \
     --asm_model /path/to/transformer.ep19
@@ -243,7 +249,7 @@ or left to automatic selection:
 Run:
 
 ```bash
-python main.py --help
+python3 thesis_code/main.py --help
 ```
 
 for the complete list of matching and evidence parameters.
@@ -257,7 +263,7 @@ For large experiments, binary analysis and PalmTree inference can be performed o
 The cache builder can process ELF datasets and static-library archives:
 
 ```bash
-python build_analysis_cache.py \
+python3 thesis_code/build_analysis_cache.py \
     --dataset-dir /path/to/binaries \
     --libraries-dir /path/to/libraries
 ```
@@ -274,41 +280,16 @@ The main implementation is organized as follows:
 
 ```text
 .
-├── main.py
-│   └── Main LIVA command-line pipeline
-│
-├── asm.py
-│   └── ELF/object parsing, assembly normalization and CodeUnit representation
-│
-├── model.py
-│   └── PalmTree interface and embedding generation
-│
-├── match.py
-│   └── Block matching, structural evidence, .rodata and library aggregation
-│
-├── analysis_cache.py
-│   └── Persistent content-addressed analysis cache
-│
-├── numpy_cache.py
-│   └── Memory-mappable representation of cached CodeUnits
-│
-├── archive_utils.py
-│   └── Safe extraction of GNU ar archive members
-│
-├── build_analysis_cache.py
-│   └── Precomputation of binary analysis and PalmTree embeddings
-│
-├── run_libseeker_batch.py
-│   └── Batch experimental evaluation
-│
-├── optuna_threshold_search.py
-│   └── Hyperparameter and decision-threshold optimization
-│
-└── palmtree/
-    └── PalmTree model interface, vocabulary and checkpoint
+├── README.md                Project overview and usage
+├── thesis_code/             Main CLI, matching, cache, model, and tests
+│   ├── main.py              Analyze one target against static archives
+│   ├── build_analysis_cache.py
+│   ├── experiments/         Evaluation programs and final-metrics runner
+│   └── palmtree/            PalmTree model interface and checkpoint
+└── Dataset/                 Dataset manifests, build scripts, and guides
 ```
 
-Additional scripts are provided for cache validation, conversion, pruning, provenance management, and experiment reproducibility.
+The final-metrics runner is `thesis_code/experiments/scripts/run_final_metrics_incremental.sh`. It requires prepared local evaluation data under `libseeker-unified/`.
 
 ---
 

@@ -2,8 +2,9 @@
 """Exact archive/CU ground truth derived from GNU linker map files.
 
 The per-binary ground truth stays small: it records the archive members that
-the linker actually selected.  Full archive membership and defined function
-symbols are normalized into a content-addressed catalog, once per archive.
+the linker actually selected. Full archive membership is normalized into a
+content-addressed catalog, once per archive. Function/call-graph analysis is
+deliberately left to the matching pipeline and its analysis cache.
 """
 
 from __future__ import annotations
@@ -21,13 +22,6 @@ from typing import Any, Iterable
 ARCHIVE_MEMBER_RE = re.compile(
     r"(?P<archive>\S+?\.a)\((?P<member>[^()\s]+)\)"
 )
-NM_POSIX_RE = re.compile(
-    r"^(?P<archive>.+?\.a)\[(?P<member>[^\]]+)\]:\s+"
-    r"(?P<symbol>\S+)\s+(?P<type>\S)(?:\s+\S+)?(?:\s+\S+)?$"
-)
-FUNCTION_SYMBOL_TYPES = frozenset("TtWwIi")
-
-
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -166,32 +160,12 @@ def duplicate_member_metadata(
     return metadata, occurrence_hashes
 
 
-def archive_function_symbols(path: Path) -> dict[str, list[str]]:
-    """List defined text/weak/ifunc symbols for each archive member."""
-    result = subprocess.run(
-        ["nm", "-A", "--defined-only", "--format=posix", str(path)],
-        check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    symbols: dict[str, set[str]] = defaultdict(set)
-    for line in result.stdout.splitlines():
-        match = NM_POSIX_RE.match(line)
-        if not match or match.group("type") not in FUNCTION_SYMBOL_TYPES:
-            continue
-        symbol = match.group("symbol")
-        if symbol and not symbol.startswith(".L"):
-            symbols[match.group("member")].add(symbol)
-    return {member: sorted(values) for member, values in sorted(symbols.items())}
-
-
 def ensure_archive_catalog(path: Path, catalog_root: Path) -> dict[str, Any]:
     digest = sha256(path)
     destination = catalog_root / f"{digest}.json"
     if destination.is_file():
         cached = json.loads(destination.read_text())
-        if cached.get("schema_version") == 3:
+        if cached.get("schema_version") == 4:
             return cached
 
     members = archive_members(path)
@@ -200,7 +174,6 @@ def ensure_archive_catalog(path: Path, catalog_root: Path) -> dict[str, Any]:
         path, name_counts
     )
     occurrences: dict[str, int] = defaultdict(int)
-    functions = archive_function_symbols(path)
     member_records = []
     for member in members:
         occurrences[member] += 1
@@ -210,18 +183,15 @@ def ensure_archive_catalog(path: Path, catalog_root: Path) -> dict[str, Any]:
             "object_sha256": occurrence_hashes.get(
                 (member, occurrences[member])
             ),
-            "defined_functions": functions.get(member, []),
         })
     payload = {
-        "schema_version": 3,
+        "schema_version": 4,
         "archive_sha256": digest,
         "archive_basename": path.name,
         "archive_size": path.stat().st_size,
         "members": member_records,
         "summary": {
             "members": len(members),
-            "members_with_functions": sum(member in functions for member in members),
-            "defined_functions": sum(len(values) for values in functions.values()),
             "duplicate_member_names": duplicate_metadata,
         },
     }

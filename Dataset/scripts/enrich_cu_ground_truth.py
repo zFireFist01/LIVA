@@ -408,6 +408,7 @@ def enrich_archives(
     linker_map: Path,
     binary: Path,
     use_symbol_fallback: bool,
+    include_inter_cu_calls: bool = True,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     map_members = parse_linker_map(linker_map)
     binary_symbols = (
@@ -465,7 +466,9 @@ def enrich_archives(
                 "linker_map" if confirmed_compilation_units else "none"
             ),
             "compilation_units": compilation_units,
-            **(
+        }
+        if include_inter_cu_calls:
+            enriched_archive.update(
                 expected_inter_cu_ground_truth(archive, included)
                 if archive.is_file() and method == "linker_map"
                 else {
@@ -475,8 +478,7 @@ def enrich_archives(
                     "expected_inter_cu_call_relocations": 0,
                     "expected_inter_cu_cu_edges": [],
                 }
-            ),
-        }
+            )
         enriched.append(enriched_archive)
 
         stats["archives"] += 1

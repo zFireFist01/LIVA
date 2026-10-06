@@ -11,7 +11,6 @@ import os
 import re
 import shutil
 import struct
-import subprocess
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -24,8 +23,8 @@ from ground_truth import build_ground_truth, sha256
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATASET_DIR = SCRIPT_DIR.parent
 REPO_DIR = DATASET_DIR.parent
-DEFAULT_ARTIFACT_ROOT = REPO_DIR.parent / f"{REPO_DIR.name}_artifacts"
-DEFAULT_LIBSEEKER_BUILD_ROOT = DEFAULT_ARTIFACT_ROOT / "builds/libseeker_balanced"
+DEFAULT_ARTIFACT_ROOT = DATASET_DIR
+DEFAULT_LIBSEEKER_BUILD_ROOT = DEFAULT_ARTIFACT_ROOT / "builds/programs"
 DEFAULT_UNSEEN_BUILD_ROOT = DEFAULT_LIBSEEKER_BUILD_ROOT
 DEFAULT_INVENTORY = DATASET_DIR / "manifests/libseeker_inventory.json"
 DEFAULT_UNSEEN_INVENTORY = DATASET_DIR / "manifests/unseen_glibc_inventory.json"
@@ -82,6 +81,14 @@ def parse_args() -> argparse.Namespace:
         "--limit-programs", type=int,
         help="Assemble only the first N inventory programs (smoke tests).",
     )
+    parser.add_argument(
+        "--compiler",
+        action="append",
+        help=(
+            "Restrict the matrix to one or more compiler commands from the plan. "
+            "This is used to materialize independently mergeable shards."
+        ),
+    )
     args = parser.parse_args()
     args.artifact_root = args.artifact_root.resolve()
     args.plan = args.plan.resolve()
@@ -91,15 +98,31 @@ def parse_args() -> argparse.Namespace:
     else:
         args.build_root = (args.build_root or DEFAULT_UNSEEN_BUILD_ROOT).resolve()
         args.inventory = (args.inventory or DEFAULT_UNSEEN_INVENTORY).resolve()
-    forbidden = {Path("/").resolve(), Path.home().resolve(), REPO_DIR.resolve()}
+    repo_root = REPO_DIR.resolve()
+    dataset_root = DATASET_DIR.resolve()
+    artifact_root = args.artifact_root
+
+    inside_repository = (
+        artifact_root == repo_root
+        or repo_root in artifact_root.parents
+    )
+    inside_dataset = (
+        artifact_root == dataset_root
+        or dataset_root in artifact_root.parents
+    )
+
     if (
-        args.artifact_root in forbidden
-        or REPO_DIR.resolve() in args.artifact_root.parents
-        or args.artifact_root in REPO_DIR.resolve().parents
+        artifact_root in {
+            Path("/").resolve(),
+            Path.home().resolve(),
+            repo_root,
+        }
+        or artifact_root in repo_root.parents
+        or (inside_repository and not inside_dataset)
     ):
         parser.error(
-            f"--artifact-root must be a dedicated directory outside the repository: "
-            f"{args.artifact_root}"
+            "--artifact-root must be Dataset, a directory below Dataset, "
+            f"or a dedicated directory outside the repository: {artifact_root}"
         )
     return args
 
@@ -213,6 +236,33 @@ def read_json(path: Path) -> dict[str, Any]:
 def load_plan(path: Path, profile: str) -> dict[str, Any]:
     payload = read_json(path)
     return payload["datasets"][profile]
+
+
+def restrict_plan_compilers(
+    plan: dict[str, Any], compilers: list[str] | None
+) -> dict[str, Any]:
+    if not compilers:
+        return plan
+    requested = set(compilers)
+    available = {
+        str(cell.get("compiler"))
+        for cell in plan.get("matrix", [])
+        if isinstance(cell, dict)
+    }
+    unknown = sorted(requested - available)
+    if unknown:
+        raise ValueError(f"compiler not present in dataset plan: {unknown}")
+    restricted = dict(plan)
+    restricted["matrix"] = [
+        dict(cell)
+        for cell in plan.get("matrix", [])
+        if str(cell.get("compiler")) in requested
+    ]
+    restricted["matrix_scope"] = {
+        "kind": "compiler_subset",
+        "compilers": sorted(requested),
+    }
+    return restricted
 
 
 def load_libseeker_inventory(path: Path, limit: int | None) -> list[dict[str, Any]]:
@@ -343,7 +393,7 @@ def discover_libseeker(
     best: dict[tuple[str, str, str], tuple[tuple[int, int, str], dict[str, Any]]] = {}
     diagnostics: list[str] = []
 
-    info_files = sorted(root.glob("*/randomized/*/build-info.json"))
+    info_files = sorted(root.glob("*/*/build-info.json"))
     if not info_files:
         return [], [f"no build-info.json found below {root}"]
 
@@ -435,6 +485,12 @@ def discover_libseeker(
                     "sha256": digest,
                     "link_type": "static",
                     "library_optimizations": info.get("seeded_library_selection", {}),
+                    "library_versions": info.get(
+                        "seeded_library_version_selection", {}
+                    ),
+                    "library_version_roles": info.get(
+                        "seeded_library_version_roles", {}
+                    ),
                     "archive_metadata": info.get("passed_archives", []),
                     "build_info": str(info_path.resolve()),
                     "build_dir": str(build_dir.resolve()),
@@ -601,37 +657,6 @@ def safe_component(value: Any, label: str) -> str:
     return component
 
 
-def compatibility_visible_path(path: Path) -> str:
-    """Translate container paths to their host-visible mount when available."""
-    resolved = path.resolve()
-    container_root_value = os.environ.get("THESIS_CONTAINER_REPO_PARENT")
-    host_root_value = os.environ.get("THESIS_HOST_REPO_PARENT")
-    if container_root_value and host_root_value:
-        container_root = Path(container_root_value).resolve()
-        try:
-            relative = resolved.relative_to(container_root)
-        except ValueError:
-            pass
-        else:
-            return str(Path(host_root_value).resolve() / relative)
-    return str(resolved)
-
-
-def binary_defined_symbols(binary: Path) -> set[str]:
-    result = subprocess.run(
-        ["nm", "-a", "--defined-only", "--format=posix", str(binary)],
-        check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-    return {
-        line.split(maxsplit=1)[0]
-        for line in result.stdout.splitlines()
-        if line.strip()
-    }
-
-
 def legacy_summaries(archives: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
     cu_summary = {
         "method": "linker_map",
@@ -691,7 +716,7 @@ def legacy_summaries(archives: list[dict[str, Any]]) -> tuple[dict[str, Any], di
     return cu_summary, library_summary
 
 
-def add_compatibility_aliases(
+def add_pipeline_metadata(
     payload: dict[str, Any], record: dict[str, Any], variant: str
 ) -> None:
     cu_summary, library_summary = legacy_summaries(payload["archives"])
@@ -702,20 +727,18 @@ def add_compatibility_aliases(
         "elf_optimization": record["program_optimization"],
         "link_type": "static",
         "seeded_library_selection": record["library_optimizations"],
+        "seeded_library_version_selection": record.get("library_versions", {}),
+        "seeded_library_version_roles": record.get(
+            "library_version_roles", {}
+        ),
         "source": record.get("source_url"),
         "libs": sorted(record["library_optimizations"]),
         "cu_ground_truth": cu_summary,
         "library_ground_truth": library_summary,
-        "inter_cu_ground_truth": {
-            "method": "not_emitted_by_occurrence_aware_ground_truth",
-            "expected_inter_cu_function_edges": 0,
-            "expected_inter_cu_call_relocations": 0,
-            "expected_inter_cu_cu_edges": [],
-        },
     })
 
 
-def render_compatibility_text(payload: dict[str, Any], binary: Path) -> str:
+def render_ground_truth_text(payload: dict[str, Any], binary: Path) -> str:
     lines = [
         f"# Binary: {binary.resolve()}",
         f"# {payload.get('program')} optimization: -{payload.get('elf_optimization')}",
@@ -723,7 +746,6 @@ def render_compatibility_text(payload: dict[str, Any], binary: Path) -> str:
         "# Source: GNU ld linker map; excluded CUs are archive members not extracted by the linker.",
         "",
     ]
-    binary_symbols = binary_defined_symbols(binary)
     for archive in payload["archives"]:
         basename = archive.get("archive_basename") or Path(str(archive["archive"])).name
         source = archive.get("source") or archive.get("library") or "unknown"
@@ -733,27 +755,8 @@ def render_compatibility_text(payload: dict[str, Any], binary: Path) -> str:
         lines.append(f"  Archive: {archive['archive']}")
         members = list(archive.get("included_members", []))
         lines.append(f"  Included compilation units: {len(members)}")
-        catalog_path = archive.get("archive_catalog")
-        catalog = read_json(Path(str(catalog_path))) if catalog_path else {"members": []}
-        catalog_members: dict[str, list[dict[str, Any]]] = defaultdict(list)
-        for member in catalog.get("members", []):
-            if isinstance(member, dict):
-                catalog_members[str(member.get("name", ""))].append(member)
-        used: defaultdict[str, int] = defaultdict(int)
         for member_name in members:
-            occurrence = used[member_name]
-            used[member_name] += 1
-            options = catalog_members.get(member_name, [])
-            member = options[min(occurrence, len(options) - 1)] if options else {}
-            functions = [
-                symbol for symbol in member.get("defined_functions", [])
-                if symbol in binary_symbols
-            ]
-            total = len(member.get("defined_functions", []))
-            lines.append(
-                f"    {member_name} ({len(functions)}/{total} symbols matched)"
-            )
-            lines.extend(f"      - {symbol}" for symbol in functions)
+            lines.append(f"    {member_name}")
         lines.append("")
     return "\n".join(lines)
 
@@ -768,9 +771,6 @@ def materialize_records(
 ) -> list[dict[str, Any]]:
     result = []
     artifact_root = dataset_root.parent.parent.resolve()
-    compatibility_gt_root = artifact_root / "ground_truth_compat" / profile
-    compatibility_dataset_root = artifact_root / "datasets_compat" / profile
-
     def portable(path: Path) -> str:
         return str(path.resolve().relative_to(artifact_root))
 
@@ -787,8 +787,8 @@ def materialize_records(
         relative = Path(
             program, compiler, variant, program
         )
-        legacy_variant = safe_component(
-            f"{program}_{compiler}_{variant}", "compatibility variant"
+        pipeline_variant = safe_component(
+            f"{program}_{compiler}_{variant}", "pipeline variant"
         )
         binary_destination = dataset_root / "binaries" / relative
         gt_directory = ground_truth_root / "binaries" / relative.parent
@@ -838,6 +838,10 @@ def materialize_records(
                     "standalone_configuration"
                 ),
                 "library_optimizations": record["library_optimizations"],
+                "library_versions": record.get("library_versions", {}),
+                "library_version_roles": record.get(
+                    "library_version_roles", {}
+                ),
                 "build_info": record["build_info"],
                 "link": link_payload,
             }
@@ -849,58 +853,8 @@ def materialize_records(
                 build_metadata=build_metadata,
                 resolution_roots=resolution_roots,
             )
-            add_compatibility_aliases(ground_truth, record, legacy_variant)
-            compatibility_payload = json.loads(json.dumps(ground_truth))
-            compatibility_json = (
-                compatibility_gt_root
-                / program
-                / legacy_variant
-                / "ground_truth.json"
-            )
-            compatibility_text = compatibility_json.with_name("ground_truth.txt")
-            compatibility_binary = (
-                compatibility_dataset_root / f"{legacy_variant}.elf"
-            )
-            compatibility_json.parent.mkdir(parents=True, exist_ok=True)
-            compatibility_binary.parent.mkdir(parents=True, exist_ok=True)
-            if compatibility_binary.exists() or compatibility_binary.is_symlink():
-                compatibility_binary.unlink()
-            compatibility_binary.symlink_to(
-                os.path.relpath(binary_destination, compatibility_binary.parent)
-            )
-            compatibility_payload["binary"] = compatibility_visible_path(
-                binary_destination
-            )
-            compatibility_payload["binary_portable"] = portable(binary_destination)
-            compatibility_payload["linker_map"] = compatibility_visible_path(
-                map_destination
-            )
-            compatibility_payload["linker_map_portable"] = portable(map_destination)
-            for archive in compatibility_payload["archives"]:
-                archive_path = archive.get("archive")
-                if archive_path and Path(str(archive_path)).is_absolute():
-                    archive["archive"] = compatibility_visible_path(
-                        Path(str(archive_path))
-                    )
-                catalog_path = archive.get("archive_catalog")
-                if catalog_path and Path(str(catalog_path)).is_absolute():
-                    archive["archive_catalog"] = compatibility_visible_path(
-                        Path(str(catalog_path))
-                    )
-            rendered_text = render_compatibility_text(
-                ground_truth, binary_destination
-            )
-            container_prefix = os.environ.get("THESIS_CONTAINER_REPO_PARENT")
-            host_prefix = os.environ.get("THESIS_HOST_REPO_PARENT")
-            if container_prefix and host_prefix:
-                rendered_text = rendered_text.replace(
-                    str(Path(container_prefix).resolve()),
-                    str(Path(host_prefix).resolve()),
-                )
-            compatibility_json.write_text(
-                json.dumps(compatibility_payload, indent=2, sort_keys=True) + "\n"
-            )
-            compatibility_text.write_text(rendered_text)
+            add_pipeline_metadata(ground_truth, record, pipeline_variant)
+            rendered_text = render_ground_truth_text(ground_truth, binary_destination)
             ground_truth["binary"] = portable(binary_destination)
             ground_truth["linker_map"] = portable(map_destination)
             for archive in ground_truth["archives"]:
@@ -912,12 +866,93 @@ def materialize_records(
             updated["ground_truth_complete"] = ground_truth["summary"]["ground_truth_complete"]
             updated["binary_sha256"] = ground_truth["binary_sha256"]
             updated["linker_map_sha256"] = ground_truth["linker_map_sha256"]
-            updated["ground_truth_compat"] = portable(compatibility_json)
-            updated["binary_compat"] = str(
-                compatibility_binary.relative_to(artifact_root)
-            )
         result.append(updated)
     return result
+
+
+def deduplicate_records_by_sha256(
+    records: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], int]:
+    """Keep one deterministic representative for each ELF SHA-256."""
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+
+    for record in records:
+        groups[str(record["sha256"])].append(record)
+
+    keep_ids: set[int] = set()
+    replacements: dict[int, dict[str, Any]] = {}
+
+    for digest, group in groups.items():
+        ordered = sorted(
+            group,
+            key=lambda record: (
+                str(record.get("program", "")),
+                str(
+                    record.get(
+                        "compiler_command",
+                        record.get("compiler", ""),
+                    )
+                ),
+                str(record.get("program_optimization", "")),
+                str(record.get("source_binary", "")),
+            ),
+        )
+
+        # La selezione è deterministica, ma non favorisce sempre
+        # il compilatore lessicograficamente precedente.
+        chosen = ordered[int(digest[:16], 16) % len(ordered)]
+        chosen_copy = dict(chosen)
+
+        duplicates = [
+            record for record in ordered
+            if record is not chosen
+        ]
+
+        if duplicates:
+            chosen_copy["equivalent_builds"] = [
+                {
+                    "program": record.get("program"),
+                    "compiler": record.get("compiler"),
+                    "compiler_command": record.get(
+                        "compiler_command"
+                    ),
+                    "program_optimization": record.get(
+                        "program_optimization"
+                    ),
+                    "library_optimizations": record.get(
+                        "library_optimizations"
+                    ),
+                    "build_info": record.get("build_info"),
+                }
+                for record in duplicates
+            ]
+            chosen_copy["deduplicated_group_size"] = len(ordered)
+
+        keep_ids.add(id(chosen))
+        replacements[id(chosen)] = chosen_copy
+
+    deduplicated = [
+        replacements[id(record)]
+        for record in records
+        if id(record) in keep_ids
+    ]
+
+    return deduplicated, len(records) - len(deduplicated)
+
+
+def library_version_role_counts(
+    records: list[dict[str, Any]],
+) -> dict[str, dict[str, int]]:
+    counts: dict[str, dict[str, int]] = defaultdict(dict)
+    for record in records:
+        for library, role in record.get("library_version_roles", {}).items():
+            library_counts = counts[str(library)]
+            role = str(role)
+            library_counts[role] = library_counts.get(role, 0) + 1
+    return {
+        library: dict(sorted(library_counts.items()))
+        for library, library_counts in sorted(counts.items())
+    }
 
 
 def write_manifests(
@@ -927,10 +962,16 @@ def write_manifests(
     dataset_root: Path,
     ground_truth_root: Path,
     expected_count: int,
+    candidate_count: int,
+    duplicates_removed: int,
+    deduplicated: bool,
+    matrix_scope: dict[str, Any] | None,
     dry_run: bool,
 ) -> dict[str, Any]:
     summary = {
         "binaries": len(records),
+        "candidate_binaries": candidate_count,
+        "duplicates_removed": duplicates_removed,
         "programs": len({record["program"] for record in records}),
         "source_projects": len({record["source_project"] for record in records}),
         "compilers": sorted({record["compiler"] for record in records}),
@@ -943,7 +984,13 @@ def write_manifests(
         "unique_binary_hashes": len({record.get("binary_sha256", record["sha256"]) for record in records}),
         "expected_binaries": expected_count,
         "diagnostics": len(diagnostics),
+        "library_version_role_counts": library_version_role_counts(records),
     }
+    if deduplicated:
+        summary["deduplicated_by"] = "binary_sha256"
+        summary["representative_policy"] = "sha256_deterministic_index"
+    if matrix_scope:
+        summary["matrix_scope"] = matrix_scope
     payload = {
         "schema_version": 2,
         "profile": profile,
@@ -974,23 +1021,25 @@ def write_manifests(
 
 def main() -> int:
     args = parse_args()
-    plan = load_plan(args.plan, args.profile)
+    plan = restrict_plan_compilers(
+        load_plan(args.plan, args.profile), args.compiler
+    )
     dataset_root = args.artifact_root / "datasets" / args.profile
     ground_truth_root = args.artifact_root / "ground_truth" / args.profile
-    compatibility_dataset_root = args.artifact_root / "datasets_compat" / args.profile
-    compatibility_ground_truth_root = (
-        args.artifact_root / "ground_truth_compat" / args.profile
-    )
     # Assembly is a snapshot operation. Always remove the two profile outputs
     # first so a compiler/version change cannot leave unmanifested stale ELF/GT.
     if not args.dry_run:
         safe_clean(dataset_root, args.artifact_root, args.dry_run)
         safe_clean(ground_truth_root, args.artifact_root, args.dry_run)
-        safe_clean(compatibility_dataset_root, args.artifact_root, args.dry_run)
-        safe_clean(compatibility_ground_truth_root, args.artifact_root, args.dry_run)
 
     inventory = load_libseeker_inventory(args.inventory, args.limit_programs)
     records, diagnostics = discover_libseeker(args.build_root, inventory, plan)
+    candidate_count = len(records)
+    deduplicated = plan.get("deduplicate_binary_sha256") is True
+    if deduplicated:
+        records, duplicates_removed = deduplicate_records_by_sha256(records)
+    else:
+        duplicates_removed = 0
     expected_count = len(expected_cells(plan, inventory))
 
     materialized = materialize_records(
@@ -999,11 +1048,15 @@ def main() -> int:
     )
     payload = write_manifests(
         args.profile, materialized, diagnostics, dataset_root,
-        ground_truth_root, expected_count, args.dry_run,
+        ground_truth_root, expected_count, candidate_count,
+        duplicates_removed, deduplicated, plan.get("matrix_scope"), args.dry_run,
     )
     problems = list(diagnostics)
-    if len(records) != expected_count:
-        problems.append(f"expected {expected_count} binaries, found {len(records)}")
+    if candidate_count != expected_count:
+        problems.append(
+            f"expected {expected_count} candidate binaries, "
+            f"found {candidate_count}"
+        )
     incomplete = [record["program"] for record in materialized if record.get("ground_truth_complete") is False]
     if incomplete:
         problems.append(f"{len(incomplete)} records have unresolved archive ground truth")

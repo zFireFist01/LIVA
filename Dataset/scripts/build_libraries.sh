@@ -4,7 +4,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DATASET_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 SOURCE_DIR="$DATASET_DIR/sources/lib_sources"
-OUTPUT_DIR="${OUTPUT_DIR:-$DATASET_DIR/builds/lib_builds}"
+OUTPUT_DIR="${OUTPUT_DIR:-$DATASET_DIR/builds/libraries}"
 
 CURATED_LIBRARIES=(
     zlib-1.3.1
@@ -14,6 +14,7 @@ CURATED_LIBRARIES=(
     openssl-3.5.0
     acl-2.3.2
     file-5.46
+    libcap
     glibc-2.41
     gmp-6.3.0
     libiconv-1.18
@@ -22,6 +23,11 @@ CURATED_LIBRARIES=(
     pcre2-10.47
     readline-8.2
     selinux-3.7
+    libunistring-1.4.2
+    libidn2-2.3.8
+    libpsl-0.21.5
+    brotli
+    zstd-1.5.7
 )
 EXCLUDED_LIBRARIES=(
     at-spi2-core_2.50.0.orig
@@ -38,7 +44,6 @@ EXCLUDED_LIBRARIES=(
     libsodium
     libx11
     libxcb
-    ncurses-6.3
     tcp-wrappers
     util-linux
     zlib
@@ -57,6 +62,7 @@ SKIP_EXISTING=0
 DRY_RUN=0
 LIST_LIBRARIES=0
 STATIC_EXECUTABLES=0
+ALLOW_EXCLUDED=0
 
 discover_source_libraries() {
     [[ -d "$SOURCE_DIR" ]] || return 0
@@ -67,6 +73,8 @@ discover_source_libraries() {
 is_excluded_library() {
     local library="$1"
     local excluded
+
+    (( ALLOW_EXCLUDED )) && return 1
 
     for excluded in "${EXCLUDED_LIBRARIES[@]}"; do
         [[ "$library" == "$excluded" ]] && return 0
@@ -190,6 +198,32 @@ compiler_id() {
     printf '%s-%s' "$name" "$version"
 }
 
+gmp_dependency_for_mpfr() {
+    local library="$1"
+    local compiler="${2:-}"
+    local optimization="${3:-}"
+
+    case "$library" in
+        mpfr-3.1.6)
+            printf 'gmp-5.1'
+            ;;
+        mpfr-4.1.0)
+            printf 'gmp-6.2'
+            ;;
+        *)
+            # The historical manifest calls the current source gmp-6.3,
+            # while the curated/current dataset calls it gmp-6.3.0. Prefer
+            # the historical build when it exists in this output tree.
+            if [[ -n "$compiler" && -n "$optimization" &&
+                  -d "$OUTPUT_DIR/$compiler/gmp-6.3/$optimization/install" ]]; then
+                printf 'gmp-6.3'
+            else
+                printf 'gmp-6.3.0'
+            fi
+            ;;
+    esac
+}
+
 configure_arguments() {
     local library="$1"
     local prefix="$2"
@@ -200,7 +234,17 @@ configure_arguments() {
 
     result=("--prefix=$prefix")
     case "$library" in
-        acl|acl-*|attr|libxcb)
+        glib-1.2.*|freetype-1.3.*|gtk-1.2.*)
+            # config.guess shipped by these releases predates x86_64 and
+            # cannot identify a modern Linux host.
+            result+=(
+                --build=x86_64-pc-linux-gnu
+                --host=x86_64-pc-linux-gnu
+                --enable-static
+                --disable-shared
+            )
+            ;;
+        acl|acl-*|attr|attr-*|libxcb|libxcb-*)
             result+=(--enable-static --disable-shared)
             ;;
         file-*)
@@ -219,6 +263,28 @@ configure_arguments() {
         glibc|glibc-*)
             result+=(--disable-werror)
             ;;
+        gtk-1.2.*)
+            printf 'glib-1.2.10-20'
+            ;;
+        gtk|gtk-*)
+            result+=(
+                --enable-static
+                --disable-shared
+                --disable-modules
+                --with-included-immodules=yes
+            )
+            ;;
+        libthai|libthai-*)
+            result+=(--enable-static --disable-shared --disable-dict)
+            ;;
+        util-linux|util-linux-*)
+            result+=(
+                --enable-static
+                --disable-shared
+                --disable-wall
+                --disable-use-tty-group
+            )
+            ;;
         libiconv|libiconv-*)
             result+=(--enable-static --disable-shared)
             ;;
@@ -226,7 +292,9 @@ configure_arguments() {
             result+=(--enable-static --disable-shared)
             ;;
         mpfr|mpfr-*)
-            dependency_prefix="$OUTPUT_DIR/$compiler/gmp-6.3.0/$optimization/install"
+            dependency_prefix="$OUTPUT_DIR/$compiler/$(
+                gmp_dependency_for_mpfr "$library" "$compiler" "$optimization"
+            )/$optimization/install"
             result+=(--enable-static --disable-shared "--with-gmp=$dependency_prefix")
             ;;
         ncurses|ncurses-*)
@@ -288,7 +356,7 @@ dependency_flags() {
     local include_dirs=()
     local lib_dirs=()
     local pkg_dirs=()
-    local install_dir library dependency
+    local install_dir dependency
     local -n cppflags_ref="$5"
     local -n ldflags_ref="$6"
     local -n pkg_config_ref="$7"
@@ -303,20 +371,16 @@ dependency_flags() {
     [[ -d "$OUTPUT_DIR/$compiler" ]] || return 0
     [[ -n "$dependencies" ]] || return 0
 
-    while IFS= read -r install_dir; do
-        library="${install_dir#"$OUTPUT_DIR/$compiler/"}"
-        library="${library%%/*}"
-        [[ "$library" != "$current_library" ]] || continue
-        for dependency in $dependencies; do
-            [[ "$library" == "$dependency" ]] || continue
-            [[ -d "$install_dir/include" ]] && include_dirs+=("-I$install_dir/include")
-            [[ -d "$install_dir/lib" ]] && lib_dirs+=("-L$install_dir/lib")
-            [[ -d "$install_dir/lib/pkgconfig" ]] && pkg_dirs+=("$install_dir/lib/pkgconfig")
-        done
-    done < <(
-        find "$OUTPUT_DIR/$compiler" -mindepth 3 -maxdepth 3 \
-            -path "*/$optimization/install" -type d -print 2>/dev/null | sort
-    )
+    # Keep the declared dependency order: for static linking and for archives
+    # with overlapping names (libidn2 ships a reduced libunistring.a), the
+    # order of -L entries is semantically significant.
+    for dependency in $dependencies; do
+        [[ "$dependency" != "$current_library" ]] || continue
+        install_dir="$OUTPUT_DIR/$compiler/$dependency/$optimization/install"
+        [[ -d "$install_dir/include" ]] && include_dirs+=("-I$install_dir/include")
+        [[ -d "$install_dir/lib" ]] && lib_dirs+=("-L$install_dir/lib")
+        [[ -d "$install_dir/lib/pkgconfig" ]] && pkg_dirs+=("$install_dir/lib/pkgconfig")
+    done
 
     cppflags_ref="$(printf '%s ' "${include_dirs[@]}")"
     if (( STATIC_EXECUTABLES )); then
@@ -328,36 +392,62 @@ dependency_flags() {
 
 dependency_libraries_for() {
     local library="$1"
+    local compiler="${2:-}"
+    local optimization="${3:-}"
 
     case "$library" in
+        acl-2.0.8-*)
+            printf 'attr-2.0.7-1'
+            ;;
+        acl-2.2.53-*)
+            printf 'attr-2.4.48-6'
+            ;;
         acl|acl-*)
             printf 'attr'
             ;;
         file-*)
             printf 'zlib-1.3.1'
             ;;
-        freetype)
+        freetype|freetype-*)
             printf 'zlib-1.3.1 bzip2 libpng brotli'
             ;;
         fontconfig)
             printf 'freetype libexpat'
             ;;
-        glib)
+        glib|glib-*)
             printf 'libffi pcre2-10.47 zlib-1.3.1'
             ;;
-        harfbuzz)
+        harfbuzz|harfbuzz-*)
             printf 'freetype glib'
             ;;
-        libpng)
+        gtk|gtk-*)
+            # GTK 2's configure tests execute host-linked probes.  Mixing
+            # historical GLib/Pango headers with the container's runtime
+            # libraries makes those probes report a false version mismatch.
+            printf ''
+            ;;
+        libbsd|libbsd-*)
+            printf 'libmd-1.1.0'
+            ;;
+        libpng|libpng-*)
             printf 'zlib-1.3.1'
             ;;
+        libidn2|libidn2-*)
+            printf 'libunistring-1.4.2'
+            ;;
+        libpsl|libpsl-*)
+            # Search the complete GNU libunistring before libidn2's private,
+            # reduced compatibility archive, which does not export every
+            # symbol required by libpsl (for example u8_tolower).
+            printf 'libunistring-1.4.2 libidn2-2.3.8'
+            ;;
         mpfr|mpfr-*)
-            printf 'gmp-6.3.0'
+            gmp_dependency_for_mpfr "$library" "$compiler" "$optimization"
             ;;
         selinux|selinux-*)
             printf 'pcre2-10.47'
             ;;
-        pango)
+        pango|pango-*)
             printf 'fontconfig freetype fribidi glib harfbuzz'
             ;;
         readline|readline-*)
@@ -372,11 +462,49 @@ has_static_archive() {
         -print -quit 2>/dev/null | grep -q .
 }
 
+collect_build_archives() {
+    local install_dir="$1"
+    local variant_dir="${install_dir%/install}"
+    local archive
+
+    mkdir -p -- "$install_dir/lib"
+    while IFS= read -r archive; do
+        cp -f -- "$archive" "$install_dir/lib/$(basename -- "$archive")"
+    done < <(
+        find "$variant_dir/build" "$variant_dir/source" \
+            -type f -name '*.a' -print 2>/dev/null | sort -u
+    )
+}
+
 variant_is_complete() {
     local variant_dir="$1"
     local install_dir="$variant_dir/install"
+    local library_name="${variant_dir%/*}"
+    library_name="${library_name##*/}"
 
+    [[ -f "$variant_dir/build-info.txt" ]] || return 1
     has_static_archive "$install_dir" || return 1
+    # These public archives are required by the ELF linker but were not part
+    # of the original 164-name LIVA inventory.  A previously pruned variant
+    # that retained only an auxiliary archive must therefore be rebuilt.
+    case "$library_name" in
+        libiconv|libiconv-*)
+            [[ -f "$install_dir/lib/libiconv.a" &&
+               -f "$install_dir/lib/libcharset.a" ]] || return 1
+            ;;
+        libidn2|libidn2-*)
+            [[ -f "$install_dir/lib/libidn2.a" ]] || return 1
+            ;;
+        libpsl|libpsl-*)
+            [[ -f "$install_dir/lib/libpsl.a" ]] || return 1
+            ;;
+        libunistring|libunistring-*)
+            [[ -f "$install_dir/lib/libunistring.a" ]] || return 1
+            ;;
+        zstd|zstd-*)
+            [[ -f "$install_dir/lib/libzstd.a" ]] || return 1
+            ;;
+    esac
     if (( STATIC_EXECUTABLES )); then
         grep -qx 'static_executables=yes' "$variant_dir/build-info.txt" \
             2>/dev/null || return 1
@@ -451,6 +579,10 @@ ensure_static_archive() {
     local install_dir="$2"
 
     copy_lib64_archives "$install_dir"
+    # The historical corpus contains both installed public archives and
+    # internal/test archives (for example OpenSSL's libtestutil.a).  Preserve
+    # every archive produced by the build under the variant's install/lib.
+    collect_build_archives "$install_dir"
     has_static_archive "$install_dir" || {
         printf 'nessun archivio statico prodotto per %s in %s\n' \
             "$library" "$install_dir" >&2
@@ -486,6 +618,15 @@ write_build_info() {
 source_root_for_library() {
     local source_path="$1"
 
+    # Zstandard's supported CMake project lives below build/cmake.  Building
+    # the repository root with its generic Makefile also attempts a shared
+    # library, which is unnecessary for this static-only dataset.
+    if [[ -f "$source_path/build/cmake/CMakeLists.txt" &&
+          -f "$source_path/lib/zstd.h" ]]; then
+        printf '%s/build/cmake' "$source_path"
+        return
+    fi
+
     if [[ -f "$source_path/expat/CMakeLists.txt" ||
           -f "$source_path/expat/configure.ac" ||
           -f "$source_path/expat/configure" ]]; then
@@ -508,8 +649,20 @@ build_system_for_source() {
     local source_root="$2"
 
     case "$library" in
-        bzip2)
+        bzip2|bzip2-*)
             printf 'bzip2'
+            return
+            ;;
+        brotli|brotli-*)
+            printf 'cmake'
+            return
+            ;;
+        glibc|glibc-*)
+            printf 'glibc'
+            return
+            ;;
+        ncurses|ncurses-*)
+            printf 'ncurses'
             return
             ;;
         openssl|openssl-*)
@@ -520,14 +673,18 @@ build_system_for_source() {
             printf 'selinux'
             return
             ;;
-        xz)
+        tcp-wrappers|tcp-wrappers-*)
+            printf 'tcp-wrappers'
+            return
+            ;;
+        xz|xz-*)
             printf 'xz'
             return
             ;;
     esac
 
     case "$library" in
-        freetype)
+        freetype|freetype-*)
             if [[ -f "$source_root/meson.build" ]]; then
                 printf 'meson'
                 return
@@ -547,7 +704,9 @@ build_system_for_source() {
         printf 'cmake'
     elif [[ -x "$source_root/autogen.sh" || -x "$source_root/autogen" ]]; then
         printf 'autogen'
-    elif [[ -f "$source_root/configure.ac" || -f "$source_root/Makefile.am" ]]; then
+    elif [[ -f "$source_root/configure.ac" ||
+            -f "$source_root/configure.in" ||
+            -f "$source_root/Makefile.am" ]]; then
         printf 'autoreconf'
     elif [[ -f "$source_root/Makefile" ]]; then
         printf 'make'
@@ -590,6 +749,72 @@ prepare_configure_source() {
     }
 }
 
+apply_historical_compatibility_fixes() {
+    local library="$1"
+    local source_root="$2"
+    local generator
+
+    case "$library" in
+        attr-2.4.48-*|acl-2.2.53-*)
+            # Prevent Automake from trying to invoke the release-specific
+            # aclocal-1.15 binary.  The distributed generated files are valid.
+            touch -- "$source_root/aclocal.m4" "$source_root/configure"
+            find "$source_root" -type f -name Makefile.in -exec touch -- {} +
+            ;;
+        glib-1.2.*|freetype-1.3.*)
+            # Refresh config.guess/config.sub only in the private copy: the
+            # originals predate the x86_64 triplet required by old ltconfig.
+            while IFS= read -r config_helper; do
+                cp -- "/usr/share/misc/$(basename -- "$config_helper")" \
+                    "$config_helper"
+            done < <(
+                find "$source_root" -type f \
+                    \( -name config.guess -o -name config.sub \)
+            )
+            if [[ "$library" == glib-1.2.* ]]; then
+                patch --batch --forward -d "$source_root" -p1 \
+                    < "$DATASET_DIR/patches/glib-1.2.10-modern-pretty-function.patch"
+            fi
+            ;;
+        libcap-1.10)
+            patch --batch --forward -d "$source_root" -p1 \
+                < "$DATASET_DIR/patches/libcap-1.10-modern-syscalls.patch"
+            ;;
+        libsodium-0.7.0)
+            patch --batch --forward -d "$source_root" -p1 \
+                < "$DATASET_DIR/patches/libsodium-0.7.0-modern-alignment.patch"
+            ;;
+        libxcrypt-3.0-*)
+            patch --batch --forward -d "$source_root" -p1 \
+                < "$DATASET_DIR/patches/libxcrypt-3.0-modern-libc-lock.patch"
+            ;;
+        libpsl-0.13.0|libpsl-0.20.2)
+            # Ubuntu 24.04 intentionally has no /usr/bin/python alias.  Both
+            # bundled generators are compatible with Python 3.
+            for generator in make_dafsa.py psl-make-dafsa; do
+                [[ ! -f "$source_root/src/$generator" ]] || \
+                    sed -i '1s|python$|python3|' \
+                        "$source_root/src/$generator"
+            done
+            ;;
+        graphite2-0.9.4.dfsg-4)
+            # Its tests require the obsolete SIL Graphite and ICU Layout APIs;
+            # neither is part of the static library being collected.
+            sed -i \
+                -e 's/^add_subdirectory(gr2fonttest)/# disabled for library-only build/' \
+                -e 's/^add_subdirectory(tests)/# disabled for library-only build/' \
+                -e 's/^add_subdirectory(doc)/# disabled for library-only build/' \
+                "$source_root/CMakeLists.txt"
+            sed -i 's/add_library(graphite2 SHARED/add_library(graphite2 STATIC/' \
+                "$source_root/src/CMakeLists.txt"
+            sed -i 's/^[[:space:]]*nolib_test(stdc++/# disabled nolib test:/' \
+                "$source_root/src/CMakeLists.txt"
+            sed -i 's/[[:space:]]-nostdlibs//g' \
+                "$source_root/src/CMakeLists.txt"
+            ;;
+    esac
+}
+
 build_bzip2_variant() {
     local library="$1"
     local optimization="$2"
@@ -605,6 +830,23 @@ build_bzip2_variant() {
 
     printf '\nBUILD %-18s %-5s (%s)\n' "$library" "$optimization" "$CC"
     mkdir -p -- "$install_dir/include" "$install_dir/lib" "$install_dir/lib/pkgconfig"
+
+    # bzip2 1.0.x uses the classic Makefile layout.  The current 1.1 source
+    # uses bz_version.h.in and is handled by the recipe below.
+    if [[ ! -f "$source_path/bz_version.h.in" ]]; then
+        rm -rf -- "$build_dir"
+        mkdir -p -- "$build_dir"
+        cp -a -- "$source_path/." "$build_dir/"
+        run_logged "$log_file" make -C "$build_dir" -j "$JOBS" \
+            CC="$CC" "CFLAGS=$flags" libbz2.a || return $?
+        cp -- "$build_dir/libbz2.a" "$install_dir/lib/" || return $?
+        cp -- "$build_dir/bzlib.h" "$install_dir/include/" || return $?
+        ensure_static_archive "$library" "$install_dir" || return $?
+        write_build_info "$library" "$optimization" "$variant_dir" \
+            "$source_path" "$build_dir" "$install_dir"
+        return 0
+    fi
+
     sed 's/@BZ_VERSION@/1.1.0/' "$source_path/bz_version.h.in" > "$build_dir/bz_version.h"
 
     for source in "${sources[@]}"; do
@@ -644,6 +886,165 @@ Version: 1.1.0
 Libs: -L\${libdir} -lbz2
 Cflags: -I\${includedir}
 EOF
+    write_build_info "$library" "$optimization" "$variant_dir" \
+        "$source_path" "$build_dir" "$install_dir"
+}
+
+build_ncurses_variant() {
+    local library="$1"
+    local optimization="$2"
+    local source_path="$3"
+    local variant_dir="$4"
+    local build_dir="$5"
+    local install_dir="$6"
+    local log_file="$7"
+    local flavor flavor_build
+    local -a flavor_args
+    local prepared_source="$variant_dir/source"
+
+    need_build_cmd rsync || return 1
+    rm -rf -- "$prepared_source"
+    mkdir -p -- "$prepared_source"
+    rsync -a --exclude=.git/ "$source_path/" "$prepared_source/" || return $?
+    source_path="$prepared_source"
+    if [[ "$library" == ncurses-5.9 ]]; then
+        # GCC 5+ expands mouse_trafo while MKlib_gen.sh preprocesses the
+        # callable wrappers, yielding an invalid function declaration.
+        patch --batch --forward -d "$source_path" -p1 \
+            < "$DATASET_DIR/patches/ncurses-5.9-mouse-trafo.patch"
+    fi
+
+    printf '\nBUILD %-18s %-5s (%s, narrow+wide)\n' \
+        "$library" "$optimization" "$CC"
+    rm -rf -- "$build_dir"
+    mkdir -p -- "$build_dir" "$install_dir"
+
+    for flavor in narrow wide; do
+        flavor_build="$build_dir/$flavor"
+        mkdir -p -- "$flavor_build"
+        flavor_args=()
+        [[ "$flavor" == wide ]] && flavor_args+=(--enable-widec)
+        (
+            cd -- "$flavor_build"
+            run_logged "$log_file" env CC="$CC" CXX="$CXX" \
+                "CFLAGS=-$optimization -std=gnu17" \
+                "CXXFLAGS=-$optimization -std=gnu++17" \
+                "$source_path/configure" \
+                "--prefix=$install_dir" \
+                --without-shared --with-normal --without-debug \
+                --without-ada --without-cxx-binding --with-termlib \
+                --disable-macros \
+                "${flavor_args[@]}" || exit $?
+            run_logged "$log_file" make -j "$JOBS" || exit $?
+            run_logged "$log_file" make install || exit $?
+        ) || return $?
+    done
+
+    ensure_static_archive "$library" "$install_dir" || return $?
+    write_build_info "$library" "$optimization" "$variant_dir" \
+        "$source_path" "$build_dir" "$install_dir"
+}
+
+build_tcp_wrappers_variant() {
+    local library="$1"
+    local optimization="$2"
+    local source_path="$3"
+    local variant_dir="$4"
+    local build_dir="$5"
+    local install_dir="$6"
+    local log_file="$7"
+    local cflags="-$optimization -std=gnu17"
+
+    # Clang 18 promotes implicit declarations in this 1997 K&R-style code to
+    # errors.  Keep the historical source unchanged and retain them as
+    # warnings, matching the behavior of the GCC builds.
+    if [[ "$CC" == clang* ]]; then
+        cflags+=" -Wno-error=implicit-function-declaration"
+    fi
+
+    printf '\nBUILD %-28s %-5s (%s, historical Makefile)\n' \
+        "$library" "$optimization" "$CC"
+    rm -rf -- "$build_dir"
+    mkdir -p -- "$build_dir" "$install_dir/lib" "$install_dir/include"
+    cp -a -- "$source_path/." "$build_dir/"
+
+    # tcp_wrappers has no configure or install target.  Reproduce the Debian
+    # Linux settings but request only the static archive, avoiding its legacy
+    # daemon and shared-library link steps.
+    run_logged "$log_file" make -C "$build_dir" \
+        "CC=$CC" "COPTS=$cflags" \
+        RANLIB=ranlib ARFLAGS=rv AUX_OBJ=weak_symbols.o \
+        NETGROUP=-DNETGROUP TLI= VSYSLOG= BUGS= \
+        'EXTRA_CFLAGS=-DSYS_ERRLIST_DEFINED -DHAVE_STRERROR -DHAVE_WEAKSYMS -DINET6=1 -Dss_family=__ss_family -Dss_len=__ss_len' \
+        config-check || return $?
+    run_logged "$log_file" make -C "$build_dir" -j "$JOBS" \
+        "CC=$CC" "COPTS=$cflags" \
+        RANLIB=ranlib ARFLAGS=rv AUX_OBJ=weak_symbols.o \
+        NETGROUP=-DNETGROUP TLI= VSYSLOG= BUGS= \
+        'EXTRA_CFLAGS=-DSYS_ERRLIST_DEFINED -DHAVE_STRERROR -DHAVE_WEAKSYMS -DINET6=1 -Dss_family=__ss_family -Dss_len=__ss_len' \
+        libwrap.a || return $?
+
+    cp -- "$build_dir/libwrap.a" "$install_dir/lib/" || return $?
+    cp -- "$build_dir/tcpd.h" "$install_dir/include/" || return $?
+    ensure_static_archive "$library" "$install_dir" || return $?
+    write_build_info "$library" "$optimization" "$variant_dir" \
+        "$source_path" "$build_dir" "$install_dir"
+}
+
+build_glibc_variant() {
+    local library="$1"
+    local optimization="$2"
+    local source_path="$3"
+    local variant_dir="$4"
+    local build_dir="$5"
+    local install_dir="$6"
+    local log_file="$7"
+    local prepared_source="$variant_dir/source"
+
+    # Keep compatibility fixes outside the downloaded revision.  glibc 2.39
+    # still calls the public fortified syslog alias internally; newer upstream
+    # code calls __syslog, avoiding GCC 13's always_inline diagnostic.
+    need_build_cmd rsync || return 1
+    rm -rf -- "$prepared_source"
+    mkdir -p -- "$prepared_source"
+    rsync -a --exclude=.git/ "$source_path/" "$prepared_source/" || return $?
+    if [[ -f "$prepared_source/misc/syslog.c" ]]; then
+        sed -i 's/^      syslog (/      __syslog (/' \
+            "$prepared_source/misc/syslog.c"
+    fi
+    if [[ "$library" == glibc-2.17 && -f "$prepared_source/configure" ]]; then
+        # Its configure whitelist predates GCC 10+ and GNU Make 4.x.  The
+        # actual feature checks remain active; only the obsolete version
+        # whitelist is relaxed in this private source copy.
+        sed -i \
+            -e 's/    4\.\[3-9\]\.\* | 4\.\[1-9\]\[0-9\]\.\* | \[5-9\]\.\* )/    * )/' \
+            -e 's/    3\.79\* | 3\.\[89\]\*)/    * )/' \
+            "$prepared_source/configure"
+        # GCC 13 may select a 64-bit immediate for this inline asm operand;
+        # x86-64 cannot encode movq imm64 directly into TLS memory.
+        sed -i \
+            's/: IMM_MODE ((uint64_t) cast_to_integer (value)),/: "r" ((uint64_t) cast_to_integer (value)),/' \
+            "$prepared_source/nptl/sysdeps/x86_64/tls.h"
+    fi
+    source_path="$prepared_source"
+
+    printf '\nBUILD %-28s %-5s (%s, libraries only)\n' \
+        "$library" "$optimization" "$CC"
+    rm -rf -- "$build_dir"
+    mkdir -p -- "$build_dir" "$install_dir"
+    (
+        cd -- "$build_dir"
+        run_logged "$log_file" env \
+            "CC=$CC" "CXX=$CXX" \
+            "CFLAGS=-$optimization -D_FORTIFY_SOURCE=0" \
+            "$source_path/configure" \
+            "--prefix=$install_dir" --disable-werror || exit $?
+        # The default `all` target also links host-side C++ support tools.
+        # That fails for old releases against a newer host libstdc++.
+        run_logged "$log_file" make -j "$JOBS" lib || exit $?
+    ) || return $?
+
+    ensure_static_archive "$library" "$install_dir" || return $?
     write_build_info "$library" "$optimization" "$variant_dir" \
         "$source_path" "$build_dir" "$install_dir"
 }
@@ -714,7 +1115,17 @@ build_openssl_variant() {
     local log_file="$7"
     local flags="-$optimization -g"
     local ldflags=""
+    local -a disabled_features=(no-shared no-tests no-dso no-engine)
+    local build_target=build_sw
     (( STATIC_EXECUTABLES )) && ldflags="-static"
+
+    # OpenSSL 1.1 has no `no-module` configure option; it was introduced by
+    # the provider/module architecture in OpenSSL 3.
+    if [[ "$library" == openssl-1.* ]]; then
+        build_target=build_libs
+    else
+        disabled_features+=(no-module)
+    fi
 
     printf '\nBUILD %-18s %-5s (%s)\n' "$library" "$optimization" "$CC"
     cp -a -- "$source_path/." "$build_dir/"
@@ -724,9 +1135,9 @@ build_openssl_variant() {
             "LDFLAGS=$ldflags" \
             perl Configure linux-x86_64 \
             "--prefix=$install_dir" "--openssldir=$install_dir/ssl" \
-            no-shared no-tests no-dso no-module no-engine \
+            "${disabled_features[@]}" \
             "$flags" || exit $?
-        run_logged "$log_file" make -j "$JOBS" build_sw || exit $?
+        run_logged "$log_file" make -j "$JOBS" "$build_target" || exit $?
         if (( INSTALL )); then
             run_logged "$log_file" make install_sw || exit $?
         fi
@@ -741,6 +1152,7 @@ build_openssl_variant() {
                 cp -f -- {} "$install_dir/lib/pkgconfig/" \;
         fi
     fi
+    ensure_static_archive "$library" "$install_dir" || return $?
     write_build_info "$library" "$optimization" "$variant_dir" \
         "$source_path" "$build_dir" "$install_dir"
 }
@@ -754,24 +1166,29 @@ build_selinux_variant() {
     local install_dir="$6"
     local log_file="$7"
     local pcre_prefix="$OUTPUT_DIR/$(compiler_id)/pcre2-10.47/$optimization/install"
+    local selinux_root="$build_dir/libselinux"
 
     printf '\nBUILD %-18s %-5s (%s)\n' "$library" "$optimization" "$CC"
     rm -rf -- "$build_dir"
     mkdir -p -- "$build_dir" "$install_dir/lib" "$install_dir/include"
     cp -a -- "$source_path/." "$build_dir/"
 
-    run_logged "$log_file" make -C "$build_dir/libselinux/src" -j "$JOBS" \
+    # The Debian libselinux source package is already rooted at src/include,
+    # whereas the current SELinux monorepo contains a libselinux/ subfolder.
+    [[ -d "$selinux_root/src" ]] || selinux_root="$build_dir"
+
+    run_logged "$log_file" make -C "$selinux_root/src" -j "$JOBS" \
         CC="$CC" \
         "CPPFLAGS=-I../../libsepol/include" \
-        "CFLAGS=-$optimization -std=gnu17 -Wall -Wextra -Wno-error" \
+        "CFLAGS=-$optimization -std=gnu17 -Wall -Wextra -Wno-error -DSHARED" \
         "LDFLAGS=-L$pcre_prefix/lib" \
         "PCRE_CFLAGS=-DUSE_PCRE2 -DPCRE2_CODE_UNIT_WIDTH=8 -I$pcre_prefix/include" \
         "PCRE_LDLIBS=$pcre_prefix/lib/libpcre2-8.a" \
         DISABLE_SETRANS=y DISABLE_RPM=y DISABLE_X11=y \
         libselinux.a || return $?
 
-    cp -- "$build_dir/libselinux/src/libselinux.a" "$install_dir/lib/" || return $?
-    cp -a -- "$build_dir/libselinux/include/selinux" "$install_dir/include/" || return $?
+    cp -- "$selinux_root/src/libselinux.a" "$install_dir/lib/" || return $?
+    cp -a -- "$selinux_root/include/selinux" "$install_dir/include/" || return $?
     ensure_static_archive "$library" "$install_dir" || return $?
     write_build_info "$library" "$optimization" "$variant_dir" \
         "$source_path" "$build_dir" "$install_dir"
@@ -796,11 +1213,70 @@ build_configure_variant() {
     local -a configure_args
     local -a build_env
 
+    if [[ "$(basename -- "$CC")" == clang-* ]]; then
+        # Old C releases rely on declarations that were implicit in the C89
+        # era.  Clang 18 diagnoses them as errors by default even though the
+        # same sources remain buildable with GCC.
+        cflags+=" -Wno-error=implicit-function-declaration -Wno-error=implicit-int -Wno-error=incompatible-function-pointer-types -Wno-error=deprecated-non-prototype"
+    fi
+
+    if [[ "$library" == glib-1.2.* || "$library" == gtk-1.2.* ]]; then
+        # GLib 1.2's public header uses GNU89 `extern inline` semantics.  With
+        # the C99 semantics selected by modern GCC/Clang, every translation
+        # unit emits g_bit_* and linking fails with duplicate definitions.
+        # Keep the historical semantics both while building GLib and while
+        # GTK's configure probes include the installed GLib header.
+        cflags+=" -fgnu89-inline"
+    fi
+
+    if [[ "$library" == libxcrypt-3.0-* ]]; then
+        # This release enables -Werror internally, but predates the alias and
+        # alignment diagnostics emitted by GCC 13 and Clang 18.
+        cflags+=" -Wno-error -Wno-missing-attributes -Wno-nonnull-compare -Wno-pointer-bool-conversion -Wno-cast-align"
+    fi
+
+    if [[ ("$library" == gtk || "$library" == gtk-*) &&
+          "$(basename -- "$CC")" == clang-18 ]]; then
+        # GTK 2.24 predates Clang 18's stricter treatment of callbacks whose
+        # declared function-pointer type is only ABI-compatible.
+        cflags+=" -Wno-error=incompatible-function-pointer-types"
+    fi
+
+    if [[ "$library" == libxcb-1.10-1 ]]; then
+        local proto_source="$SOURCE_DIR/xcb-proto-1.10"
+        local proto_build="$variant_dir/xcb-proto-build"
+        local proto_prefix="$variant_dir/xcb-proto-install"
+        local proto_python
+        [[ -x "$proto_source/configure" ]] || {
+            printf 'dipendenza sorgente mancante: %s\n' "$proto_source" >&2
+            return 1
+        }
+        rm -rf -- "$proto_build" "$proto_prefix"
+        mkdir -p -- "$proto_build"
+        (
+            cd -- "$proto_build"
+            run_logged "$log_file" "$proto_source/configure" \
+                "--prefix=$proto_prefix" || exit $?
+        ) || return $?
+        proto_python="$proto_prefix/local/lib/python3.12/dist-packages"
+        mkdir -p -- "$proto_prefix/share/xcb" "$proto_python/xcbgen" \
+            "$proto_prefix/lib/pkgconfig"
+        cp -- "$proto_source/src/"*.xml "$proto_source/src/xcb.xsd" \
+            "$proto_prefix/share/xcb/" || return $?
+        cp -- "$proto_source/xcbgen/"*.py "$proto_python/xcbgen/" || return $?
+        cp -- "$proto_build/xcb-proto.pc" "$proto_prefix/lib/pkgconfig/" || return $?
+        pkg_config_path="$proto_prefix/lib/pkgconfig"
+    fi
+
     prepare_configure_source "$build_system" "$source_root" "$log_file" || return $?
     configure_arguments "$library" "$install_dir" "$compiler" "$optimization" configure_args
-    dependencies="$(dependency_libraries_for "$library")"
+    dependencies="$(dependency_libraries_for "$library" "$compiler" "$optimization")"
     dependency_flags "$compiler" "$optimization" "$library" "$dependencies" \
         cppflags ldflags pkg_config_path
+
+    if [[ "$library" == libxcb-1.10-1 ]]; then
+        pkg_config_path="$proto_prefix/lib/pkgconfig${pkg_config_path:+:$pkg_config_path}"
+    fi
 
     build_env=(
         "CC=$CC"
@@ -811,6 +1287,38 @@ build_configure_variant() {
         "LDFLAGS=$ldflags"
         "PKG_CONFIG_PATH=$pkg_config_path"
     )
+    if [[ "$library" == libxcb-0.9.92-* ]]; then
+        # The Debian source archive already contains all generated protocol C
+        # files.  Configure only needs a successful no-op XSLT command.
+        build_env+=(
+            "XSLTPROC=/usr/bin/true"
+            "ac_cv_path_XSLTPROC=/usr/bin/true"
+        )
+    fi
+    if [[ "$library" == gtk-1.2.* ]]; then
+        local glib_variant="$OUTPUT_DIR/$compiler/glib-1.2.10-20/$optimization"
+        local glib_source="$OUTPUT_DIR/$compiler/glib-1.2.10-20/$optimization/source"
+        mkdir -p -- "$glib_variant/install/bin" \
+            "$glib_variant/install/include/glib-1.2" \
+            "$glib_variant/install/lib/glib/include"
+        cp -f -- "$glib_source/glib-config" "$glib_variant/install/bin/" \
+            || return $?
+        cp -f -- "$glib_source/glib.h" \
+            "$glib_variant/install/include/glib-1.2/" || return $?
+        cp -f -- "$glib_source/glibconfig.h" \
+            "$glib_variant/install/lib/glib/include/" || return $?
+        build_env+=(
+            "GLIB_CONFIG=$OUTPUT_DIR/$compiler/glib-1.2.10-20/$optimization/install/bin/glib-config"
+        )
+    fi
+    if [[ "$library" == attr-2.0.* || "$library" == acl-2.0.* ]]; then
+        # Their pre-AC_PREFIX configure scripts use uppercase PREFIX variables
+        # and otherwise silently install below /usr.
+        build_env+=("PREFIX=$install_dir" "ROOT_PREFIX=$install_dir")
+    fi
+    if [[ "$library" == libxcb-1.10-1 ]]; then
+        build_env+=("PYTHONPATH=$proto_python")
+    fi
 
     printf '\nBUILD %-28s %-5s (%s, %s)\n' \
         "$library" "$optimization" "$CC" "$build_system"
@@ -818,22 +1326,91 @@ build_configure_variant() {
         cd -- "$build_dir"
         run_logged "$log_file" env "${build_env[@]}" \
             "$source_root/configure" "${configure_args[@]}" || exit $?
-        if (( STATIC_EXECUTABLES )) && [[ -x ./libtool ]]; then
+        if [[ ("$library" == attr-2.0.* || "$library" == acl-2.0.*) &&
+              -f include/builddefs ]]; then
+            # These releases discover the host's libtool executable instead
+            # of generating a project wrapper.  Modern libtool needs an
+            # explicit language tag for compilation.
+            sed -i 's|^LIBTOOL[[:space:]]*=.*|LIBTOOL = /usr/bin/libtool --tag=CC|' \
+                include/builddefs
+            printf '\nLCFLAGS += -%s %s\n' "$optimization" "$cppflags" \
+                >> include/builddefs
+        fi
+        if [[ "$library" == libxcb || "$library" == libxcb-* ]]; then
+            # The static archives live entirely in src/.  Old Debian releases
+            # otherwise descend into tests and try to regenerate them with
+            # their exact historical Automake version.
+            if [[ "$library" == libxcb-0.9.92-* ]]; then
+                # Its single Make rule recreates every XML symlink.  Running
+                # that rule in parallel races with itself and corrupts links.
+                run_logged "$log_file" make -C src -j 1 || exit $?
+            else
+                run_logged "$log_file" make -C src -j "$JOBS" || exit $?
+            fi
+        elif [[ "$library" == gtk || "$library" == gtk-* ]]; then
+            # The perf/example executables do not support the static-only
+            # configuration; build the actual GTK library subtrees directly.
+            run_logged "$log_file" make -C gdk -j "$JOBS" || exit $?
+            if ! run_logged "$log_file" make -C gtk -j "$JOBS"; then
+                find gtk -type f -name '*.a' -print -quit | grep -q . || exit 1
+                printf 'WARN: GTK tools/tests failed after static archive creation\n' \
+                    | tee -a "$log_file"
+            fi
+        elif (( STATIC_EXECUTABLES )) && [[ -x ./libtool ]]; then
             run_logged "$log_file" make -j "$JOBS" \
                 "LDFLAGS=$ldflags -all-static" || exit $?
         else
-            run_logged "$log_file" make -j "$JOBS" || exit $?
+            if ! run_logged "$log_file" make -j "$JOBS"; then
+                # Several historical projects build their static library
+                # before optional tools/tests that no longer compile on a
+                # modern host.  The dataset needs archives, not those tools.
+                find . -type f -name '*.a' -print -quit | grep -q . || exit 1
+                printf 'WARN: utility/test build failed after static archive creation\n' \
+                    | tee -a "$log_file"
+            fi
         fi
-        if (( INSTALL )); then
+        if (( INSTALL )) &&
+           [[ "$library" != util-linux && "$library" != util-linux-* &&
+              "$library" != libxcb && "$library" != libxcb-* &&
+              "$library" != gtk && "$library" != gtk-* ]]; then
             if (( STATIC_EXECUTABLES )) && [[ -x ./libtool ]]; then
                 run_logged "$log_file" make install \
                     "LDFLAGS=$ldflags -all-static" || exit $?
             else
-                run_logged "$log_file" make install || exit $?
+                if ! run_logged "$log_file" make install; then
+                    find . -type f -name '*.a' -print -quit | grep -q . || exit 1
+                    printf 'WARN: install failed; collecting built static archives\n' \
+                        | tee -a "$log_file"
+                fi
             fi
         fi
     ) || return $?
 
+    if [[ "$library" == glib-1.2.* ]]; then
+        # Old GLib builds the library before legacy tests fail.  Recreate the
+        # small public development layout GTK 1.2 expects from glib-config.
+        mkdir -p -- "$install_dir/bin" "$install_dir/include/glib-1.2" \
+            "$install_dir/lib/glib/include"
+        cp -f -- "$source_root/glib-config" "$install_dir/bin/"
+        cp -f -- "$source_root/glib.h" "$install_dir/include/glib-1.2/"
+        cp -f -- "$source_root/glibconfig.h" \
+            "$install_dir/lib/glib/include/"
+    elif [[ "$library" == attr-2.0.* ]]; then
+        mkdir -p -- "$install_dir/include/attr"
+        cp -f -- "$source_root/include/"*.h "$install_dir/include/attr/" || return $?
+    elif [[ "$library" == acl-2.0.* ]]; then
+        mkdir -p -- "$install_dir/include/sys"
+        cp -f -- "$source_root/include/acl.h" "$install_dir/include/sys/" || return $?
+        cp -f -- "$source_root/include/"*.h "$install_dir/include/" || return $?
+    fi
+
+    if [[ "$library" == util-linux || "$library" == util-linux-* ||
+          "$library" == libxcb || "$library" == libxcb-* ||
+          "$library" == gtk || "$library" == gtk-* ]]; then
+        # Installing util-linux also tries to chown its setuid programs.  The
+        # dataset only needs archives, so collect them from the finished build.
+        collect_build_archives "$build_dir" "$install_dir" || return $?
+    fi
     ensure_static_archive "$library" "$install_dir" || return $?
     write_build_info "$library" "$optimization" "$variant_dir" \
         "$source_root" "$build_dir" "$install_dir"
@@ -854,9 +1431,37 @@ build_cmake_variant() {
     local ldflags=""
     local pkg_config_path=""
     local dependencies
+    local -a cmake_args=(-DBUILD_SHARED_LIBS=OFF)
+
+    if [[ "$library" == graphite2-0.9.4.dfsg-4 ]]; then
+        local prepared_source="$variant_dir/source"
+        need_build_cmd rsync || return 1
+        rm -rf -- "$prepared_source"
+        mkdir -p -- "$prepared_source"
+        rsync -a --exclude=.git/ "$source_root/" "$prepared_source/" || return $?
+        source_root="$prepared_source"
+        apply_historical_compatibility_fixes "$library" "$source_root" || return $?
+    fi
+
+    case "$library" in
+        brotli|brotli-*)
+            cmake_args+=(
+                -DBROTLI_DISABLE_TESTS=ON
+                -DBROTLI_BUILD_TOOLS=OFF
+            )
+            ;;
+        zstd|zstd-*)
+            cmake_args+=(
+                -DZSTD_BUILD_SHARED=OFF
+                -DZSTD_BUILD_PROGRAMS=OFF
+                -DZSTD_BUILD_TESTS=OFF
+                -DZSTD_BUILD_CONTRIB=OFF
+            )
+            ;;
+    esac
 
     need_build_cmd cmake || return 1
-    dependencies="$(dependency_libraries_for "$library")"
+    dependencies="$(dependency_libraries_for "$library" "$compiler" "$optimization")"
     dependency_flags "$compiler" "$optimization" "$library" "$dependencies" \
         cppflags ldflags pkg_config_path
 
@@ -873,7 +1478,7 @@ build_cmake_variant() {
             -DCMAKE_CXX_FLAGS_RELEASE= \
             -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
             -DCMAKE_EXE_LINKER_FLAGS="$ldflags" \
-            -DBUILD_SHARED_LIBS=OFF || return $?
+            "${cmake_args[@]}" || return $?
     run_logged "$log_file" cmake --build "$build_dir" -- -j "$JOBS" || return $?
     if (( INSTALL )); then
         run_logged "$log_file" cmake --install "$build_dir" || return $?
@@ -899,10 +1504,21 @@ build_meson_variant() {
     local ldflags=""
     local pkg_config_path=""
     local dependencies
+    local -a meson_args=()
+
+    case "$library" in
+        at-spi2-core|at-spi2-core-*)
+            meson_args+=(
+                -Ddocs=false
+                -Dintrospection=disabled
+                -Duse_systemd=false
+            )
+            ;;
+    esac
 
     need_build_cmd meson || return 1
     need_build_cmd ninja || return 1
-    dependencies="$(dependency_libraries_for "$library")"
+    dependencies="$(dependency_libraries_for "$library" "$compiler" "$optimization")"
     dependency_flags "$compiler" "$optimization" "$library" "$dependencies" \
         cppflags ldflags pkg_config_path
 
@@ -915,7 +1531,8 @@ build_meson_variant() {
         meson setup "$build_dir" "$source_root" \
             --prefix "$install_dir" \
             --default-library=static \
-            --buildtype=plain || return $?
+            --buildtype=plain \
+            "${meson_args[@]}" || return $?
     run_logged "$log_file" ninja -C "$build_dir" -j "$JOBS" || return $?
     if (( INSTALL )); then
         run_logged "$log_file" ninja -C "$build_dir" install || return $?
@@ -942,7 +1559,11 @@ build_make_variant() {
     local pkg_config_path=""
     local dependencies
 
-    dependencies="$(dependency_libraries_for "$library")"
+    if [[ "$(basename -- "$CC")" == clang-* ]]; then
+        cflags+=" -Wno-error=implicit-function-declaration -Wno-error=implicit-int -Wno-error=incompatible-function-pointer-types -Wno-error=deprecated-non-prototype"
+    fi
+
+    dependencies="$(dependency_libraries_for "$library" "$compiler" "$optimization")"
     dependency_flags "$compiler" "$optimization" "$library" "$dependencies" \
         cppflags ldflags pkg_config_path
 
@@ -951,6 +1572,28 @@ build_make_variant() {
     rm -rf -- "$build_dir"
     mkdir -p -- "$build_dir" "$install_dir"
     cp -a -- "$source_root/." "$build_dir/"
+    apply_historical_compatibility_fixes "$library" "$build_dir" || return $?
+
+    if [[ "$library" == libcap-1.10 ]]; then
+        local -a cap_objects=(
+            cap_alloc.o cap_proc.o cap_extint.o cap_flag.o cap_text.o cap_sys.o
+        )
+        mkdir -p -- "$install_dir/lib" "$install_dir/include/sys"
+        run_logged "$log_file" make -C "$build_dir/libcap" -j "$JOBS" \
+            "CC=$CC" \
+            "CFLAGS=$cflags $cppflags -I$build_dir/libcap/include" \
+            "${cap_objects[@]}" || return $?
+        run_logged "$log_file" ar cr "$install_dir/lib/libcap.a" \
+            "${cap_objects[@]/#/$build_dir/libcap/}" || return $?
+        run_logged "$log_file" ranlib "$install_dir/lib/libcap.a" || return $?
+        cp -- "$build_dir/libcap/include/sys/capability.h" \
+            "$install_dir/include/sys/" || return $?
+        ensure_static_archive "$library" "$install_dir" || return $?
+        write_build_info "$library" "$optimization" "$variant_dir" \
+            "$source_root" "$build_dir" "$install_dir"
+        return 0
+    fi
+
     (
         cd -- "$build_dir"
         run_logged "$log_file" env \
@@ -1009,6 +1652,13 @@ build_variant() {
         return 0
     fi
 
+    # A previous failed attempt is not a reusable build tree.  Reconfiguring
+    # it causes misleading, optimization-dependent errors in old Autotools
+    # projects, so recreate only that incomplete variant.
+    if [[ -d "$variant_dir" ]] && ! variant_is_complete "$variant_dir"; then
+        rm -rf -- "$variant_dir"
+    fi
+
     if (( DRY_RUN )); then
         printf 'DRY   %-28s %-5s build_system=%s source=%s\n' \
             "$library" "$optimization" "$build_system" "$source_root"
@@ -1018,7 +1668,8 @@ build_variant() {
     mkdir -p -- "$build_dir" "$install_dir"
     : > "$log_file"
 
-    if [[ "$library" == attr ]]; then
+    if [[ "$build_system" == configure || "$build_system" == autoreconf ||
+          "$build_system" == autogen ]]; then
         # Automake may refresh configure/aclocal files during `make`.  Keep
         # those generated changes in the external build tree, never in the
         # revision-pinned source checkout.
@@ -1028,12 +1679,50 @@ build_variant() {
         mkdir -p -- "$prepared_source"
         rsync -a --exclude=.git/ "$source_root/" "$prepared_source/" || return $?
         source_root="$prepared_source"
-        build_system="$(build_system_for_source "$library" "$source_root")"
+        if [[ -f "$source_root/config.status" ]]; then
+            [[ ! -f "$source_root/Makefile" ]] || \
+                make -C "$source_root" distclean >/dev/null 2>&1 || true
+            rm -f -- "$source_root/config.status" "$source_root/config.log" \
+                "$source_root/config.cache"
+        fi
+        apply_historical_compatibility_fixes "$library" "$source_root" || return $?
+        if [[ "$library" == libxcrypt || "$library" == libxcrypt-* ]]; then
+            # Perl 5.38 moved smartmatch/when to the general deprecation
+            # category; these releases make every warning fatal.
+            while IFS= read -r perl_source; do
+                sed -i "/use warnings FATAL/a no warnings 'deprecated';" "$perl_source"
+            done < <(grep -rl 'use warnings FATAL' "$source_root")
+            build_system=configure
+        elif [[ "$library" == libxcb || "$library" == libxcb-* ]]; then
+            # xcbgen 1.16 no longer pre-populates namecount for enum names in
+            # the way libxcb 1.14/1.15's generator expects.  Make the lookup
+            # tolerant in this per-variant copy, leaving downloaded sources
+            # untouched and preserving the generated C API.
+            if [[ -f "$source_root/src/c_client.py" ]]; then
+                sed -i 's/namecount\[tname\]/namecount.get(tname, 0)/g' \
+                    "$source_root/src/c_client.py"
+            fi
+            build_system="$(build_system_for_source "$library" "$source_root")"
+        else
+            build_system="$(build_system_for_source "$library" "$source_root")"
+        fi
+        # Configure in the private source copy.  A number of releases from
+        # the 1990s/2000s do not implement VPATH builds and read VERSION,
+        # Makefile.in or headers relative to the working directory.
+        build_dir="$source_root"
     fi
 
     case "$build_system" in
         bzip2)
             build_bzip2_variant "$library" "$optimization" "$source_path" \
+                "$variant_dir" "$build_dir" "$install_dir" "$log_file"
+            ;;
+        glibc)
+            build_glibc_variant "$library" "$optimization" "$source_path" \
+                "$variant_dir" "$build_dir" "$install_dir" "$log_file"
+            ;;
+        ncurses)
+            build_ncurses_variant "$library" "$optimization" "$source_path" \
                 "$variant_dir" "$build_dir" "$install_dir" "$log_file"
             ;;
         openssl)
@@ -1042,6 +1731,10 @@ build_variant() {
             ;;
         selinux)
             build_selinux_variant "$library" "$optimization" "$source_path" \
+                "$variant_dir" "$build_dir" "$install_dir" "$log_file"
+            ;;
+        tcp-wrappers)
+            build_tcp_wrappers_variant "$library" "$optimization" "$source_path" \
                 "$variant_dir" "$build_dir" "$install_dir" "$log_file"
             ;;
         xz)
@@ -1110,6 +1803,122 @@ write_manifest() {
     printf '\nManifest: %s\n' "$manifest"
 }
 
+run_historical_mode() {
+    shift # `historical`
+    local action=all
+    local historical_jobs="$JOBS"
+    local use_covered=0
+    local historical_dry_run=0
+    local -a only=()
+    local -a toolchains=(
+        "gcc-11|g++-11"
+        "gcc-13|g++-13"
+        "clang-14|clang++-14"
+        "clang-18|clang++-18"
+    )
+
+    if (($#)) && [[ "$1" =~ ^(all|fetch|build|list)$ ]]; then
+        action="$1"
+        shift
+    fi
+    while (($#)); do
+        case "$1" in
+            -j|--jobs)
+                (($# >= 2)) || die "$1 richiede un valore"
+                historical_jobs="$2"; shift 2 ;;
+            --only|-l|--libraries)
+                (($# >= 2)) || die "$1 richiede un valore"
+                only+=("$2"); shift 2 ;;
+            --use-covered)
+                use_covered=1; shift ;;
+            --dry-run)
+                historical_dry_run=1; shift ;;
+            -h|--help)
+                cat <<'EOF'
+Uso: build_libraries.sh historical [all|fetch|build|list] [opzioni]
+
+Scarica e/o compila le tre versioni historical definite in
+Dataset/manifests/source_manifest.json, senza costruire o modificare ELF.
+
+  --only LIST       pacchetti separati da virgola; ripetibile
+  -j, --jobs N      job paralleli
+  --use-covered     usa build correnti equivalenti dove dichiarato
+  --dry-run         mostra le operazioni senza scrivere
+EOF
+                return 0 ;;
+            *)
+                die "argomento historical sconosciuto: $1" ;;
+        esac
+    done
+
+    [[ "$historical_jobs" =~ ^[1-9][0-9]*$ ]] ||
+        die "--jobs deve essere positivo"
+
+    local selection=all
+    if ((${#only[@]})); then
+        selection="$(IFS=,; printf '%s' "${only[*]}")"
+    fi
+    local -a fetch_args=(
+        "$SCRIPT_DIR/fetch_dataset_sources.sh"
+        --historical-only "$selection"
+        --historical-jobs "$historical_jobs"
+    )
+    (( use_covered )) && fetch_args+=(--use-covered)
+
+    if [[ "$action" == list ]]; then
+        exec "${fetch_args[@]}" --list
+    fi
+    if [[ "$action" == all || "$action" == fetch ]]; then
+        local -a download_args=("${fetch_args[@]}")
+        (( historical_dry_run )) && download_args+=(--dry-run)
+        "${download_args[@]}"
+    fi
+    [[ "$action" == all || "$action" == build ]] || return 0
+
+    local -a name_args=("${fetch_args[@]}" --historical-build-names)
+    mapfile -t historical_libraries < <("${name_args[@]}")
+    ((${#historical_libraries[@]})) || die "nessuna versione historical selezionata"
+
+    local csv
+    csv="$(IFS=,; printf '%s' "${historical_libraries[*]}")"
+    local -a failures=()
+    local toolchain historical_cc historical_cxx
+    for toolchain in "${toolchains[@]}"; do
+        IFS='|' read -r historical_cc historical_cxx <<< "$toolchain"
+        local -a selected_libraries=()
+        local library
+        for library in "${historical_libraries[@]}"; do
+            [[ "$historical_cc" == clang-* && "$library" == glibc-* ]] && continue
+            selected_libraries+=("$library")
+        done
+        csv="$(IFS=,; printf '%s' "${selected_libraries[*]}")"
+        local -a build_args=(
+            "$SCRIPT_DIR/build_libraries.sh"
+            --libraries "$csv"
+            --optimizations O0,O2,O3,Os
+            --jobs "$historical_jobs"
+            --cc "$historical_cc"
+            --cxx "$historical_cxx"
+            --output "$DATASET_DIR/builds/libraries"
+            --skip-existing
+            --continue-on-error
+            --include-excluded
+        )
+        (( historical_dry_run )) && build_args+=(--dry-run)
+        "${build_args[@]}" || failures+=("$historical_cc/$historical_cxx")
+    done
+    if ((${#failures[@]})); then
+        printf 'Build historical con errori: %s\n' "${failures[*]}" >&2
+        return 1
+    fi
+    printf 'Build historical completata; nessun ELF è stato modificato.\n'
+}
+
+if [[ "${1:-}" == historical ]]; then
+    run_historical_mode "$@"
+    exit $?
+fi
+
 while (($#)); do
     case "$1" in
         -l|--libraries)
@@ -1164,6 +1973,10 @@ while (($#)); do
             ;;
         --continue-on-error)
             CONTINUE_ON_ERROR=1
+            shift
+            ;;
+        --include-excluded)
+            ALLOW_EXCLUDED=1
             shift
             ;;
         --dry-run)

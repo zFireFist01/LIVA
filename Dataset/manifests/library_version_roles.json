@@ -1,0 +1,306 @@
+{
+  "schema": 1,
+  "description": "Explicit semantic roles for the three source versions of each static-library package.",
+  "role_semantics": {
+    "current": "Current reference version used by the experiment.",
+    "minor-alternative": "Nearest earlier available version, preferably within the current major line.",
+    "major-alternative": "More distant earlier version, preferably from an earlier major line; when unavailable, the farthest earlier version present in the corpus."
+  },
+  "packages": {
+    "glibc": {
+      "current": "2.41",
+      "minor-alternative": "2.39",
+      "major-alternative": "2.17"
+    },
+    "libice": {
+      "current": "1.0.10",
+      "minor-alternative": "1.0.9",
+      "major-alternative": "1.0.2"
+    },
+    "libsm": {
+      "current": "1.2.3",
+      "minor-alternative": "1.2.2",
+      "major-alternative": "1.1.1"
+    },
+    "libx11": {
+      "current": "1.8.7",
+      "minor-alternative": "1.8.6",
+      "major-alternative": "1.7.5"
+    },
+    "libxau": {
+      "current": "1.0.9",
+      "minor-alternative": "1.0.8",
+      "major-alternative": "1.0.2"
+    },
+    "libxcomposite": {
+      "current": "0.4.5",
+      "minor-alternative": "0.4.4",
+      "major-alternative": "0.3.2"
+    },
+    "libxcursor": {
+      "current": "1.2.1",
+      "minor-alternative": "1.2.0",
+      "major-alternative": "1.1.9"
+    },
+    "libxdamage": {
+      "current": "1.1.6",
+      "minor-alternative": "1.1.5",
+      "major-alternative": "1.0.4"
+    },
+    "libxdmcp": {
+      "current": "1.1.3",
+      "minor-alternative": "1.1.1",
+      "major-alternative": "1.0.3"
+    },
+    "libxext": {
+      "current": "1.3.4",
+      "minor-alternative": "1.3.3",
+      "major-alternative": "1.2.0"
+    },
+    "libxfixes": {
+      "current": "6.0.1",
+      "minor-alternative": "6.0.0",
+      "major-alternative": "5.0.3"
+    },
+    "libxi": {
+      "current": "1.8.1",
+      "minor-alternative": "1.8",
+      "major-alternative": "1.7.9"
+    },
+    "libxinerama": {
+      "current": "1.1.4",
+      "minor-alternative": "1.1.3",
+      "major-alternative": "1.0.3"
+    },
+    "libxrandr": {
+      "current": "1.5.2",
+      "minor-alternative": "1.5.1",
+      "major-alternative": "1.4.2"
+    },
+    "libxrender": {
+      "current": "0.9.10",
+      "minor-alternative": "0.9.9",
+      "major-alternative": "0.9.2"
+    },
+    "libxt": {
+      "current": "1.2.1",
+      "minor-alternative": "1.2.0",
+      "major-alternative": "1.1.5"
+    },
+    "acl": {
+      "current": "2.3.2-1",
+      "minor-alternative": "2.2.53-9",
+      "major-alternative": "2.0.8-1"
+    },
+    "openssl": {
+      "current": "3.5.0",
+      "minor-alternative": "3.0.12",
+      "major-alternative": "1.1.1w"
+    },
+    "at-spi2-core": {
+      "current": "2.52.0",
+      "minor-alternative": "2.51.90",
+      "major-alternative": "2.50.0"
+    },
+    "attr": {
+      "current": "1:2.5.2-1",
+      "minor-alternative": "1:2.4.48-6",
+      "major-alternative": "2.0.7-1"
+    },
+    "util-linux": {
+      "current": "2.39.3",
+      "minor-alternative": "2.39.2",
+      "major-alternative": "2.38.1"
+    },
+    "brotli": {
+      "current": "1.1.0",
+      "minor-alternative": "1.0.9",
+      "major-alternative": "0.6.0"
+    },
+    "libbsd": {
+      "current": "0.12.1",
+      "minor-alternative": "0.12.0",
+      "major-alternative": "0.11.8"
+    },
+    "bzip2": {
+      "current": "1.0.8",
+      "minor-alternative": "1.0.6",
+      "major-alternative": "0.9.5d-2"
+    },
+    "libcap": {
+      "current": "2.75",
+      "minor-alternative": "2.65",
+      "major-alternative": "1.10"
+    },
+    "glib": {
+      "current": "2.81.0",
+      "minor-alternative": "2.80.1",
+      "major-alternative": "1.2.10-20"
+    },
+    "libxcrypt": {
+      "current": "4.4.36",
+      "minor-alternative": "4.4.35",
+      "major-alternative": "3.0-2"
+    },
+    "libdatrie": {
+      "current": "0.2.13",
+      "minor-alternative": "0.2.12",
+      "major-alternative": "0.2.10"
+    },
+    "libexpat": {
+      "current": "2.6.1",
+      "minor-alternative": "2.6.0",
+      "major-alternative": "1.95.8-4"
+    },
+    "libffi": {
+      "current": "3.4.6",
+      "minor-alternative": "3.4.5",
+      "major-alternative": "2.99.9"
+    },
+    "fontconfig": {
+      "current": "2.16.0",
+      "minor-alternative": "2.15.0",
+      "major-alternative": "2.14.2"
+    },
+    "ncurses": {
+      "current": "6.5",
+      "minor-alternative": "6.4",
+      "major-alternative": "5.9"
+    },
+    "freetype": {
+      "current": "2.13.2",
+      "minor-alternative": "2.13.1",
+      "major-alternative": "1.3.1-1"
+    },
+    "fribidi": {
+      "current": "1.0.13",
+      "minor-alternative": "1.0.12",
+      "major-alternative": "0.19.7-5"
+    },
+    "gtk": {
+      "current": "2.24.33",
+      "minor-alternative": "2.24.32",
+      "major-alternative": "1.2.10-18.1"
+    },
+    "gmp": {
+      "current": "6.3",
+      "minor-alternative": "6.2",
+      "major-alternative": "5.1"
+    },
+    "gpm": {
+      "current": "1.20.7-11",
+      "minor-alternative": "1.20.7-10",
+      "major-alternative": "1.20.7-6"
+    },
+    "graphite2": {
+      "current": "1.3.14",
+      "minor-alternative": "1.3.13",
+      "major-alternative": "0.9.4.dfsg-4"
+    },
+    "harfbuzz": {
+      "current": "8.3.0",
+      "minor-alternative": "8.2.2",
+      "major-alternative": "7.3.0"
+    },
+    "readline": {
+      "current": "8.2-1",
+      "minor-alternative": "8.1-1",
+      "major-alternative": "7.0-1"
+    },
+    "xz": {
+      "current": "5.6.1",
+      "minor-alternative": "5.4.7",
+      "major-alternative": "4.999.9beta+20100927-1"
+    },
+    "file": {
+      "current": "5.46",
+      "minor-alternative": "5.45",
+      "major-alternative": "4.26-2"
+    },
+    "libmd": {
+      "current": "1.1.0",
+      "minor-alternative": "1.0.4",
+      "major-alternative": "0.0.0-3"
+    },
+    "mpfr": {
+      "current": "4.2.1",
+      "minor-alternative": "4.1.0",
+      "major-alternative": "3.1.6"
+    },
+    "pango": {
+      "current": "1.52.1",
+      "minor-alternative": "1.52.0",
+      "major-alternative": "0.26"
+    },
+    "pcre2": {
+      "current": "10.47",
+      "minor-alternative": "10.41",
+      "major-alternative": "10.00"
+    },
+    "pixman": {
+      "current": "0.42.2",
+      "minor-alternative": "0.42.0",
+      "major-alternative": "0.40.0"
+    },
+    "libpng": {
+      "current": "1.6.43",
+      "minor-alternative": "1.6.42",
+      "major-alternative": "1.6.30"
+    },
+    "selinux": {
+      "current": "3.7",
+      "minor-alternative": "3.2",
+      "major-alternative": "2.9-3"
+    },
+    "libsodium": {
+      "current": "1.0.18",
+      "minor-alternative": "1.0.17",
+      "major-alternative": "0.7.0"
+    },
+    "libthai": {
+      "current": "0.1.29",
+      "minor-alternative": "0.1.28",
+      "major-alternative": "0.1.25"
+    },
+    "tcp-wrappers": {
+      "current": "7.6.q-33",
+      "minor-alternative": "7.6.q-32",
+      "major-alternative": "7.6.q-25"
+    },
+    "libxcb": {
+      "current": "1.15-1",
+      "minor-alternative": "1.14-3",
+      "major-alternative": "0.9.92-1"
+    },
+    "libiconv": {
+      "current": "1.18",
+      "minor-alternative": "1.17",
+      "major-alternative": "1.9.2"
+    },
+    "libunistring": {
+      "current": "1.4.2",
+      "minor-alternative": "1.3",
+      "major-alternative": "0.9.10"
+    },
+    "libidn2": {
+      "current": "2.3.8",
+      "minor-alternative": "2.2.0",
+      "major-alternative": "2.0.1"
+    },
+    "libpsl": {
+      "current": "0.21.5",
+      "minor-alternative": "0.20.2",
+      "major-alternative": "0.13.0"
+    },
+    "zstd": {
+      "current": "1.5.7",
+      "minor-alternative": "1.4.9",
+      "major-alternative": "0.8.1"
+    },
+    "zlib": {
+      "current": "1.3.1",
+      "minor-alternative": "1.2.12",
+      "major-alternative": "0.99"
+    }
+  }
+}

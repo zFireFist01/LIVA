@@ -1,0 +1,53 @@
+{
+  "applied": true,
+  "auxiliary_paths": 16,
+  "deleted_paths": 16,
+  "experiment_link_archive_names": 5,
+  "extra_requested_name_paths": 0,
+  "generated_at": "2026-09-01T23:02:17.690870+00:00",
+  "installed_after": 4472,
+  "installed_before": 4488,
+  "materialized_symlinks": 0,
+  "missing_by_package": {
+    "brotli": 24,
+    "freetype": 8,
+    "fribidi": 8,
+    "glib": 96,
+    "glibc": 390,
+    "gpm": 8,
+    "graphite2": 8,
+    "gtk": 16,
+    "libcap": 8,
+    "libice": 4,
+    "libxcb": 40,
+    "libxcrypt": 8,
+    "libxrender": 8,
+    "ncurses": 96,
+    "openssl": 114,
+    "pango": 36,
+    "selinux": 64
+  },
+  "missing_by_reason": {
+    "archive_not_produced_by_version": 608,
+    "unsupported_compiler": 240,
+    "unsupported_optimization": 60,
+    "variant_not_built_or_unsupported": 28
+  },
+  "missing_by_role": {
+    "current": 348,
+    "major-alternative": 399,
+    "minor-alternative": 189
+  },
+  "missing_coordinates": 936,
+  "planned_deletions": 16,
+  "reference_archive_names": 164,
+  "requested_archive_names": 169,
+  "requested_coordinates": 5408,
+  "selected_by_role": {
+    "current": 2356,
+    "major-alternative": 953,
+    "minor-alternative": 1163
+  },
+  "selected_coordinates": 4472,
+  "version_roles_manifest": "Dataset/manifests/library_version_roles.json"
+}

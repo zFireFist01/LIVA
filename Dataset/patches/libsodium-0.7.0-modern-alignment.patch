@@ -1,0 +1,13 @@
+--- a/src/libsodium/crypto_generichash/blake2/ref/blake2.h
++++ b/src/libsodium/crypto_generichash/blake2/ref/blake2.h
+@@ -76,1 +76,1 @@
+-  ALIGN( 64 ) typedef struct __blake2s_state
++  typedef struct __blake2s_state
+@@ -104,1 +104,1 @@
+-  ALIGN( 64 ) typedef struct __blake2b_state
++  typedef struct __blake2b_state
+--- a/src/libsodium/include/sodium/crypto_generichash_blake2b.h
++++ b/src/libsodium/include/sodium/crypto_generichash_blake2b.h
+@@ -24,1 +24,1 @@
+-CRYPTO_ALIGN(64) typedef struct crypto_generichash_blake2b_state {
++typedef struct crypto_generichash_blake2b_state {

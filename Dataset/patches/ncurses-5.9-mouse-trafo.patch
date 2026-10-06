@@ -1,0 +1,21 @@
+--- a/ncurses/base/MKlib_gen.sh
++++ b/ncurses/base/MKlib_gen.sh
+@@ -421,7 +421,8 @@
+ cat >$TMP <<EOF
+ #include <ncurses_cfg.h>
+ #undef NCURSES_NOMACROS
+ #include <curses.h>
++#undef mouse_trafo
+ 
+ DECLARATIONS
+ 
+@@ -447,7 +448,8 @@
+ | sed \
+ 	-e 's/^.*T_CALLED.*returnCode( \([a-z].*) \));/	return \1;/' \
+ 	-e 's/^.*T_CALLED.*returnCode( \((wmove.*) \));/	return \1;/' \
+-	-e 's/gen_//' \
++	-e 's/gen_//' \
++	-e 's/^\([ 	]*\)mouse_trafo (/\1(mouse_trafo) (/' \
+ 	-e 's/^[ 	]*#/#/' \
+ 	-e '/#ident/d' \
+ 	-e '/#line/d' \
